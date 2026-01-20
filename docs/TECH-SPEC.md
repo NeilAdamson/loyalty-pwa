@@ -1,7 +1,7 @@
 # Tech Spec — Multi-tenant Loyalty PWA (Node, Postgres, WhatsApp OTP)
 
 ## 0. Document control
-- Version: 1.0
+- Version: 1.1
 - Date: 2026-01-20
 - Purpose: Provide unambiguous interfaces and implementation rules for development.
 
@@ -16,30 +16,67 @@
 - Reverse proxy: Nginx
 - Frontend: PWA static bundle (React/Vite or lightweight equivalent)
 
-
 ---
 
-## 1A. Reference repository structure (required)
-The repository MUST use the following top-level structure:
 
-```text
-/loyalty-platform
-  /apps
-    /pwa                 # member + staff + vendor admin PWA (single codebase, role-gated routes)
-    /platform-admin      # platform admin UI (optional separate app; can also be route-gated in /pwa)
-  /services
-    /api                 # Node API (Fastify/NestJS)
-  /packages
-    /shared              # shared types, validation schemas, utils
-  /docs                  # PRD.md, ARCHITECTURE.md, TECH-SPEC.md
-  /infra
-    /nginx               # nginx config templates
-    /docker              # docker-compose for local dev
+
+### 1.1 Local development (mandatory: Docker Compose)
+The supported local development path MUST run the full stack in Docker containers (no host installs of DB/web servers/middleware).
+- Host prerequisites: Docker Desktop (WSL2 engine), Git, Antigravity IDE.
+- Local stack MUST be started with a single command: `docker compose up --build`.
+- Hot reload MUST work for both:
+  - `apps/api` (Node dev server with watch)
+  - `apps/web` (Vite dev server)
+
+**Required services (docker-compose)**
+- `api`: Node (TypeScript), mounts repo, runs dev command (watch mode)
+- `web`: Vite PWA dev server, mounts repo, serves on `http://localhost:5173`
+- `db`: PostgreSQL 16 (or pinned version), data persisted in a named volume
+- `redis`: optional (recommended for rate limiting / token replay store in phase 2; for MVP replay protection can be DB-backed)
+
+**Required ports (host mappings)**
+- `web`: 5173:5173
+- `api`: 8000:8000
+- `db`: 5432:5432 (optional; only if you want external DB tooling on host)
+- `redis`: 6379:6379 (optional)
+
+**Minimum docker-compose requirements**
+- Compose file path: `infra/docker-compose.yml`
+- Uses a dedicated network (default compose network acceptable)
+- Uses named volumes for DB persistence
+- Uses bind mounts for source code to enable hot reload
+
+Example (illustrative only; implementation may vary):
+```yaml
+services:
+  api:
+    build: ./apps/api
+    ports: ["8000:8000"]
+    volumes:
+      - ./:/workspace
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/loyalty
+    depends_on: [db]
+  web:
+    build: ./apps/web
+    ports: ["5173:5173"]
+    volumes:
+      - ./:/workspace
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=loyalty
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+volumes:
+  dbdata:
 ```
 
-- The API MUST expose OpenAPI/Swagger at `/api/v1/docs`.
-
----
+**Antigravity rule**
+All run/test instructions in this repo MUST assume Docker Compose (no “install Postgres locally”, no “run node on host” as the supported path).
 
 ## 2. URL structure (tenant routing)
 - Public vendor landing: `/v/{vendor_slug}`
@@ -446,30 +483,6 @@ All admin actions MUST write `admin_audit_log`.
 ---
 
 ## 10. PWA requirements
-
-## 10A. Per-vendor web manifest (required)
-To allow each vendor to appear as its own icon/name when saved to the home screen, the web manifest MUST be served per vendor.
-
-**Route**
-- `GET /v/{vendor_slug}/manifest.webmanifest`
-
-**Rules**
-- Response MUST include:
-  - `name` and `short_name` derived from vendor trading name.
-  - `start_url` = `/v/{vendor_slug}`
-  - `scope` = `/v/{vendor_slug}`
-  - `icons` pointing to vendor-specific icon URLs (stored per vendor).
-- The manifest MUST be cacheable for 24 hours, but MUST revalidate if vendor updates branding.
-
-**Acceptance**
-- Installing Vendor A and Vendor B results in two distinct home-screen entries (separate icons/names).
-
-## 10B. Install prompt behavior (required)
-- Android Chrome/Edge: implement `beforeinstallprompt` handling to show an install CTA and trigger the browser prompt.
-- iOS Safari: show an in-app instruction sheet explaining Add to Home Screen steps (no native prompt can be triggered programmatically).
-- The CTA/instructions MUST be shown only after successful member join OR after the 2nd card view.
-
-
 - Manifest:
   - name, short_name, icons, display=standalone, start_url
 - Service worker:

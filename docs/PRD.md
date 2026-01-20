@@ -2,7 +2,7 @@
 
 ## 0. Document control
 - Product: Digital Loyalty Stamp Cards (PWA)
-- Version: 1.0
+- Version: 1.1
 - Date: 2026-01-20
 - Audience: Antigravity AI (engineering + QA), Ops
 
@@ -220,18 +220,6 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 - Card view (progress + rotating QR)
 - History (simple list)
 
-
-
-## 10A. PWA install / Add to Home Screen (MVP)
-**FR-X1 Install guidance banner**
-- The PWA MUST show a lightweight, dismissible guidance banner suggesting “Add to Home Screen” after the member has successfully joined OR after the 2nd card view (whichever comes first).
-- Platform behavior:
-  - Android Chrome/Edge: if `beforeinstallprompt` is available, show a CTA that triggers the browser install prompt.
-  - iOS Safari: show an in-app instruction sheet (cannot programmatically trigger the native Add-to-Home-Screen prompt).
-- Acceptance:
-  - Banner is shown at most once per device per vendor per 30 days (use local storage).
-  - Banner can be dismissed.
-
 ## 11. Edge cases
 - Program updated while members have active cards: existing cards remain on old program version.
 - Vendor suspended: member can view card but cannot be stamped/redeemed.
@@ -245,6 +233,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 - Availability: target 99.5% (MVP best-effort).
 - Logging: append-only transactions + immutable admin audit.
 - Privacy: minimal PII, explicit consent fields.
+- Local development (mandatory): the supported local dev path runs **the full stack in Docker** (PWA dev server, API, PostgreSQL, and supporting services) via Docker Compose on Windows 11. Developers must not install PostgreSQL, Node, Nginx, or other middleware directly on the host. Host prerequisites are limited to: Docker Desktop (WSL2 engine), Git, and the IDE.
 
 ## 13. Privacy and retention
 - Store minimal PII: name + phone + consent flags.

@@ -1,7 +1,7 @@
 # Architecture — Multi-tenant Loyalty PWA (Afrihost Cloud/VPS, Node)
 
 ## 0. Document control
-- Version: 1.0
+- Version: 1.1
 - Date: 2026-01-20
 - Hosting: Afrihost Cloud/VPS
 - HTTPS: required (AutoSSL)
@@ -40,8 +40,6 @@ flowchart LR
 ## 3. Components
 
 ### 3.1 Static PWA
-- Per-vendor web manifest served at `/v/{vendor_slug}/manifest.webmanifest` to enable per-vendor home-screen install identity.
-
 - Served by Nginx.
 - Tenant routing via URL path `/v/{vendor_slug}`.
 - UI themed via vendor branding fetched from API.
@@ -120,6 +118,25 @@ flowchart LR
 - Backups: daily DB backup + weekly full snapshot.
 - Logs: structured JSON logs (API) + Nginx access logs.
 - Admin audit logs stored in DB.
+
+
+### Local development (mandatory)
+All local development MUST run the full stack inside Docker containers using Docker Compose (Windows 11 supported).
+- Do **not** install PostgreSQL, Node, Nginx, or other middleware directly on the developer host.
+- Host prerequisites: Docker Desktop (WSL2 engine), Git, IDE (Antigravity).
+- Compose MUST provide hot-reload for `apps/api` and `apps/web` via bind mounts.
+
+**Local dev topology (Docker Compose)**
+```mermaid
+flowchart LR
+  Dev[Developer Laptop] -->|Docker Compose| Net[(Docker Network)]
+  Net --> WEB[Vite PWA Dev Server]
+  Net --> API[Node API (dev)]
+  Net --> DB[(PostgreSQL)]
+  Net --> REDIS[(Redis - optional)]
+  API --> WA[WhatsApp Provider API]
+  WEB --> API
+```
 
 ## 10. Deployment model (VPS)
 - Nginx reverse proxy
