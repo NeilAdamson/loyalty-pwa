@@ -1,0 +1,136 @@
+# Architecture — Multi-tenant Loyalty PWA (Afrihost Cloud/VPS, Node)
+
+## 0. Document control
+- Version: 1.0
+- Date: 2026-01-20
+- Hosting: Afrihost Cloud/VPS
+- HTTPS: required (AutoSSL)
+
+## 1. Architectural goals
+1. Tenant isolation by `vendor_id` in all data access paths.
+2. Ultra-fast stamp/redeem flows suitable for point-of-service.
+3. Fraud resistance: rotating single-use tokens + replay protection + auditable staff attribution.
+4. Simple deploy/operate on a single VPS: reverse proxy + API + static PWA + database.
+
+## 2. High-level topology
+
+```mermaid
+flowchart LR
+  M[Member Browser/PWA] -->|HTTPS| N[Nginx]
+  S[Staff Browser] -->|HTTPS| N
+  VA[Vendor Admin Browser] -->|HTTPS| N
+  PA[Platform Admin Browser] -->|HTTPS| N
+
+  N --> API[Node API]
+  N --> PWA[Static PWA Assets]
+
+  API --> DB[(PostgreSQL)]
+  API --> WA[WhatsApp Provider API]
+  API --> RL[(Rate limit store)]
+
+  subgraph VPS
+    N
+    API
+    PWA
+    DB
+    RL
+  end
+```
+
+## 3. Components
+
+### 3.1 Static PWA
+- Per-vendor web manifest served at `/v/{vendor_slug}/manifest.webmanifest` to enable per-vendor home-screen install identity.
+
+- Served by Nginx.
+- Tenant routing via URL path `/v/{vendor_slug}`.
+- UI themed via vendor branding fetched from API.
+
+### 3.2 Node API
+- Provides all REST endpoints (public vendor info, member auth, staff flows, admin portals).
+- Enforces authorization and tenant boundaries.
+- Signs rotating tokens and enforces replay protection.
+
+### 3.3 PostgreSQL
+- Primary system of record.
+- Append-only transaction tables.
+- Token replay table (`token_use`).
+
+### 3.4 Rate limiting store
+- MVP option A: Postgres (simple) with time-window counters.
+- Preferred: Redis (recommended on VPS) for efficient rate limits + token replay cache.
+
+### 3.5 WhatsApp OTP provider
+- WhatsApp OTP is implemented by sending a WhatsApp message containing a one-time code.
+- Provider options (implementation choice):
+  - Direct Meta WhatsApp Business Platform (Cloud API)
+  - Third-party provider that exposes WhatsApp messaging API
+- The system must support “send OTP” and “verify OTP” using internal code generation + storage.
+
+## 4. Tenant isolation
+- Single DB shared across tenants.
+- Every tenant-scoped table includes `vendor_id`.
+- API derives vendor context from:
+  - URL path vendor_slug -> resolves vendor_id
+  - Auth token claims include vendor_id
+- Every query for tenant-scoped resources MUST filter by vendor_id.
+
+## 5. Identity and session model
+
+### 5.1 Member auth
+- Passwordless: phone + WhatsApp OTP.
+- Session token: JWT (access token) stored as httpOnly cookie (preferred) OR in memory/local storage (fallback).
+- Session TTL: 30 days; refresh on activity.
+
+### 5.2 Staff auth (PIN-only)
+- Staff portal is vendor-scoped. Staff enters only PIN.
+- PIN uniquely identifies staff within vendor.
+- Session token: JWT, TTL 12 hours, idle timeout 30 minutes.
+
+### 5.3 Admin auth
+- Vendor Admin: email+password (recommended) OR separate admin PIN (optional).
+- Platform Admin: email+password + MFA (recommended).
+
+## 6. Fraud-resistant rotating token
+- Member card screen displays rotating token refreshed every 30 seconds.
+- Token properties:
+  - server-signed (HMAC)
+  - includes `vendor_id`, `card_id`, `member_id`, `jti`, `exp`
+  - token is single-use for stamping OR redeeming
+- Replay protection:
+  - record `vendor_id + jti` as used at first successful stamp/redeem
+  - reject reuse
+
+## 7. Transaction integrity
+- `stamp_transactions` and `redemption_transactions` are append-only.
+- Card state changes are performed within a DB transaction:
+  - validate card state
+  - enforce cooldown
+  - insert token_use
+  - update card
+  - insert transaction row
+
+## 8. Program versioning
+- Each vendor has exactly one active program.
+- Program updates create a new program row with incremented version.
+- Existing active cards remain tied to their program version.
+- New cards use the current active program.
+
+## 9. Operational concerns
+- Backups: daily DB backup + weekly full snapshot.
+- Logs: structured JSON logs (API) + Nginx access logs.
+- Admin audit logs stored in DB.
+
+## 10. Deployment model (VPS)
+- Nginx reverse proxy
+- Node API running under systemd or PM2
+- PostgreSQL service
+- Redis service (recommended)
+- AutoSSL configured for HTTPS
+
+## 11. Security baseline
+- HTTPS only, HSTS.
+- Strict CORS (allow only the app origin).
+- Content Security Policy for PWA.
+- Rate limiting on OTP, staff PIN login, stamp, redeem.
+- All admin impersonation is auditable and time-bounded.
