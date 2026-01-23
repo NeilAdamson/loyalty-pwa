@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import VendorLayout from './pages/VendorLayout';
-import LandingPage from './pages/LandingPage';
+
 import MemberAuth from './pages/MemberAuth';
 import StaffAuth from './pages/StaffAuth';
 import MemberCard from './pages/MemberCard';
@@ -11,10 +11,13 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminVendorList from './pages/admin/AdminVendorList';
 import AdminVendorCreate from './pages/admin/AdminVendorCreate';
+import AdminUserList from './pages/admin/AdminUserList';
+import AdminUserCreate from './pages/admin/AdminUserCreate';
+import AdminMemberList from './pages/admin/AdminMemberList';
+import AdminVendorQr from './pages/admin/AdminVendorQr';
 
-// Placeholder Admin Screens - We will create real ones next
-const AdminDashboard = () => <div>Dashboard Overview</div>;
-const AdminMemberList = () => <div>Member List</div>;
+import AdminDashboard from './pages/admin/AdminDashboard';
+
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles?: string[] }) => {
     const { token, user, isLoading } = useAuth();
@@ -32,9 +35,9 @@ function App() {
                     <Routes>
                         {/* Vendor Scoped Routes */}
                         <Route path="/v/:slug" element={<VendorLayout />}>
-                            <Route index element={<LandingPage />} />
-                            <Route path="auth/member" element={<MemberAuth />} />
-                            <Route path="auth/staff" element={<StaffAuth />} />
+                            <Route index element={<Navigate to="login" replace />} />
+                            <Route path="login" element={<MemberAuth />} />
+                            <Route path="staff" element={<StaffAuth />} />
                         </Route>
 
                         {/* Protected Routes */}
@@ -55,7 +58,10 @@ function App() {
                             <Route index element={<AdminDashboard />} />
                             <Route path="vendors" element={<AdminVendorList />} />
                             <Route path="vendors/new" element={<AdminVendorCreate />} />
+                            <Route path="vendors/:id/qr" element={<AdminVendorQr />} />
                             <Route path="members" element={<AdminMemberList />} />
+                            <Route path="users" element={<AdminUserList />} />
+                            <Route path="users/new" element={<AdminUserCreate />} />
                             <Route path="settings" element={<div>Settings</div>} />
                         </Route>
 

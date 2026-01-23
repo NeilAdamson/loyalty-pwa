@@ -22,6 +22,13 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [isLoading, setIsLoading] = useState(true);
 
     const checkAuth = async () => {
+        // Skip check on login page to avoid 401 console errors
+        if (window.location.pathname === '/admin/login') {
+            setAdmin(null);
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const res = await api.get('/api/v1/admin/auth/me');
             if (res.data.authenticated) {

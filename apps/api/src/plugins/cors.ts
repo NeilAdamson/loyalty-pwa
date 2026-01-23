@@ -3,7 +3,8 @@ import cors from '@fastify/cors'
 
 export default fp(async (fastify) => {
     await fastify.register(cors, {
-        origin: '*', // For dev only. In prod, list specific domains.
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Credentials require specific origin, not *
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     })
 })

@@ -1,22 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
-import { Link } from 'react-router-dom';
+import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
+import AdminButton from '../../components/admin/ui/AdminButton';
+import AdminTable from '../../components/admin/ui/AdminTable';
+import AdminBadge from '../../components/admin/ui/AdminBadge';
 
 interface Vendor {
     vendor_id: string;
-    trading_name: string;
     vendor_slug: string;
+    legal_name: string;
+    trading_name: string;
     status: string;
-    created_at: string;
-    _count?: {
+    _count: {
         members: number;
         branches: number;
     }
 }
 
-const AdminVendorList: React.FC = () => {
+export default function AdminVendorList() {
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchVendors();
@@ -25,62 +30,70 @@ const AdminVendorList: React.FC = () => {
     const fetchVendors = async () => {
         try {
             const res = await api.get('/api/v1/admin/vendors');
-            setVendors(res.data.data);
-        } catch (err) {
-            console.error(err);
+            setVendors(res.data.data || []);
+        } catch (error) {
+            console.error("Failed to fetch vendors", error);
         } finally {
             setLoading(false);
         }
     };
 
+    const columns = [
+        { header: 'Trading Name', accessor: 'trading_name' as keyof Vendor },
+        { header: 'Slug', accessor: 'vendor_slug' as keyof Vendor },
+        {
+            header: 'Status',
+            render: (v: Vendor) => <AdminBadge status={v.status} />
+        },
+        {
+            header: 'Members',
+            render: (v: Vendor) => v._count?.members || 0
+        },
+        {
+            header: 'Branches',
+            render: (v: Vendor) => v._count?.branches || 0
+        },
+        {
+            header: 'Actions',
+            render: (v: Vendor) => (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <AdminButton
+                        variant="secondary"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/admin/vendors/${v.vendor_id}`); }}
+                    >
+                        Manage
+                    </AdminButton>
+                    <AdminButton
+                        variant="secondary"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/admin/vendors/${v.vendor_id}/qr`); }}
+                    >
+                        QR
+                    </AdminButton>
+                </div>
+            )
+        }
+    ];
+
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <h2>Vendors</h2>
-                <Link to="/admin/vendors/new" style={{ padding: '10px', background: 'green', color: 'white', textDecoration: 'none' }}>
-                    + New Vendor
-                </Link>
-            </div>
+            <AdminPageHeader
+                title="Vendors"
+                description="Manage all vendors, subscription status, and onboard new businesses."
+                actions={
+                    <AdminButton onClick={() => navigate('/admin/vendors/new')}>
+                        + New Vendor
+                    </AdminButton>
+                }
+            />
 
-            {loading ? <div>Loading...</div> : (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
-                            <th style={{ padding: '10px' }}>Name</th>
-                            <th style={{ padding: '10px' }}>Slug</th>
-                            <th style={{ padding: '10px' }}>Status</th>
-                            <th style={{ padding: '10px' }}>Members</th>
-                            <th style={{ padding: '10px' }}>Branches</th>
-                            <th style={{ padding: '10px' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {vendors.map(v => (
-                            <tr key={v.vendor_id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{ padding: '10px' }}>{v.trading_name}</td>
-                                <td style={{ padding: '10px' }}>{v.vendor_slug}</td>
-                                <td style={{ padding: '10px' }}>
-                                    <span style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        background: v.status === 'ACTIVE' ? '#e6fffa' : '#fff5f5',
-                                        color: v.status === 'ACTIVE' ? '#2c7a7b' : '#c53030'
-                                    }}>
-                                        {v.status}
-                                    </span>
-                                </td>
-                                <td style={{ padding: '10px' }}>{v._count?.members || 0}</td>
-                                <td style={{ padding: '10px' }}>{v._count?.branches || 0}</td>
-                                <td style={{ padding: '10px' }}>
-                                    <button onClick={() => alert('View Details TODO')} style={{ marginRight: '5px' }}>View</button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
+            <AdminTable
+                columns={columns}
+                data={vendors}
+                isLoading={loading}
+                emptyMessage="No vendors found. Ready to onboard your first customer?"
+            />
         </div>
     );
-};
-
-export default AdminVendorList;
+}

@@ -30,7 +30,6 @@ server.register(authRoutes)
 server.register(vendorRoutes)
 server.register(programRoutes)
 server.register(memberRoutes)
-server.register(memberRoutes)
 server.register(transactionRoutes)
 server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix: '/val/admin/auth' })
 // Note: Prefix /val/admin/auth? Spec said /api/v1/admin/auth.
@@ -49,6 +48,7 @@ server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix
 server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix: '/api/v1/admin/auth' })
 server.register(require('./modules/admin/vendor.routes').adminVendorRoutes, { prefix: '/api/v1/admin/vendors' })
 server.register(require('./modules/admin/member.routes').adminMemberRoutes, { prefix: '/api/v1/admin/members' })
+server.register(require('./modules/admin/users.routes').adminUserRoutes, { prefix: '/api/v1/admin/users' })
 
 server.get('/health', async (request, reply) => {
     return { status: 'ok', timestamp: new Date().toISOString() };

@@ -1,6 +1,6 @@
-# Walkthrough - Milestone 5: Admin Portal
+# Walkthrough - Milestone 5 + 6: Admin Portal & Public UI
 
-**Goal**: Verify the new Backoffice features for Platform Admins.
+**Goal**: Verify the new Backoffice features and the updated Member/Staff authentication flows.
 
 ## Prerequisites
 - Services running: `docker compose up -d`
@@ -14,6 +14,7 @@
    - **Password**: `password123`
 3. You should be redirected to `/admin` (Dashboard).
 4. Verify "Welcome, Super Admin" or similar text.
+5. **Dashboard Stats**: Verify "Active Vendors" and "Total Members" show numbers > 0 (if data exists).
 
 ## 2. Vendor Management
 
@@ -28,31 +29,36 @@
 5. Click **Create**.
 6. Verify redirect to Vendor List and `New Cafe` appears in the table.
 7. Verify status is `ACTIVE`.
+8. (Note: Valid Slug characters are alphanumeric and hyphens).
 
 ## 3. Member Management
 
 1. Click **Members** in sidebar.
 2. Verify list of members.
-3. (Optional) Check Database to see `status` column on `members` table is present.
+3. Verify table columns: Name, Phone, Vendor, Status, Joined Date.
+4. Verify empty state if no members are found.
 
-## 4. Security Check (Cookie)
+## 4. Public Authentication Flows (Milestone 6)
 
+### Member Login
+1. Navigate to `http://localhost:5173/v/new-cafe` (or any existing vendor slug).
+2. It should redirect to `/v/new-cafe/login`.
+3. Verify the **AuthShell** UI (Dark theme, centered card).
+4. Enter phone number -> Request OTP -> Enter OTP -> Login.
+
+### Staff Login
+1. Navigate to `http://localhost:5173/v/new-cafe/staff`.
+2. Verify the **Staff Login** UI (same theme as Member).
+3. Enter PIN -> Login.
+
+## 5. Security & Troubleshooting
+
+### Security Check (Cookie)
 1. Open DevTools -> Application -> Cookies.
-2. Verify `admin_token` exists and is `HttpOnly` (if browser allows seeing it, or check Network tab request headers).
+2. Verify `admin_token` exists and is `HttpOnly`.
 3. Click **Logout**.
-4. Verify cookie is removed or you are redirected to login.
+4. Verify cookie is removed.
 
-## 5. Database Management (pgAdmin)
-
-1. Open http://localhost:5050
-2. Login with:
-   - **Email**: `admin@admin.com`
-   - **Password**: `root`
-3. Add New Server:
-   - **Name**: `LoyaltyDB`
-   - **Connection** -> **Host name/address**: `db`
-   - **Port**: `5432`
-   - **Username**: `postgres`
-   - **Password**: `postgres`
-   - **Save**.
-4. You can now browse tables under `Databases -> loyalty -> Schemas -> public -> Tables`.
+### Troubleshooting
+- **Blank Screen / 404**: Check Docker logs `docker compose logs -f api`.
+- **CORS Errors**: Ensure you are accessing via `localhost:5173` not `127.0.0.1` if cookies are failing, or vice versa depending on config.

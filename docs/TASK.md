@@ -42,14 +42,14 @@
     - [x] Verify Member Card Flow (Automated) <!-- id: 65 -->
     - [x] Verify Transaction Flow (Automated) <!-- id: 66 -->
     - [x] Update Documentation (API.md) <!-- id: 67 -->
-- [ ] Milestone 4: Frontend Integration <!-- id: 70 -->
+- [x] Milestone 4: Frontend Integration <!-- id: 70 -->
     - [x] Backend Tweak: Enhanced Stamp Response <!-- id: 71 -->
     - [x] Setup Frontend Logic (API Client, Auth Context) <!-- id: 72 -->
     - [x] Implement Vendor Public Page (`/v/:slug`) <!-- id: 73 -->
     - [x] Implement Member Auth (OTP) & Card View <!-- id: 74 -->
     - [x] Implement Staff Auth (PIN) & Scanner View <!-- id: 75 -->
     - [x] Verify Frontend Flows (Manual E2E) <!-- id: 76 -->
-- [ ] Milestone 5: Admin Portal & Backoffice <!-- id: 80 -->
+- [x] Milestone 5: Admin Portal & Backoffice <!-- id: 80 -->
     - [x] DB: AdminUser & Vendor Billing Fields <!-- id: 81 -->
     - [x] API: Platform Admin Auth (HttpOnly Cookie) <!-- id: 82 -->
     - [x] API: Vendor Management (CRUD + Suspension) <!-- id: 83 -->
@@ -57,4 +57,19 @@
     - [x] Web: Admin Layout & Navigation <!-- id: 85 -->
     - [x] Web: Vendor Management Screens <!-- id: 86 -->
     - [x] Web: Member Management Screens (Basic List) <!-- id: 87 -->
-    - [ ] Web: QR Asset Generation <!-- id: 88 -->
+    - [x] Web: QR Asset Generation <!-- id: 88 -->
+- [x] Milestone 5a: Admin UI Overhaul (Phase 1) <!-- id: 90 -->
+    - [x] Design System: CSS Variables & Reset <!-- id: 91 -->
+    - [x] Layout: Responsive Grid Shell (Sidebar + Content) <!-- id: 92 -->
+    - [x] Components: Primitives (Button, Input, Badge, Card) <!-- id: 93 -->
+    - [x] Components: Complex (PageHeader, Table w/ States) <!-- id: 94 -->
+    - [x] Refactor: Apply to Vendor Screens <!-- id: 95 -->
+- [x] Milestone 5b: Admin UI Overhaul (Phase 2 - Polish) <!-- id: 96 -->
+    - [x] Dashboard: Stats & Quick Actions <!-- id: 97 -->
+    - [x] Empty States: Visual Component & Integration <!-- id: 98 -->
+    - [x] Shell: Branding, User Profile, Icons <!-- id: 99 -->
+    - [x] UX: Contextual Navigation & Polish <!-- id: 100 -->
+- [x] Milestone 6: Public/Member/Staff UI Overhaul <!-- id: 101 -->
+    - [x] Routes: Distinct URLs for Member vs Staff <!-- id: 102 -->
+    - [x] Style: Apply Admin Theme to Public Pages <!-- id: 103 -->
+    - [x] Components: AuthShell & Reusable Inputs <!-- id: 104 -->

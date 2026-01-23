@@ -12,7 +12,9 @@ const VendorLayout: React.FC = () => {
                 const { branding, trading_name } = res.data;
                 // 2. Set CSS Variables for Theme
                 const root = document.documentElement;
-                root.style.setProperty('--primary-color', branding.primary_color);
+                root.style.setProperty('--primary', branding.primary_color);
+                root.style.setProperty('--primary-color', branding.primary_color); // Fallback
+                root.style.setProperty('--primary-hover', branding.primary_color); // Simplified for now
                 root.style.setProperty('--secondary-color', branding.secondary_color);
                 // root.style.setProperty('--font-family', ...); // If needed
                 document.title = trading_name;
