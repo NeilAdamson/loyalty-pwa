@@ -79,10 +79,20 @@ export class AdminVendorService {
         })
     }
 
-    async update(vendorId: string, data: Partial<Vendor>) {
+    async update(vendorId: string, data: any) {
+        const { branding, ...vendorData } = data
+
         return this.prisma.vendor.update({
             where: { vendor_id: vendorId },
-            data
+            data: {
+                ...vendorData,
+                branding: branding ? {
+                    upsert: {
+                        create: branding,
+                        update: branding
+                    }
+                } : undefined
+            }
         })
     }
 }

@@ -1,9 +1,10 @@
 import React, { InputHTMLAttributes } from 'react';
 
-interface AdminInputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface AdminInputProps extends InputHTMLAttributes<HTMLInputElement | HTMLSelectElement> {
     label?: string;
     error?: string;
     helperText?: string;
+    options?: { value: string; label: string }[];
 }
 
 const AdminInput: React.FC<AdminInputProps> = ({
@@ -11,6 +12,8 @@ const AdminInput: React.FC<AdminInputProps> = ({
     error,
     helperText,
     style,
+    options,
+    type,
     ...props
 }) => {
     return (
@@ -24,22 +27,46 @@ const AdminInput: React.FC<AdminInputProps> = ({
                     {label}
                 </label>
             )}
-            <input
-                style={{
-                    padding: '10px 12px',
-                    borderRadius: 'var(--radius)',
-                    background: 'var(--bg)',
-                    border: error ? '1px solid var(--danger)' : '1px solid var(--border)',
-                    color: 'var(--text)',
-                    fontSize: '14px',
-                    outline: 'none',
-                    transition: 'border-color 0.2s',
-                    ...style
-                }}
-                onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
-                onBlur={(e) => e.target.style.borderColor = error ? 'var(--danger)' : 'var(--border)'}
-                {...props}
-            />
+            {type === 'select' ? (
+                <select
+                    style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radius)',
+                        background: 'var(--bg)',
+                        border: error ? '1px solid var(--danger)' : '1px solid var(--border)',
+                        color: 'var(--text)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        transition: 'border-color 0.2s',
+                        ...style
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                    onBlur={(e) => e.target.style.borderColor = error ? 'var(--danger)' : 'var(--border)'}
+                    {...props as any}
+                >
+                    {options?.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
+            ) : (
+                <input
+                    type={type}
+                    style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radius)',
+                        background: 'var(--bg)',
+                        border: error ? '1px solid var(--danger)' : '1px solid var(--border)',
+                        color: 'var(--text)',
+                        fontSize: '14px',
+                        outline: 'none',
+                        transition: 'border-color 0.2s',
+                        ...style
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                    onBlur={(e) => e.target.style.borderColor = error ? 'var(--danger)' : 'var(--border)'}
+                    {...props as any}
+                />
+            )}
             {error && (
                 <span style={{ fontSize: '12px', color: 'var(--danger)' }}>{error}</span>
             )}

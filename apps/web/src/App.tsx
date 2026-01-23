@@ -15,6 +15,7 @@ import AdminUserList from './pages/admin/AdminUserList';
 import AdminUserCreate from './pages/admin/AdminUserCreate';
 import AdminMemberList from './pages/admin/AdminMemberList';
 import AdminVendorQr from './pages/admin/AdminVendorQr';
+import AdminVendorDetail from './pages/admin/AdminVendorDetail';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 
@@ -58,6 +59,7 @@ function App() {
                             <Route index element={<AdminDashboard />} />
                             <Route path="vendors" element={<AdminVendorList />} />
                             <Route path="vendors/new" element={<AdminVendorCreate />} />
+                            <Route path="vendors/:id" element={<AdminVendorDetail />} />
                             <Route path="vendors/:id/qr" element={<AdminVendorQr />} />
                             <Route path="members" element={<AdminMemberList />} />
                             <Route path="users" element={<AdminUserList />} />

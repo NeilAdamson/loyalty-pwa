@@ -3,16 +3,23 @@ import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
 import { api } from '../../utils/api';
 import { useNavigate } from 'react-router-dom';
 
-const StatCard = ({ title, value, subtext }: { title: string, value: string, subtext?: string }) => (
-    <div style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px'
-    }}>
+const StatCard = ({ title, value, subtext, onClick }: { title: string, value: string, subtext?: string, onClick?: () => void }) => (
+    <div
+        onClick={onClick}
+        style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            cursor: onClick ? 'pointer' : 'default',
+            transition: 'border-color 0.2s'
+        }}
+        onMouseEnter={e => { if (onClick) e.currentTarget.style.borderColor = 'var(--primary)'; }}
+        onMouseLeave={e => { if (onClick) e.currentTarget.style.borderColor = 'var(--border)'; }}
+    >
         <h3 style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 500 }}>{title}</h3>
         <div style={{ fontSize: '28px', fontWeight: 600, color: 'var(--text)' }}>
             {value}
@@ -92,11 +99,13 @@ export default function AdminDashboard() {
                     title="Active Vendors"
                     value={loading ? "-" : stats.vendors.toString()}
                     subtext="Total businesses onboarded"
+                    onClick={() => navigate('/admin/vendors')}
                 />
                 <StatCard
                     title="Total Members"
                     value={loading ? "-" : stats.members.toString()}
                     subtext="Across all vendors"
+                    onClick={() => navigate('/admin/members')}
                 />
                 <StatCard
                     title="System Status"
