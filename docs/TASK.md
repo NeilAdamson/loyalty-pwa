@@ -1,0 +1,60 @@
+# Tasks
+
+- [x] Analyze project documentation <!-- id: 0 -->
+    - [x] Read PRD.md <!-- id: 1 -->
+    - [x] Read ARCHITECTURE.md <!-- id: 2 -->
+    - [x] Read TECH-SPEC.md <!-- id: 3 -->
+- [x] Determine missing information (Confirmed Decisions) <!-- id: 4 -->
+- [x] Milestone 0: Project Scaffolding <!-- id: 10 -->
+    - [x] Setup Prerequisites <!-- id: 11 -->
+    - [x] Setup Infrastructure <!-- id: 14 -->
+    - [x] Setup pgAdmin (DB Management) <!-- id: 15 -->
+    - [x] Setup Backend (apps/api) <!-- id: 16 -->
+    - [x] Setup Frontend (apps/web) <!-- id: 20 -->
+    - [x] Setup Root Configuration <!-- id: 24 -->
+    - [x] Verify Installation <!-- id: 26 -->
+- [x] Milestone 1: Database Schema <!-- id: 31 -->
+    - [x] Install Prisma & Dependencies <!-- id: 32 -->
+    - [x] Define Schema (schema.prisma) <!-- id: 33 -->
+        - [x] Vendors, Branding, Branches, Staff <!-- id: 34 -->
+        - [x] Members, Programs, Cards <!-- id: 35 -->
+        - [x] Transactions, Tokens, OTP, Audit <!-- id: 36 -->
+    - [x] Add partial unique indexes (active program / active card) <!-- id: 39 -->
+    - [x] Add seed script <!-- id: 40 -->
+    - [x] Add verify-constraints script <!-- id: 43 -->
+    - [x] Run Migration (Dev & Deploy) <!-- id: 37 -->
+    - [x] Run Seeds <!-- id: 41 -->
+    - [x] Verify Constraints & Replay Protection <!-- id: 38 -->
+    - [x] Update Documentation (DB-SCHEMA.md, WALKTHROUGH.md) <!-- id: 42 -->
+- [x] Milestone 2: Basic API Implementation <!-- id: 50 -->
+    - [x] Setup Core Plugins (Prisma, Errors, CORS) <!-- id: 51 -->
+    - [x] Implement Global Error Handling (Prisma -> 409) <!-- id: 52 -->
+    - [x] Implement Auth Module (OTP Flow) <!-- id: 53 -->
+    - [x] Implement Vendor Module (Profile) <!-- id: 54 -->
+    - [x] Implement Program Module (Management) <!-- id: 55 -->
+    - [x] Verify API Error Mapping (Automated) <!-- id: 56 -->
+    - [x] Update Documentation (API.md) <!-- id: 57 -->
+- [x] Milestone 3: Member Experience <!-- id: 60 -->
+    - [x] Implement Card Service (Get/Create + Rotating Token) <!-- id: 61 -->
+    - [x] Implement Transaction Service (Stamp/Redeem + Replay Protection) <!-- id: 62 -->
+    - [x] Implement Member Endpoints (GET /me/card) <!-- id: 63 -->
+    - [x] Implement Transaction Endpoints (POST /tx/stamp, /tx/redeem) <!-- id: 64 -->
+    - [x] Verify Member Card Flow (Automated) <!-- id: 65 -->
+    - [x] Verify Transaction Flow (Automated) <!-- id: 66 -->
+    - [x] Update Documentation (API.md) <!-- id: 67 -->
+- [ ] Milestone 4: Frontend Integration <!-- id: 70 -->
+    - [x] Backend Tweak: Enhanced Stamp Response <!-- id: 71 -->
+    - [x] Setup Frontend Logic (API Client, Auth Context) <!-- id: 72 -->
+    - [x] Implement Vendor Public Page (`/v/:slug`) <!-- id: 73 -->
+    - [x] Implement Member Auth (OTP) & Card View <!-- id: 74 -->
+    - [x] Implement Staff Auth (PIN) & Scanner View <!-- id: 75 -->
+    - [x] Verify Frontend Flows (Manual E2E) <!-- id: 76 -->
+- [ ] Milestone 5: Admin Portal & Backoffice <!-- id: 80 -->
+    - [x] DB: AdminUser & Vendor Billing Fields <!-- id: 81 -->
+    - [x] API: Platform Admin Auth (HttpOnly Cookie) <!-- id: 82 -->
+    - [x] API: Vendor Management (CRUD + Suspension) <!-- id: 83 -->
+    - [x] API: Member Management (Global Search + Status) <!-- id: 84 -->
+    - [x] Web: Admin Layout & Navigation <!-- id: 85 -->
+    - [x] Web: Vendor Management Screens <!-- id: 86 -->
+    - [x] Web: Member Management Screens (Basic List) <!-- id: 87 -->
+    - [ ] Web: QR Asset Generation <!-- id: 88 -->

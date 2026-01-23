@@ -1,0 +1,273 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 3.1 vendors
+model Vendor {
+  vendor_id       String   @id @default(uuid()) @db.Uuid
+  vendor_slug     String   @unique
+  legal_name      String
+  trading_name    String
+  status          String   // 'TRIAL','ACTIVE','SUSPENDED'
+  
+  // Billing & Contact
+  billing_plan_id String
+  billing_status  String   // 'TRIAL','PAID','OVERDUE','SUSPENDED'
+  billing_email   String?
+  billing_address String?
+  tax_id          String?
+  company_reg_no  String?
+  
+  contact_name    String?
+  contact_phone   String?
+  contact_role    String?
+
+  created_at      DateTime @default(now()) @db.Timestamptz
+  updated_at      DateTime @updatedAt @db.Timestamptz
+
+  branding        VendorBranding?
+  branches        Branch[]
+  staff           StaffUser[]
+  members         Member[]
+  programs        Program[]
+  cards           CardInstance[]
+  stamp_txs       StampTransaction[]
+  redeem_txs      RedemptionTransaction[]
+  tokens_used     TokenUse[]
+  otp_requests    OtpRequest[]
+  audit_logs      AdminAuditLog[]
+
+  @@map("vendors")
+}
+
+// 4.1 Admin Users (Platform)
+model AdminUser {
+  admin_id      String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  password_hash String
+  role          String   // 'SUPER_ADMIN', 'ADMIN', 'READ_ONLY'
+  name          String
+  created_at    DateTime @default(now()) @db.Timestamptz
+  updated_at    DateTime @updatedAt @db.Timestamptz
+
+  @@map("admin_users")
+}
+
+// 3.2 vendor_branding
+model VendorBranding {
+  vendor_id       String   @id @db.Uuid
+  logo_url        String?
+  primary_color   String
+  secondary_color String
+  card_bg_url     String?
+  updated_at      DateTime @updatedAt @db.Timestamptz
+
+  vendor          Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+
+  @@map("vendor_branding")
+}
+
+// 3.3 branches (required)
+model Branch {
+  branch_id    String   @id @default(uuid()) @db.Uuid
+  vendor_id    String   @db.Uuid
+  name         String
+  address_text String?
+  is_active    Boolean  @default(true)
+
+  vendor       Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+  staff        StaffUser[]
+  members      Member[] // Members who joined at this branch
+  stamp_txs    StampTransaction[]
+  redeem_txs   RedemptionTransaction[]
+
+  @@map("branches")
+}
+
+// 3.4 staff_users
+model StaffUser {
+  staff_id             String   @id @default(uuid()) @db.Uuid
+  vendor_id            String   @db.Uuid
+  branch_id            String   @db.Uuid
+  name                 String
+  role                 String   // 'ADMIN','STAMPER'
+  status               String   // 'ENABLED','DISABLED'
+  pin_hash             String
+  pin_last_changed_at  DateTime @default(now()) @db.Timestamptz
+  created_at           DateTime @default(now()) @db.Timestamptz
+  updated_at           DateTime @updatedAt @db.Timestamptz
+
+  vendor               Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+  branch               Branch   @relation(fields: [branch_id], references: [branch_id])
+  stamp_txs            StampTransaction[]
+  redeem_txs           RedemptionTransaction[]
+
+  // Constraint: PIN uniqueness logic requires app logic or composite constraint via fingerprint (spec detail).
+  // For standard schema, we just model relations.
+  
+  @@map("staff_users")
+}
+
+// 3.5 members
+model Member {
+  member_id         String   @id @default(uuid()) @db.Uuid
+  vendor_id         String   @db.Uuid
+  branch_joined_id  String?  @db.Uuid
+  name              String
+  phone_e164        String
+  status            String   @default("ACTIVE") // 'ACTIVE','SUSPENDED'
+  consent_service   Boolean  @default(true)
+  consent_marketing Boolean  @default(false)
+  last_active_at    DateTime @default(now()) @db.Timestamptz
+  created_at        DateTime @default(now()) @db.Timestamptz
+  updated_at        DateTime @updatedAt @db.Timestamptz
+
+  vendor            Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+  branch_joined     Branch?  @relation(fields: [branch_joined_id], references: [branch_id])
+  cards             CardInstance[]
+
+  @@unique([vendor_id, phone_e164])
+  @@map("members")
+}
+
+// 3.6 programs
+model Program {
+  program_id         String   @id @default(uuid()) @db.Uuid
+  vendor_id          String   @db.Uuid
+  version            Int
+  is_active          Boolean
+  stamps_required    Int
+  reward_title       String
+  reward_description String
+  terms_text         String
+  created_at         DateTime @default(now()) @db.Timestamptz
+
+  vendor             Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+  cards              CardInstance[]
+
+  // Constraint: only one active program per vendor.
+  // Partial unique index handled in migration or DB.
+
+  @@unique([vendor_id, version])
+  @@map("programs")
+}
+
+// 3.7 card_instances
+model CardInstance {
+  card_id         String   @id @default(uuid()) @db.Uuid
+  vendor_id       String   @db.Uuid
+  member_id       String   @db.Uuid
+  program_id      String   @db.Uuid
+  status          String   // 'ACTIVE','REDEEMED','EXPIRED'
+  stamps_count    Int      @default(0)
+  created_at      DateTime @default(now()) @db.Timestamptz
+  redeemed_at     DateTime? @db.Timestamptz
+
+  vendor          Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+  member          Member   @relation(fields: [member_id], references: [member_id])
+  program         Program  @relation(fields: [program_id], references: [program_id])
+  
+  stamp_txs       StampTransaction[]
+  redeem_txs      RedemptionTransaction[]
+
+  // Constraint: one active card per (vendor_id, member_id).
+  // Partial unique index handled in migration.
+
+  @@map("card_instances")
+}
+
+// 3.8 stamp_transactions (append-only)
+model StampTransaction {
+  stamp_tx_id        String   @id @default(uuid()) @db.Uuid
+  vendor_id          String   @db.Uuid
+  card_id            String   @db.Uuid
+  staff_id           String   @db.Uuid
+  branch_id          String   @db.Uuid
+  token_jti          String
+  stamped_at         DateTime @default(now()) @db.Timestamptz
+  ip_address         String?
+  device_fingerprint String?
+  flags              Json?
+
+  vendor             Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+  card               CardInstance @relation(fields: [card_id], references: [card_id])
+  staff              StaffUser    @relation(fields: [staff_id], references: [staff_id])
+  branch             Branch       @relation(fields: [branch_id], references: [branch_id])
+
+  @@index([vendor_id, stamped_at])
+  @@index([card_id, stamped_at])
+  @@map("stamp_transactions")
+}
+
+// 3.9 redemption_transactions (append-only)
+model RedemptionTransaction {
+  redeem_tx_id       String   @id @default(uuid()) @db.Uuid
+  vendor_id          String   @db.Uuid
+  card_id            String   @db.Uuid
+  staff_id           String   @db.Uuid
+  branch_id          String   @db.Uuid
+  token_jti          String
+  redeemed_at        DateTime @default(now()) @db.Timestamptz
+  ip_address         String?
+  device_fingerprint String?
+  flags              Json?
+
+  vendor             Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+  card               CardInstance @relation(fields: [card_id], references: [card_id])
+  staff              StaffUser    @relation(fields: [staff_id], references: [staff_id])
+  branch             Branch       @relation(fields: [branch_id], references: [branch_id])
+
+  @@index([vendor_id, redeemed_at])
+  @@index([card_id, redeemed_at])
+  @@map("redemption_transactions")
+}
+
+// 3.10 token_use (replay protection)
+model TokenUse {
+  vendor_id String   @db.Uuid
+  token_jti String
+  used_at   DateTime @default(now()) @db.Timestamptz
+
+  vendor    Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+
+  @@id([vendor_id, token_jti])
+  @@map("token_use")
+}
+
+// 3.11 otp_requests
+model OtpRequest {
+  otp_id      String   @id @default(uuid()) @db.Uuid
+  vendor_id   String   @db.Uuid
+  phone_e164  String
+  purpose     String   // 'MEMBER_LOGIN'
+  otp_hash    String
+  expires_at  DateTime @db.Timestamptz
+  attempts    Int      @default(0)
+  created_at  DateTime @default(now()) @db.Timestamptz
+  consumed_at DateTime? @db.Timestamptz
+
+  vendor      Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+
+  @@map("otp_requests")
+}
+
+// 3.12 admin_audit_log
+model AdminAuditLog {
+  audit_id   String   @id @default(uuid()) @db.Uuid
+  actor_type String   // 'PLATFORM_ADMIN','VENDOR_ADMIN'
+  actor_id   String   @db.Uuid
+  vendor_id  String?  @db.Uuid
+  action     String
+  payload    Json
+  created_at DateTime @default(now()) @db.Timestamptz
+  
+  vendor     Vendor?  @relation(fields: [vendor_id], references: [vendor_id])
+
+  @@map("admin_audit_log")
+}
