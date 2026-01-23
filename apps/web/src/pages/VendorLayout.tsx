@@ -4,37 +4,44 @@ import { api } from '../utils/api';
 
 const VendorLayout: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
+    const [vendorData, setVendorData] = React.useState<any>(null);
 
     useEffect(() => {
+        if (!slug) return;
+
         // 1. Fetch Vendor Branding Publicly
-        api.get(`/v/${slug}/public`)
+        api.get(`/api/v1/v/${slug}/public`)
             .then(res => {
                 const { branding, trading_name } = res.data;
-                // 2. Set CSS Variables for Theme
-                const root = document.documentElement;
-                root.style.setProperty('--primary', branding.primary_color);
-                root.style.setProperty('--primary-color', branding.primary_color); // Fallback
-                root.style.setProperty('--primary-hover', branding.primary_color); // Simplified for now
-                root.style.setProperty('--secondary-color', branding.secondary_color);
-                // root.style.setProperty('--font-family', ...); // If needed
+                setVendorData(res.data);
+
+                if (branding) {
+                    // 2. Set CSS Variables for Theme
+                    const root = document.documentElement;
+                    root.style.setProperty('--primary', branding.primary_color);
+                    root.style.setProperty('--primary-color', branding.primary_color);
+                    root.style.setProperty('--primary-hover', branding.primary_color); // Simplified
+                    root.style.setProperty('--secondary-color', branding.secondary_color);
+
+                    // New Branding Fields
+                    root.style.setProperty('--vendor-accent', branding.accent_color || branding.primary_color);
+                    root.style.setProperty('--vendor-background', branding.background_color || '#18181b'); // Zinc-900 default
+
+                    // If background color is set, apply it to body or shell?
+                    // Ideally we apply it to a class or body.
+                    // For now, let's set it as a variable that AuthShell/CardPage uses.
+                }
+
                 document.title = trading_name;
             })
             .catch(err => {
                 console.error("Failed to load vendor", err);
-                // Handle 404 - e.g. Redirect to generic error page
             });
     }, [slug]);
 
     return (
-        <div className="vendor-app">
-            <header style={{ backgroundColor: 'var(--primary-color)', color: '#fff', padding: '1rem' }}>
-                {/* Logo or Title could specific here or in sub-pages */}
-                <div className="container">Vendor App</div>
-            </header>
-            <main className="container" style={{ padding: '1rem' }}>
-                <Outlet />
-            </main>
-            {/* Simple Global CSS for variables would be in index.css */}
+        <div className="vendor-app" style={{ minHeight: '100vh', background: 'var(--vendor-background, #18181b)' }}>
+            <Outlet context={{ vendor: vendorData }} />
         </div>
     );
 };

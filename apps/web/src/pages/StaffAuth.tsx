@@ -21,7 +21,7 @@ const StaffAuth: React.FC = () => {
         setIsLoading(true);
         setError('');
         try {
-            const res = await api.post(`/v/${slug}/auth/staff/login`, { staff_id: staffId, pin });
+            const res = await api.post(`/api/v1/v/${slug}/auth/staff/login`, { staff_id: staffId, pin });
             login(res.data.token);
             navigate('/staff');
         } catch (err: any) {

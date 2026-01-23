@@ -116,16 +116,24 @@ const QrCard = ({ title, description, url, color, isPrivate = false }: any) => (
             <QRCodeSVG value={url} size={200} fgColor={color} />
         </div>
 
-        <div style={{
-            background: '#f4f4f4',
-            padding: '10px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            wordBreak: 'break-all',
-            fontFamily: 'monospace'
-        }}>
+        <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+                display: 'block',
+                background: '#f4f4f4',
+                padding: '10px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                wordBreak: 'break-all',
+                fontFamily: 'monospace',
+                color: 'inherit',
+                textDecoration: 'none'
+            }}
+        >
             {url}
-        </div>
+        </a>
 
         {isPrivate && (
             <div style={{

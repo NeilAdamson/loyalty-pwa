@@ -22,7 +22,7 @@ const MemberAuth: React.FC = () => {
         setIsLoading(true);
         setError('');
         try {
-            await api.post(`/v/${slug}/auth/member/otp/request`, { phone });
+            await api.post(`/api/v1/v/${slug}/auth/member/otp/request`, { phone });
             setStep('OTP');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to send OTP');
@@ -36,7 +36,7 @@ const MemberAuth: React.FC = () => {
         setIsLoading(true);
         setError('');
         try {
-            const res = await api.post(`/v/${slug}/auth/member/otp/verify`, { phone, code });
+            const res = await api.post(`/api/v1/v/${slug}/auth/member/otp/verify`, { phone, code });
             login(res.data.token); // Updates context
             navigate('/me/card'); // Redirect to protected route
         } catch (err: any) {
@@ -49,7 +49,7 @@ const MemberAuth: React.FC = () => {
     return (
         <AuthShell
             title="Welcome"
-            subtitle={step === 'PHONE' ? "Enter your phone number to get started" : `Enter the code sent to ${phone}`}
+            subtitle={step === 'PHONE' ? "Enter your mobile number to join or login" : `Enter the code sent to ${phone}`}
         >
             {error && (
                 <div style={{

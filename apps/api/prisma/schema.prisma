@@ -65,6 +65,13 @@ model VendorBranding {
   logo_url        String?
   primary_color   String
   secondary_color String
+  accent_color    String   @default("#3B82F6")
+  background_color String?
+  card_style      String   @default("SOLID")
+  card_bg_image_url String?
+  wordmark_url    String?
+  welcome_text    String?
+  card_title      String?
   card_bg_url     String?
   updated_at      DateTime @updatedAt @db.Timestamptz
 

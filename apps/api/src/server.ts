@@ -26,11 +26,11 @@ import programRoutes from './modules/program/routes'
 import memberRoutes from './modules/member/routes'
 import transactionRoutes from './modules/transaction/routes'
 
-server.register(authRoutes)
-server.register(vendorRoutes)
-server.register(programRoutes)
-server.register(memberRoutes)
-server.register(transactionRoutes)
+server.register(authRoutes, { prefix: '/api/v1' })
+server.register(vendorRoutes, { prefix: '/api/v1' })
+server.register(programRoutes, { prefix: '/api/v1' })
+server.register(memberRoutes, { prefix: '/api/v1' })
+server.register(transactionRoutes, { prefix: '/api/v1' })
 server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix: '/val/admin/auth' })
 // Note: Prefix /val/admin/auth? Spec said /api/v1/admin/auth.
 // Current routes are registered at root level of server? 

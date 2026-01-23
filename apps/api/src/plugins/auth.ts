@@ -15,12 +15,16 @@ declare module '@fastify/jwt' {
             role?: string
             staff_id?: string
             member_id?: string
+            card_id?: string
+            jti?: string
         }
         user: {
             vendor_id: string
             role?: string
             staff_id?: string
             member_id?: string
+            card_id?: string
+            jti?: string
         }
     }
 }

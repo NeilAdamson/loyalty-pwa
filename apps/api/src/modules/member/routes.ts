@@ -27,6 +27,12 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
 
             const card = await cardService.getOrCreateActiveCard(vendor_id, member_id)
 
+            // Fetch Vendor Branding for the card display
+            const vendor = await fastify.prisma.vendor.findUnique({
+                where: { vendor_id },
+                include: { branding: true }
+            })
+
             // Generate Rotating Token
             // Payload: vendor_id, member_id, card_id, jti, exp
             const jti = randomUUID()
@@ -45,7 +51,11 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
             return {
                 card,
                 token,
-                expires_in_seconds: 30
+                expires_in_seconds: 30,
+                vendor: {
+                    trading_name: vendor?.trading_name,
+                    branding: vendor?.branding
+                }
             }
         }
     )
