@@ -36,4 +36,11 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
         const body = request.body as any
         return adminVendorService.update(id, body)
     })
+
+    // Delete
+    fastify.delete('/:id', { preHandler: [verifyAdmin] }, async (request) => {
+        const { id } = request.params as any
+        await adminVendorService.delete(id)
+        return { success: true, message: 'Vendor deleted' }
+    })
 }

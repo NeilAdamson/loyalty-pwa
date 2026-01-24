@@ -13,7 +13,7 @@ const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'var(--bg)',
+            background: 'transparent',
             padding: '24px'
         }}>
             <div style={{

@@ -64,6 +64,22 @@ export default function AdminVendorDetail() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!window.confirm('Are you sure you want to delete this vendor? This action cannot be undone and will delete all associated data (members, cards, branch data).')) {
+            return;
+        }
+        setSaving(true);
+        try {
+            await api.delete(`/api/v1/admin/vendors/${id}`);
+            alert('Vendor deleted successfully');
+            navigate('/admin/vendors');
+        } catch (error) {
+            console.error(error);
+            alert('Failed to delete vendor');
+            setSaving(false);
+        }
+    };
+
     // Helper for color input with preview
     const ColorPicker = ({ label, value, onChange }: any) => (
         <div style={{ marginBottom: '15px' }}>
@@ -222,10 +238,20 @@ export default function AdminVendorDetail() {
                     </div>
                 </div>
 
-                {/* Footer Save */}
-                <div style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
-                    <AdminButton type="submit" isLoading={saving} style={{ width: '100%', padding: '14px', fontSize: '16px' }}>
+                {/* Footer Actions */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '10px', display: 'flex', gap: '20px' }}>
+                    <AdminButton type="submit" isLoading={saving} style={{ flex: 1, padding: '14px', fontSize: '16px' }}>
                         Save Changes
+                    </AdminButton>
+
+                    <AdminButton
+                        type="button"
+                        variant="danger"
+                        isLoading={saving}
+                        onClick={handleDelete}
+                        style={{ padding: '14px', fontSize: '16px' }}
+                    >
+                        Delete Vendor
                     </AdminButton>
                 </div>
             </form>

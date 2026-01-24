@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
 import { api } from '../utils/api';
+import { getContrastColor } from '../utils/color';
 
 const VendorLayout: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -18,14 +19,23 @@ const VendorLayout: React.FC = () => {
                 if (branding) {
                     // 2. Set CSS Variables for Theme
                     const root = document.documentElement;
-                    root.style.setProperty('--primary', branding.primary_color);
-                    root.style.setProperty('--primary-color', branding.primary_color);
-                    root.style.setProperty('--primary-hover', branding.primary_color); // Simplified
-                    root.style.setProperty('--secondary-color', branding.secondary_color);
+                    const primary = branding.primary_color || '#000000';
+                    const secondary = branding.secondary_color || '#ffffff';
+                    const accent = branding.accent_color || branding.primary_color;
+                    const background = branding.background_color || '#18181b';
+
+                    root.style.setProperty('--primary', primary);
+                    root.style.setProperty('--primary-color', primary);
+                    root.style.setProperty('--primary-hover', primary);
+                    root.style.setProperty('--secondary-color', secondary);
+
+                    // Contrast
+                    root.style.setProperty('--primary-contrast', getContrastColor(primary));
+                    root.style.setProperty('--accent-contrast', getContrastColor(accent));
 
                     // New Branding Fields
-                    root.style.setProperty('--vendor-accent', branding.accent_color || branding.primary_color);
-                    root.style.setProperty('--vendor-background', branding.background_color || '#18181b'); // Zinc-900 default
+                    root.style.setProperty('--vendor-accent', accent);
+                    root.style.setProperty('--vendor-background', background);
 
                     // If background color is set, apply it to body or shell?
                     // Ideally we apply it to a class or body.

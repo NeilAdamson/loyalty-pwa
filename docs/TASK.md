@@ -73,3 +73,11 @@
     - [x] Routes: Distinct URLs for Member vs Staff <!-- id: 102 -->
     - [x] Style: Apply Admin Theme to Public Pages <!-- id: 103 -->
     - [x] Components: AuthShell & Reusable Inputs <!-- id: 104 -->
+
+- [x] Milestone 7: Vendor Management Enhancements <!-- id: 110 -->
+    - [x] Feature: Admin Vendor Detail Page <!-- id: 111 -->
+    - [x] Feature: Delete Vendor Endpoint & UI <!-- id: 112 -->
+    - [x] Feature: Branding Color Contrast Logic <!-- id: 113 -->
+    - [x] Fix: Admin User List (Schema Missing Column) <!-- id: 114 -->
+    - [x] Fix: Admin User Creation (Schema Missing Status) <!-- id: 115 -->
+    - [x] Fix: Default Loyalty Program for New Vendors <!-- id: 116 -->

@@ -35,7 +35,7 @@ const AdminButton: React.FC<AdminButtonProps> = ({
     const variants = {
         primary: {
             background: 'var(--primary)',
-            color: 'white',
+            color: 'var(--primary-contrast, white)',
             boxShadow: '0 4px 12px rgba(79,124,255,0.3)'
         },
         secondary: {

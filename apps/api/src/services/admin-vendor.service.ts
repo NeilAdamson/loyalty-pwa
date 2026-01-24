@@ -58,6 +58,17 @@ export class AdminVendorService {
                         secondary_color: '#ffffff'
                     }
                 },
+                // Create default program
+                programs: {
+                    create: {
+                        version: 1,
+                        is_active: true,
+                        stamps_required: 10,
+                        reward_title: 'Free Reward',
+                        reward_description: 'Collect 10 stamps to earn a reward.',
+                        terms_text: 'Standard terms and conditions apply.'
+                    }
+                },
                 // Create default branch?
                 branches: {
                     create: {
@@ -80,19 +91,74 @@ export class AdminVendorService {
     }
 
     async update(vendorId: string, data: any) {
-        const { branding, ...vendorData } = data
+        const { branding, ...rest } = data
+
+        // Pick allowed fields for Vendor (avoid passing _count, branches etc)
+        const vendorUpdate: any = {}
+        const allowed = ['legal_name', 'trading_name', 'vendor_slug', 'billing_email', 'status']
+        allowed.forEach(k => {
+            if (rest[k] !== undefined) vendorUpdate[k] = rest[k]
+        })
+
+        // Prepare Branding Update
+        let brandingUpdate = undefined
+        if (branding) {
+            // Pick branding fields to avoid passing metadata
+            const bFields = {
+                primary_color: branding.primary_color,
+                secondary_color: branding.secondary_color,
+                accent_color: branding.accent_color,
+                background_color: branding.background_color,
+                logo_url: branding.logo_url,
+                wordmark_url: branding.wordmark_url,
+                card_style: branding.card_style,
+                card_bg_image_url: branding.card_bg_image_url,
+                welcome_text: branding.welcome_text,
+                card_title: branding.card_title
+            }
+
+            brandingUpdate = {
+                upsert: {
+                    create: {
+                        ...bFields,
+                        primary_color: bFields.primary_color || '#000000',
+                        secondary_color: bFields.secondary_color || '#ffffff',
+                        accent_color: bFields.accent_color || '#3B82F6',
+                        card_style: bFields.card_style || 'SOLID'
+                    } as any,
+                    update: bFields
+                }
+            }
+        }
 
         return this.prisma.vendor.update({
             where: { vendor_id: vendorId },
             data: {
-                ...vendorData,
-                branding: branding ? {
-                    upsert: {
-                        create: branding,
-                        update: branding
-                    }
-                } : undefined
+                ...vendorUpdate,
+                branding: brandingUpdate
             }
+        })
+    }
+
+    async delete(vendorId: string) {
+        return this.prisma.$transaction(async (tx) => {
+            // Delete dependencies in order
+            await tx.otpRequest.deleteMany({ where: { vendor_id: vendorId } })
+            await tx.tokenUse.deleteMany({ where: { vendor_id: vendorId } })
+            await tx.stampTransaction.deleteMany({ where: { vendor_id: vendorId } })
+            await tx.redemptionTransaction.deleteMany({ where: { vendor_id: vendorId } })
+
+            await tx.cardInstance.deleteMany({ where: { vendor_id: vendorId } })
+            await tx.program.deleteMany({ where: { vendor_id: vendorId } })
+
+            await tx.member.deleteMany({ where: { vendor_id: vendorId } })
+            await tx.staffUser.deleteMany({ where: { vendor_id: vendorId } })
+
+            await tx.vendorBranding.deleteMany({ where: { vendor_id: vendorId } })
+            await tx.branch.deleteMany({ where: { vendor_id: vendorId } })
+
+            // Finally delete vendor
+            return tx.vendor.delete({ where: { vendor_id: vendorId } })
         })
     }
 }
