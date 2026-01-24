@@ -81,3 +81,7 @@
     - [x] Fix: Admin User List (Schema Missing Column) <!-- id: 114 -->
     - [x] Fix: Admin User Creation (Schema Missing Status) <!-- id: 115 -->
     - [x] Fix: Default Loyalty Program for New Vendors <!-- id: 116 -->
+    - [x] Feature: Live Card Preview in Admin <!-- id: 117 -->
+    - [x] Feature: Enhanced Card Design (Text Color, Outlines, Phone Simulator) <!-- id: 118 -->
+    - [x] Feature: Customizable Card Text (Reward Title) <!-- id: 119 -->
+    - [x] Verification: Update Documentation (PRD, Tech Spec) <!-- id: 120 -->

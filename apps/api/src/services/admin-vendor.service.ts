@@ -42,12 +42,16 @@ export class AdminVendorService {
         legal_name: string,
         trading_name: string,
         vendor_slug: string,
-        billing_email?: string
+        billing_email?: string,
+        initial_branch_city?: string,
+        initial_branch_region?: string
     }) {
+        const { initial_branch_city, initial_branch_region, ...vendorData } = data
+
         // Defaults
         return this.prisma.vendor.create({
             data: {
-                ...data,
+                ...vendorData,
                 status: 'ACTIVE', // or TRIAL
                 billing_plan_id: 'FREE',
                 billing_status: 'TRIAL',
@@ -72,7 +76,9 @@ export class AdminVendorService {
                 // Create default branch?
                 branches: {
                     create: {
-                        name: 'Main Branch'
+                        name: 'Main Branch',
+                        city: initial_branch_city,
+                        region: initial_branch_region
                     }
                 }
             }
@@ -85,13 +91,14 @@ export class AdminVendorService {
             include: {
                 branding: true,
                 branches: true,
+                programs: true,
                 _count: { select: { members: true, staff: true } }
             }
         })
     }
 
     async update(vendorId: string, data: any) {
-        const { branding, ...rest } = data
+        const { branding, program, ...rest } = data
 
         // Pick allowed fields for Vendor (avoid passing _count, branches etc)
         const vendorUpdate: any = {}
@@ -99,6 +106,17 @@ export class AdminVendorService {
         allowed.forEach(k => {
             if (rest[k] !== undefined) vendorUpdate[k] = rest[k]
         })
+
+        // Program Update (Active)
+        if (program) {
+            await this.prisma.program.updateMany({
+                where: { vendor_id: vendorId, is_active: true },
+                data: {
+                    reward_title: program.reward_title,
+                    stamps_required: program.stamps_required ? parseInt(program.stamps_required) : undefined
+                }
+            })
+        }
 
         // Prepare Branding Update
         let brandingUpdate = undefined
@@ -109,6 +127,7 @@ export class AdminVendorService {
                 secondary_color: branding.secondary_color,
                 accent_color: branding.accent_color,
                 background_color: branding.background_color,
+                card_text_color: branding.card_text_color,
                 logo_url: branding.logo_url,
                 wordmark_url: branding.wordmark_url,
                 card_style: branding.card_style,
@@ -124,6 +143,7 @@ export class AdminVendorService {
                         primary_color: bFields.primary_color || '#000000',
                         secondary_color: bFields.secondary_color || '#ffffff',
                         accent_color: bFields.accent_color || '#3B82F6',
+                        card_text_color: bFields.card_text_color || '#ffffff',
                         card_style: bFields.card_style || 'SOLID'
                     } as any,
                     update: bFields

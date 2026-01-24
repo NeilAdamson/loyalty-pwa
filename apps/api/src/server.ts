@@ -3,6 +3,12 @@ import prismaPlugin from './plugins/prisma'
 import corsPlugin from './plugins/cors'
 import errorsPlugin from './plugins/errors'
 import authPlugin from './plugins/auth'
+import fs from 'fs';
+import path from 'path';
+import { pipeline } from 'stream';
+import util from 'util';
+
+const pump = util.promisify(pipeline);
 
 const server = fastify({
     logger: true
@@ -16,6 +22,12 @@ server.register(require('@fastify/cookie'), {
     hook: 'onRequest',
     parseOptions: {}
 })
+server.register(require('@fastify/multipart'))
+server.register(require('@fastify/static'), {
+    root: require('path').join(__dirname, '../uploads'),
+    prefix: '/uploads/',
+})
+
 server.register(prismaPlugin)
 server.register(authPlugin)
 
@@ -31,6 +43,27 @@ server.register(vendorRoutes, { prefix: '/api/v1' })
 server.register(programRoutes, { prefix: '/api/v1' })
 server.register(memberRoutes, { prefix: '/api/v1' })
 server.register(transactionRoutes, { prefix: '/api/v1' })
+
+// Inline Upload Route
+server.register(async function (fastify) {
+    const uploadDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    fastify.post('/uploads', async (req: any, reply) => {
+        const data = await req.file();
+        if (!data) return reply.status(400).send({ message: 'No file uploaded' });
+
+        const ext = path.extname(data.filename);
+        const uniqueName = `image-${Date.now()}-${Math.round(Math.random() * 1000)}${ext}`;
+        const filePath = path.join(uploadDir, uniqueName);
+
+        await pump(data.file, fs.createWriteStream(filePath));
+
+        const fileUrl = `${process.env.API_BASE_URL || 'http://localhost:8000'}/uploads/${uniqueName}`;
+        return { url: fileUrl };
+    });
+}, { prefix: '/api/v1' });
+
 server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix: '/val/admin/auth' })
 // Note: Prefix /val/admin/auth? Spec said /api/v1/admin/auth.
 // Current routes are registered at root level of server? 
@@ -58,6 +91,7 @@ const start = async () => {
     try {
         const port = parseInt(process.env.PORT || '8000');
         const host = process.env.HOST || '0.0.0.0';
+        console.log('Server is starting up...');
         await server.listen({ port, host });
         console.log(`Server listening at http://${host}:${port}`);
     } catch (err) {

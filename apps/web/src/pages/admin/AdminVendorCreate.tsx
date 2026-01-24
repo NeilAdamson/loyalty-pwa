@@ -12,7 +12,9 @@ export default function AdminVendorCreate() {
         legal_name: '',
         trading_name: '',
         vendor_slug: '',
-        billing_email: ''
+        billing_email: '',
+        initial_branch_city: '',
+        initial_branch_region: ''
     });
     const [isSlugTouched, setIsSlugTouched] = useState(false);
     const [error, setError] = useState('');
@@ -115,6 +117,21 @@ export default function AdminVendorCreate() {
                         onChange={e => setFormData({ ...formData, billing_email: e.target.value })}
                         required
                     />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <AdminInput
+                            label="Branch"
+                            placeholder="e.g. East"
+                            value={formData.initial_branch_region}
+                            onChange={e => setFormData({ ...formData, initial_branch_region: e.target.value })}
+                        />
+                        <AdminInput
+                            label="City"
+                            placeholder="e.g. Johannesburg"
+                            value={formData.initial_branch_city}
+                            onChange={e => setFormData({ ...formData, initial_branch_city: e.target.value })}
+                        />
+                    </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                         <AdminButton type="submit" isLoading={loading}>

@@ -146,7 +146,7 @@ const AdminShell: React.FC = () => {
 
             {/* Main Content */}
             <main className="adminContent">
-                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <div style={{ maxWidth: '95%', margin: '0 auto', padding: '0 20px' }}>
                     <Outlet />
                 </div>
             </main>

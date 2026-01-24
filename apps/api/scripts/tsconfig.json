@@ -1,0 +1,11 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "outDir": "../dist/scripts",
+        "module": "commonjs",
+        "target": "es2019"
+    },
+    "include": [
+        "backfill-branch-location.ts"
+    ]
+}

@@ -74,12 +74,18 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 - System generates:
   - `vendor_id` (UUID)
   - `public_signup_url` and QR code
+  - Default active program (v1) with 10 stamps.
 
 **FR-A2 Vendor suspend / reactivate**
 - Suspending vendor MUST:
   - block: staff login, stamp, redeem
   - allow: member card view (read-only)
 - Reactivation restores normal operation.
+
+**FR-A5 Vendor delete (Danger)**
+- Platform Admin can delete a vendor.
+- MUST cascade delete all associated data (branches, staff, members, cards, transactions).
+- This action is irreversible.
 
 **FR-A3 Support impersonation**
 - Platform Admin may impersonate Vendor Admin.
@@ -93,8 +99,13 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ### EPIC B — Vendor admin portal (tenant-scoped)
 **FR-B1 Branding**
-- Vendor Admin can set logo, colors, card imagery.
+- Vendor Admin can set:
+  - Logo and Wordmark URLs.
+  - Colors: Primary, Secondary, Accent, Background, Card Text.
+  - Card Style: Solid, Gradient, Glass.
+  - Welcome Text (header).
 - Member landing and card UI MUST reflect changes within 60 seconds.
+- Interactive Live Preview (with phone simulator) MUST be shown during editing.
 
 **FR-B2 Branch management (required)**
 - Vendor Admin can:

@@ -57,7 +57,11 @@ Returns:
 {
   "card": { "card_id": "...", "stamps_count": 0, "status": "ACTIVE", ... },
   "token": "ROTATING_JWT_TOKEN",
-  "expires_in_seconds": 30
+  "expires_in_seconds": 30,
+  "vendor": {
+      "trading_name": "...",
+      "branding": { ... }
+  }
 }
 ```
 
@@ -100,3 +104,7 @@ Returns:
 
 **Get Active Program** (Public)
 `GET /v/:vendorSlug/programs/active`
+
+### Platform Admin
+**Delete Vendor**
+`DELETE /api/v1/admin/vendors/:id`

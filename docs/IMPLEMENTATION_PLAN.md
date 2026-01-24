@@ -52,6 +52,8 @@ Create a secure, functional "Backoffice" for Platform Admins to manage Vendors, 
 - `AdminVendorList`: Table with search/filter.
 - `AdminVendorDetail`: Tabs (Overview, Branding, Staff, etc.).
 - `AdminMemberList`: Search + Actions.
+#### [MODIFY] [AdminVendorCreate.tsx](file:///d:/loyalty-pwa/apps/web/src/pages/admin/AdminVendorCreate.tsx)
+- Add inputs for City and Region.
 
 ## Verification Plan
 ### Automated
@@ -61,5 +63,13 @@ Create a secure, functional "Backoffice" for Platform Admins to manage Vendors, 
 ### Manual
 - Login as `admin@loyalty.com`.
 - Create a new Vendor "Test Cafe".
+- Verify "Test Cafe" exists in DB.
+- Suspend a Member. Use Member App to try login -> Should Fail (or 403).
+### Automated Tests
+- N/A (Manual test)
+
+### Manual Verification
+- Create new vendor, verify branch has city/region.
+- Check existing vendors (run backfill script).
 - Verify "Test Cafe" exists in DB.
 - Suspend a Member. Use Member App to try login -> Should Fail (or 403).

@@ -4,6 +4,8 @@ import { api } from '../../utils/api';
 import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
 import AdminButton from '../../components/admin/ui/AdminButton';
 import AdminInput from '../../components/admin/ui/AdminInput';
+import ImageUpload from '../../components/admin/ui/ImageUpload';
+import CardPreview from '../../components/CardPreview';
 
 export default function AdminVendorDetail() {
     const { id } = useParams<{ id: string }>();
@@ -13,6 +15,7 @@ export default function AdminVendorDetail() {
 
     // Form States
     const [branding, setBranding] = useState<any>({});
+    const [program, setProgram] = useState<any>({});
     const [details, setDetails] = useState<any>({});
     const [saving, setSaving] = useState(false);
 
@@ -26,9 +29,16 @@ export default function AdminVendorDetail() {
             const v = res.data.vendor || res.data;
             setVendor(v);
 
-            // Separate branding and details for form
-            const { branding: b, ...rest } = v;
-            setBranding(b || { primary_color: '#000000', secondary_color: '#ffffff', accent_color: '#3B82F6', card_style: 'SOLID' });
+            // Separate branding, program and details for form
+            const { branding: b, programs, ...rest } = v;
+            setBranding(b || { primary_color: '#000000', secondary_color: '#ffffff', accent_color: '#3B82F6', card_text_color: '#ffffff', card_style: 'SOLID' });
+
+            const activeProgram = programs?.find((p: any) => p.is_active) || {};
+            setProgram({
+                reward_title: activeProgram.reward_title || 'Free Reward',
+                stamps_required: activeProgram.stamps_required || 10
+            });
+
             setDetails({
                 legal_name: rest.legal_name,
                 trading_name: rest.trading_name,
@@ -51,7 +61,8 @@ export default function AdminVendorDetail() {
             // Clean up: explicitly send what we want to update
             const payload = {
                 ...details,
-                branding
+                branding,
+                program
             };
             await api.patch(`/api/v1/admin/vendors/${id}`, payload);
             alert('Updated successfully');
@@ -140,9 +151,14 @@ export default function AdminVendorDetail() {
                 }
             />
 
-            <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '40px' }}>
+            <form onSubmit={handleSave} style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+                gap: '30px',
+                alignItems: 'start'
+            }}>
 
-                {/* General Details */}
+                {/* Column 1: Properties */}
                 <div className="admin-card" style={{ padding: '24px', background: 'var(--bg-surface, #1e1e1e)', borderRadius: '12px' }}>
                     <h3 style={{ marginBottom: '24px', fontSize: '18px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>Properties</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -184,11 +200,12 @@ export default function AdminVendorDetail() {
                     </div>
                 </div>
 
-                {/* Branding Form */}
+                {/* Column 2: Branding Controls */}
                 <div className="admin-card" style={{ padding: '24px', background: 'var(--bg-surface, #1e1e1e)', borderRadius: '12px' }}>
-                    <h3 style={{ marginBottom: '24px', fontSize: '18px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>Branding</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <h3 style={{ marginBottom: '24px', fontSize: '18px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>Branding Setup</h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <ColorPicker
                                 label="Primary Color"
                                 value={branding.primary_color}
@@ -209,20 +226,44 @@ export default function AdminVendorDetail() {
                                 value={branding.background_color}
                                 onChange={(val: string) => setBranding({ ...branding, background_color: val })}
                             />
+                            <ColorPicker
+                                label="Card Text Color"
+                                value={branding.card_text_color}
+                                onChange={(val: string) => setBranding({ ...branding, card_text_color: val })}
+                            />
                         </div>
 
                         <AdminInput
-                            label="Logo URL"
+                            label="Reward Title (Text on Card)"
                             type="text"
-                            value={branding.logo_url || ''}
-                            onChange={e => setBranding({ ...branding, logo_url: e.target.value })}
-                            placeholder="https://..."
+                            value={program.reward_title || ''}
+                            onChange={e => setProgram({ ...program, reward_title: e.target.value })}
+                        />
+
+                        <AdminInput
+                            label="Stamps Required"
+                            type="number"
+                            value={program.stamps_required || 10}
+                            onChange={e => setProgram({ ...program, stamps_required: parseInt(e.target.value) })}
+                            min="2"
+                            max="30"
+                        />
+
+                        <ImageUpload
+                            label="Logo"
+                            value={branding.logo_url}
+                            onChange={(val) => setBranding({ ...branding, logo_url: val })}
+                        />
+                        <ImageUpload
+                            label="Wordmark"
+                            value={branding.wordmark_url}
+                            onChange={(val) => setBranding({ ...branding, wordmark_url: val })}
                         />
                         <AdminInput
-                            label="Wordmark URL"
+                            label="Welcome Text (Optional Header)"
                             type="text"
-                            value={branding.wordmark_url || ''}
-                            onChange={e => setBranding({ ...branding, wordmark_url: e.target.value })}
+                            value={branding.welcome_text || ''}
+                            onChange={e => setBranding({ ...branding, welcome_text: e.target.value })}
                         />
                         <AdminInput
                             label="Card Style"
@@ -235,6 +276,70 @@ export default function AdminVendorDetail() {
                                 { value: 'GLASS', label: 'Glass' }
                             ]}
                         />
+                    </div>
+                </div>
+
+                {/* Column 3: Preview (Right) */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{
+                        position: 'sticky',
+                        top: '20px',
+                        display: 'flex', // Re-add flex
+                        flexDirection: 'column', // align box
+                        alignItems: 'center'
+                    }}>
+                        <div style={{
+                            width: '300px',
+                            height: '560px',
+                            background: branding.background_color || '#121212',
+                            border: '10px solid #2a2a2a',
+                            borderRadius: '36px',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            padding: '20px',
+                            boxShadow: '0 30px 60px rgba(0,0,0,0.6)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            transition: 'background 0.3s ease'
+                        }}>
+                            {/* Status Bar Mock */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', height: '14px', marginBottom: '20px', opacity: 0.5 }}>
+                                <span style={{ fontSize: '10px', color: '#fff' }}>9:41</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                    <div style={{ width: '12px', height: '10px', background: '#fff', borderRadius: '2px' }}></div>
+                                    <div style={{ width: '12px', height: '10px', background: '#fff', borderRadius: '2px' }}></div>
+                                </div>
+                            </div>
+
+                            <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', margin: '0 0 20px 0' }}>
+                                {details.trading_name || 'Vendor Name'}
+                            </h2>
+
+                            <CardPreview
+                                branding={branding}
+                                program={{
+                                    stamps_required: Number(program.stamps_required || 10),
+                                    reward_title: program.reward_title
+                                }}
+                                stampsCount={3}
+                            />
+
+                            <div style={{
+                                marginTop: 'auto',
+                                background: '#fff',
+                                padding: '16px',
+                                borderRadius: '16px',
+                                textAlign: 'center',
+                                color: '#000'
+                            }}>
+                                <div style={{ width: '100px', height: '100px', background: '#000', margin: '0 auto' }}></div>
+                                <p style={{ fontSize: '12px', marginTop: '8px' }}>Scan to get stamped</p>
+                            </div>
+                        </div>
+
+                        <p style={{ marginTop: '20px', fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', maxWidth: '300px', lineHeight: '1.5' }}>
+                            Interactive Live Preview
+                        </p>
                     </div>
                 </div>
 

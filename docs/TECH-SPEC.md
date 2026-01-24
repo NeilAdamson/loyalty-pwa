@@ -103,14 +103,34 @@ API base: `/api/v1`
 - billing_plan_id TEXT NOT NULL
 - billing_status TEXT CHECK IN ('TRIAL','PAID','OVERDUE','SUSPENDED') NOT NULL
 - created_at TIMESTAMPTZ NOT NULL
+- created_at TIMESTAMPTZ NOT NULL
+- updated_at TIMESTAMPTZ NOT NULL
+
+### 3.13 admin_users (platform)
+- admin_id UUID PK
+- email TEXT UNIQUE NOT NULL
+- password_hash TEXT NOT NULL
+- name TEXT NOT NULL
+- role TEXT CHECK IN ('SUPER_ADMIN','ADMIN','READ_ONLY') NOT NULL
+- status TEXT CHECK IN ('ACTIVE','DISABLED') NOT NULL DEFAULT 'ACTIVE'
+- last_login_at TIMESTAMPTZ NULL
+- created_at TIMESTAMPTZ NOT NULL
 - updated_at TIMESTAMPTZ NOT NULL
 
 ### 3.2 vendor_branding
 - vendor_id UUID PK/FK
 - logo_url TEXT NULL
+- wordmark_url TEXT NULL
 - primary_color TEXT NOT NULL
 - secondary_color TEXT NOT NULL
+- accent_color TEXT NOT NULL DEFAULT '#3B82F6'
+- background_color TEXT NULL
+- card_text_color TEXT NOT NULL DEFAULT '#ffffff'
+- card_style TEXT NOT NULL DEFAULT 'SOLID'
+- welcome_text TEXT NULL
+- card_title TEXT NULL
 - card_bg_url TEXT NULL
+- card_bg_image_url TEXT NULL
 - updated_at TIMESTAMPTZ NOT NULL
 
 ### 3.3 branches (required)
@@ -467,7 +487,7 @@ Required error codes:
 ## 9. Admin APIs (summary)
 Implement separately with admin auth:
 - Platform admin:
-  - create vendor
+  - create vendor / delete vendor
   - suspend/reactivate
   - set billing status
   - audit export

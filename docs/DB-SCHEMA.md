@@ -11,6 +11,7 @@ The database is implemented in PostgreSQL using Prisma ORM.
 *   **Branch** (`branches`): Physical locations.
 
 ### Users & Access
+*   **AdminUser** (`admin_users`): Platform administrators (Role: `SUPER_ADMIN`, `ADMIN`).
 *   **StaffUser** (`staff_users`): Employees who stamp/redeem (Role: `STAMPER`, `ADMIN`).
 *   **Member** (`members`): End-users identified by phone (`phone_e164`).
 

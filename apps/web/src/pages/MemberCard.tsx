@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import CardPreview from '../components/CardPreview';
 
 const MemberCard: React.FC = () => {
     const { logout } = useAuth();
@@ -30,22 +31,19 @@ const MemberCard: React.FC = () => {
         return () => clearInterval(timer);
     }, [timeLeft]);
 
+    useEffect(() => {
+        if (data?.vendor?.branding?.background_color) {
+            const prev = document.body.style.background;
+            document.body.style.background = data.vendor.branding.background_color;
+            document.body.style.minHeight = '100vh';
+            return () => { document.body.style.background = prev; };
+        }
+    }, [data]);
+
     if (!data) return <div style={{ padding: 20 }}>Loading Card...</div>;
 
     const { card, token, vendor } = data;
     const branding = vendor?.branding || {};
-    const cardStyle = branding.card_style || 'SOLID';
-    const primaryColor = branding.primary_color || '#000';
-    const secondaryColor = branding.secondary_color || '#333';
-    const accentColor = branding.accent_color || '#fff';
-
-    // Simple Card Styles
-    const getCardBackground = () => {
-        if (cardStyle === 'GRADIENT') return `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`;
-        return primaryColor;
-    };
-
-    const stampsRequired = card.program?.stamps_required || 10;
     const stamps = card.stamps_count;
 
     return (
@@ -69,53 +67,12 @@ const MemberCard: React.FC = () => {
                 </button>
             </header>
 
-            <div className="loyalty-card" style={{
-                background: getCardBackground(),
-                color: '#fff',
-                padding: '24px',
-                borderRadius: '20px',
-                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.3)',
-                position: 'relative',
-                overflow: 'hidden',
-                minHeight: '220px',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                {branding.logo_url && (
-                    <img
-                        src={branding.logo_url}
-                        alt="Logo"
-                        style={{ height: '40px', objectFit: 'contain', alignSelf: 'flex-start', marginBottom: 'auto' }}
-                    />
-                )}
-
-                <div style={{ marginTop: '20px' }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', opacity: 0.9 }}>
-                        {card.program?.reward_title || 'Reward Progess'}
-                    </h3>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-                        {Array.from({ length: stampsRequired }).map((_, i) => (
-                            <div key={i} style={{
-                                aspectRatio: '1',
-                                borderRadius: '50%',
-                                background: i < stamps ? accentColor : 'rgba(255,255,255,0.15)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: 'bold',
-                                color: primaryColor, // Contrast assuming accent is light on dark card
-                                fontSize: '14px',
-                                boxShadow: i < stamps ? '0 2px 8px rgba(0,0,0,0.2)' : 'none'
-                            }}>
-                                {i < stamps && '✓'}
-                            </div>
-                        ))}
-                    </div>
-                    <p style={{ marginTop: '12px', fontSize: '0.9rem', opacity: 0.7, textAlign: 'right' }}>
-                        {stamps} / {stampsRequired}
-                    </p>
-                </div>
+            <div className="loyalty-card-container" style={{ display: 'flex', justifyContent: 'center' }}>
+                <CardPreview
+                    branding={branding}
+                    program={card.program}
+                    stampsCount={stamps}
+                />
             </div>
 
             <div className="qr-section" style={{

@@ -69,6 +69,7 @@ model VendorBranding {
   secondary_color String
   accent_color    String   @default("#3B82F6")
   background_color String?
+  card_text_color String   @default("#ffffff")
   card_style      String   @default("SOLID")
   card_bg_image_url String?
   wordmark_url    String?
@@ -88,6 +89,8 @@ model Branch {
   vendor_id    String   @db.Uuid
   name         String
   address_text String?
+  city         String?
+  region       String?
   is_active    Boolean  @default(true)
 
   vendor       Vendor   @relation(fields: [vendor_id], references: [vendor_id])
