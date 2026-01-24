@@ -65,7 +65,7 @@ services:
       start_period: 10s
     networks:
       - loyalty_net
-    command: pnpm dev
+    command: sh -c "npx prisma generate && pnpm dev"
 
   # Frontend Web App
   web:

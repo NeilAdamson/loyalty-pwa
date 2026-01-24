@@ -64,8 +64,7 @@ server.register(async function (fastify) {
     });
 }, { prefix: '/api/v1' });
 
-server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix: '/val/admin/auth' })
-// Note: Prefix /val/admin/auth? Spec said /api/v1/admin/auth.
+
 // Current routes are registered at root level of server? 
 // Wait, `server.register(authRoutes)` etc are at root?
 // In previous view of server.ts:
