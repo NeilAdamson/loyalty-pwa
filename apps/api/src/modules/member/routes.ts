@@ -3,6 +3,31 @@ import { CardService } from '../../services/card.service' // Check path validity
 import { randomUUID } from 'crypto'
 
 const memberRoutes: FastifyPluginAsync = async (fastify) => {
+
+    // Update Profile (Name)
+    // PATCH /me/profile
+    fastify.patch(
+        '/me/profile',
+        {
+            onRequest: [fastify.authenticate]
+        },
+        async (request, reply) => {
+            const { member_id } = request.user
+            const { name } = request.body as { name: string }
+
+            if (!name || name.trim().length < 2) {
+                return reply.code(400).send({ message: 'Name is too short' })
+            }
+
+            const updated = await fastify.prisma.member.update({
+                where: { member_id },
+                data: { name: name.trim() }
+            })
+
+            return { success: true, member: updated }
+        }
+    )
+
     const cardService = new CardService(fastify.prisma)
 
     // Protected: Get My Card + Rotating Token
@@ -27,6 +52,11 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
 
             const card = await cardService.getOrCreateActiveCard(vendor_id, member_id)
 
+            // Fetch Member Details
+            const member = await fastify.prisma.member.findUnique({
+                where: { member_id }
+            })
+
             // Fetch Vendor Branding for the card display
             const vendor = await fastify.prisma.vendor.findUnique({
                 where: { vendor_id },
@@ -50,6 +80,10 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
 
             return {
                 card,
+                member: {
+                    name: member?.name || 'Member',
+                    phone: member?.phone_e164
+                },
                 token,
                 expires_in_seconds: 30,
                 vendor: {
@@ -57,6 +91,31 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
                     branding: vendor?.branding
                 }
             }
+        }
+    )
+
+    // Update Profile (Name)
+    // PATCH /me/profile
+    // Added explicit route definition
+    fastify.patch(
+        '/me/profile',
+        {
+            onRequest: [fastify.authenticate]
+        },
+        async (request, reply) => {
+            const { member_id } = request.user
+            const { name } = request.body as { name: string }
+
+            if (!name || name.trim().length < 2) {
+                return reply.code(400).send({ message: 'Name is too short' })
+            }
+
+            const updated = await fastify.prisma.member.update({
+                where: { member_id },
+                data: { name: name.trim() }
+            })
+
+            return { success: true, member: updated }
         }
     )
 }

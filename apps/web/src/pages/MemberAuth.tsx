@@ -11,14 +11,39 @@ const MemberAuth: React.FC = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
 
-    const [phone, setPhone] = useState('');
+    const [phoneParts, setPhoneParts] = useState({ network: '', number: '' });
     const [code, setCode] = useState('');
     const [step, setStep] = useState<'PHONE' | 'OTP'>('PHONE');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // Derived phone for API
+    const phone = `+27${phoneParts.network.replace(/^0/, '')}${phoneParts.number}`;
+
+    const handleNetworkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.replace(/\D/g, '').slice(0, 3);
+        setPhoneParts(prev => ({ ...prev, network: val }));
+
+        // Auto-focus next if full (simple logic, ref improved later if needed)
+        if (val.length === 3) {
+            document.getElementById('sub-input')?.focus();
+        }
+    };
+
+    const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.replace(/\D/g, '').slice(0, 7);
+        setPhoneParts(prev => ({ ...prev, number: val }));
+    };
+
     const requestOtp = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validation
+        if (phoneParts.network.length !== 3 || phoneParts.number.length !== 7) {
+            setError('Please enter a valid SA mobile number (e.g. 082 123 4567)');
+            return;
+        }
+
         setIsLoading(true);
         setError('');
         try {
@@ -67,15 +92,80 @@ const MemberAuth: React.FC = () => {
 
             {step === 'PHONE' ? (
                 <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <AdminInput
-                        label="Phone Number"
-                        type="tel"
-                        value={phone}
-                        onChange={e => setPhone(e.target.value)}
-                        placeholder="+1 234 567 8900"
-                        required
-                        autoFocus
-                    />
+
+                    {/* SA Phone Input Enforcement */}
+                    <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                            South African Mobile Number
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {/* Country Code (Fixed) */}
+                            <div style={{
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border)',
+                                color: 'var(--text-secondary)',
+                                padding: '12px 0',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                userSelect: 'none',
+                                width: '50px',
+                                textAlign: 'center',
+                                flexShrink: 0
+                            }}>
+                                +27
+                            </div>
+
+                            {/* Network Code (3 Digits) */}
+                            <input
+                                type="tel"
+                                value={phoneParts.network}
+                                onChange={handleNetworkChange}
+                                placeholder="082"
+                                maxLength={3}
+                                style={{
+                                    width: '85px',
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border)',
+                                    color: 'var(--text)',
+                                    padding: '12px 14px',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    outline: 'none',
+                                    textAlign: 'left',
+                                    letterSpacing: '0.05em'
+                                }}
+                                required
+                            />
+
+                            {/* Subscriber Number (7 Digits) */}
+                            <input
+                                id="sub-input"
+                                type="tel"
+                                value={phoneParts.number}
+                                onChange={handleNumberChange}
+                                placeholder="123 4567"
+                                maxLength={7}
+                                style={{
+                                    width: '150px',
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border)',
+                                    color: 'var(--text)',
+                                    padding: '12px 14px',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    outline: 'none',
+                                    letterSpacing: '0.05em',
+                                    textAlign: 'left'
+                                }}
+                                required
+                            />
+                        </div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '8px' }}>
+                            Example: 082 1234567
+                        </p>
+                    </div>
+
                     <AdminButton type="submit" variant="primary" isLoading={isLoading} fullWidth>
                         Continue
                     </AdminButton>
