@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -42,7 +43,6 @@ async function main() {
             data: {
                 vendor_id: vendor.vendor_id,
                 name: 'Main Street HQ',
-                timezone: 'UTC',
                 is_active: true,
             }
         })
@@ -75,7 +75,7 @@ async function main() {
     // The P2023 error must be on `vendor_id` or `branch_id`??
     // `vendor.vendor_id` is UUID (from findFirst/create).
     // `branch.branch_id` is UUID.
-    const staffPinHash = await import('bcryptjs').then(b => b.hash('1234', 10))
+    const staffPinHash = await bcrypt.hash('1234', 10)
 
     // Lookup by Name + Vendor since staff_id is UUID and we don't know it from M1 seed
     const existingStaff = await prisma.staffUser.findFirst({
@@ -122,6 +122,22 @@ async function main() {
         },
     })
     console.log('Created/Found member:', member.name)
+
+
+    // 6a. Admin User (Upsert) - Fix for missing Admin Login
+    const adminPassword = await bcrypt.hash('password123', 10)
+    const admin = await prisma.adminUser.upsert({
+        where: { email: 'admin@loyalty.com' },
+        update: {},
+        create: {
+            email: 'admin@loyalty.com',
+            password_hash: adminPassword,
+            name: 'Super Admin',
+            role: 'SUPER_ADMIN',
+            status: 'ACTIVE'
+        }
+    })
+    console.log('Created/Found admin:', admin.email)
 
     // 6. Program (Upsert)
     // Program has unique (vendor_id, version)

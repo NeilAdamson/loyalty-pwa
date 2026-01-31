@@ -20,7 +20,7 @@ const MemberCard: React.FC = () => {
             setTimeLeft(res.data.expires_in_seconds || 30);
 
             // Check default name
-            if (res.data.member?.name === 'Member' || !res.data.member?.name) {
+            if (res.data.member?.name === 'Member' || res.data.member?.name === 'New Member' || !res.data.member?.name) {
                 setIsEditingName(true);
             }
         } catch (err) {

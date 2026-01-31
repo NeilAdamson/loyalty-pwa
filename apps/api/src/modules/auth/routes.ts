@@ -48,6 +48,11 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             const { vendorSlug } = request.params
             const { staff_id, pin } = request.body
 
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(staff_id)) {
+                return reply.code(400).send({ message: 'Invalid Staff ID format. Please use the UUID provided by your administrator.' })
+            }
+
             const vendor = await vendorService.resolveBySlug(vendorSlug)
             const staff = await authService.verifyStaffPin(vendor.vendor_id, staff_id, pin)
 
