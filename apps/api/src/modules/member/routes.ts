@@ -94,30 +94,7 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
         }
     )
 
-    // Update Profile (Name)
-    // PATCH /me/profile
-    // Added explicit route definition
-    fastify.patch(
-        '/me/profile',
-        {
-            onRequest: [fastify.authenticate]
-        },
-        async (request, reply) => {
-            const { member_id } = request.user
-            const { name } = request.body as { name: string }
-
-            if (!name || name.trim().length < 2) {
-                return reply.code(400).send({ message: 'Name is too short' })
-            }
-
-            const updated = await fastify.prisma.member.update({
-                where: { member_id },
-                data: { name: name.trim() }
-            })
-
-            return { success: true, member: updated }
-        }
-    )
+    // End of file
 }
 
 export default memberRoutes

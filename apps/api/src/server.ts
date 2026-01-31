@@ -62,18 +62,6 @@ server.register(async function (fastify) {
         const fileUrl = `${process.env.API_BASE_URL || 'http://localhost:8000'}/uploads/${uniqueName}`;
         return { url: fileUrl };
     });
-
-    // TEMPORARY DEBUG ROUTE
-    fastify.patch('/me/profile', { onRequest: [fastify.authenticate] }, async (req: any, reply) => {
-        const { member_id } = req.user
-        const { name } = req.body as { name: string }
-        const updated = await fastify.prisma.member.update({
-            where: { member_id },
-            data: { name: name }
-        })
-        return { success: true, member: updated, debug: true }
-    });
-
 }, { prefix: '/api/v1' });
 
 
