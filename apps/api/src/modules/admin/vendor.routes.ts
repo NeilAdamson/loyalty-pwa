@@ -39,33 +39,34 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
     })
 
     // Delete
-    const { id } = request.params as any
-    await adminVendorService.delete(id)
-    return { success: true, message: 'Vendor deleted' }
-})
+    fastify.delete('/:id', { preHandler: [verifyAdmin] }, async (request) => {
+        const { id } = request.params as any
+        await adminVendorService.delete(id)
+        return { success: true, message: 'Vendor deleted' }
+    })
 
-// --- Staff Management ---
-const adminStaffService = new AdminStaffService(prisma)
+    // --- Staff Management ---
+    const adminStaffService = new AdminStaffService(prisma)
 
-// List Staff
-fastify.get('/:id/staff', { preHandler: [verifyAdmin] }, async (request) => {
-    const { id } = request.params as any
-    return adminStaffService.listByVendor(id)
-})
+    // List Staff
+    fastify.get('/:id/staff', { preHandler: [verifyAdmin] }, async (request) => {
+        const { id } = request.params as any
+        return adminStaffService.listByVendor(id)
+    })
 
-// Create Staff
-fastify.post('/:id/staff', { preHandler: [verifyAdmin] }, async (request, reply) => {
-    const { id } = request.params as any
-    const body = request.body as any
-    const staff = await adminStaffService.create(id, body)
-    return { success: true, staff }
-})
+    // Create Staff
+    fastify.post('/:id/staff', { preHandler: [verifyAdmin] }, async (request, reply) => {
+        const { id } = request.params as any
+        const body = request.body as any
+        const staff = await adminStaffService.create(id, body)
+        return { success: true, staff }
+    })
 
-// Reset PIN
-fastify.patch('/:id/staff/:staffId/pin', { preHandler: [verifyAdmin] }, async (request) => {
-    const { id, staffId } = request.params as any
-    const { pin } = request.body as any
-    await adminStaffService.resetPin(id, staffId, pin)
-    return { success: true, message: 'PIN updated' }
-})
+    // Reset PIN
+    fastify.patch('/:id/staff/:staffId/pin', { preHandler: [verifyAdmin] }, async (request) => {
+        const { id, staffId } = request.params as any
+        const { pin } = request.body as any
+        await adminStaffService.resetPin(id, staffId, pin)
+        return { success: true, message: 'PIN updated' }
+    })
 }
