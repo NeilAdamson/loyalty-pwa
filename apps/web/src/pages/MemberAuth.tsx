@@ -95,10 +95,7 @@ const MemberAuth: React.FC = () => {
 
                     {/* SA Phone Input Enforcement */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                            South African Mobile Number
-                        </label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {/* Country Code (Fixed) */}
                             <div style={{
                                 background: 'var(--bg-secondary)',
@@ -109,7 +106,7 @@ const MemberAuth: React.FC = () => {
                                 fontSize: '14px',
                                 fontWeight: 600,
                                 userSelect: 'none',
-                                width: '50px',
+                                width: '48px',
                                 textAlign: 'center',
                                 flexShrink: 0
                             }}>
@@ -124,15 +121,16 @@ const MemberAuth: React.FC = () => {
                                 placeholder="082"
                                 maxLength={3}
                                 style={{
-                                    width: '85px',
+                                    flex: '0 0 70px',
+                                    width: '70px',
                                     background: 'var(--surface)',
                                     border: '1px solid var(--border)',
                                     color: 'var(--text)',
-                                    padding: '12px 14px',
+                                    padding: '12px 10px',
                                     borderRadius: '8px',
                                     fontSize: '16px',
                                     outline: 'none',
-                                    textAlign: 'left',
+                                    textAlign: 'center',
                                     letterSpacing: '0.05em'
                                 }}
                                 required
@@ -147,7 +145,9 @@ const MemberAuth: React.FC = () => {
                                 placeholder="123 4567"
                                 maxLength={7}
                                 style={{
-                                    width: '150px',
+                                    flex: 1,
+                                    width: '100%',
+                                    minWidth: 0,
                                     background: 'var(--surface)',
                                     border: '1px solid var(--border)',
                                     color: 'var(--text)',

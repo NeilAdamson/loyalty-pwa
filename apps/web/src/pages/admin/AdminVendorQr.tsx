@@ -31,9 +31,8 @@ export default function AdminVendorQr() {
     if (loading) return <div style={{ padding: 40 }}>Loading QR Assets...</div>;
     if (!vendor) return <div style={{ padding: 40 }}>Vendor not found</div>;
 
-    // Use current host for links
-    // In production, this should be configurable or pulled from environment
-    const baseUrl = window.location.origin;
+    // Use configured public URL or fall back to current host
+    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
     const memberUrl = `${baseUrl}/v/${vendor.vendor_slug}`;
     const staffUrl = `${baseUrl}/v/${vendor.vendor_slug}/staff`;
 

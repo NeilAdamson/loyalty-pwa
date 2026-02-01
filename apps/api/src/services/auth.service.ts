@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { ERROR_CODES } from '../plugins/errors'
 import bcrypt from 'bcryptjs'
+import { randomInt } from 'crypto';
 
 import { WhatsAppService } from './whatsapp.service'
 
@@ -18,8 +19,7 @@ export class AuthService {
         // Spec: "Rate limiting: enforce per (vendor_id, phone)"
 
         // 2. Generate OTP
-        // Mock for Dev: '123456'
-        const plainOtp = '123456'
+        const plainOtp = randomInt(100000, 999999).toString();
         const hash = await bcrypt.hash(plainOtp, 10)
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
 
