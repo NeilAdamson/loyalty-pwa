@@ -2,8 +2,13 @@ import { PrismaClient } from '@prisma/client'
 import { ERROR_CODES } from '../plugins/errors'
 import bcrypt from 'bcryptjs'
 
+import { WhatsAppService } from './whatsapp.service'
+
 export class AuthService {
-    constructor(private prisma: PrismaClient) { }
+    constructor(
+        private prisma: PrismaClient,
+        private whatsAppService: WhatsAppService
+    ) { }
 
     // --- Member OTP ---
 
@@ -34,8 +39,8 @@ export class AuthService {
             }
         })
 
-        // 4. Send (Mock: Log it)
-        console.log(`[MOCK OTP] Vendor: ${vendorId}, Phone: ${phone}, OTP: ${plainOtp}`)
+        // 4. Send via WhatsApp
+        await this.whatsAppService.sendOtp(phone, plainOtp);
 
         return { success: true, dev_otp: plainOtp }
     }

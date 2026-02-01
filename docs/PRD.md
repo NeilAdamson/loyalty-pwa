@@ -30,7 +30,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 - Apple/Google Wallet passes.
 
 ## 5. Key decisions locked for MVP
-- OTP channel: **WhatsApp**
+- OTP channel: **WhatsApp (Twilio)**
 - Staff login: **PIN-only** (PIN uniquely identifies staff within a vendor)
 - Vendor onboarding: **platform-admin-only**
 - Multi-branch: **required**

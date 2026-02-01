@@ -2,9 +2,12 @@ import { FastifyPluginAsync } from 'fastify'
 import { VendorService } from '../../services/vendor.service'
 import { AuthService } from '../../services/auth.service'
 
+import { WhatsAppService } from '../../services/whatsapp.service'
+
 const authRoutes: FastifyPluginAsync = async (fastify) => {
     const vendorService = new VendorService(fastify.prisma)
-    const authService = new AuthService(fastify.prisma)
+    const whatsAppService = new WhatsAppService()
+    const authService = new AuthService(fastify.prisma, whatsAppService)
 
     // Member OTP Request
     fastify.post<{ Params: { vendorSlug: string }; Body: { phone: string } }>(

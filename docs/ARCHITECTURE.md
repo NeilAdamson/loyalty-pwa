@@ -34,6 +34,7 @@ flowchart LR
     PWA
     DB
     RL
+    WA[Twilio API]
   end
 ```
 
@@ -60,10 +61,9 @@ flowchart LR
 
 ### 3.5 WhatsApp OTP provider
 - WhatsApp OTP is implemented by sending a WhatsApp message containing a one-time code.
-- Provider options (implementation choice):
-  - Direct Meta WhatsApp Business Platform (Cloud API)
-  - Third-party provider that exposes WhatsApp messaging API
-- The system must support “send OTP” and “verify OTP” using internal code generation + storage.
+- Provider: **Twilio Programmable Messaging (WhatsApp)**.
+- Integration requires valid `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`.
+- The system supports “send OTP” and “verify OTP” using internal code generation + storage.
 
 ## 4. Tenant isolation
 - Single DB shared across tenants.
