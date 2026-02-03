@@ -18,6 +18,7 @@ import AdminVendorQr from './pages/admin/AdminVendorQr';
 import AdminVendorDetail from './pages/admin/AdminVendorDetail';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
+import LandingPage from './pages/LandingPage';
 
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles?: string[] }) => {
@@ -34,6 +35,7 @@ function App() {
             <AuthProvider>
                 <BrowserRouter>
                     <Routes>
+                        <Route path="/" element={<LandingPage />} />
                         {/* Vendor Scoped Routes */}
                         <Route path="/v/:slug" element={<VendorLayout />}>
                             <Route index element={<Navigate to="login" replace />} />

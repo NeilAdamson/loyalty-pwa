@@ -185,8 +185,8 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
   - create a new empty ACTIVE card on latest program version
 
 **FR-D4 Cooldown rules**
-- Global cooldown default: **30 minutes** between stamps per card.
-- Vendor may increase cooldown (e.g., 60 minutes) but cannot decrease.
+- Global cooldown default: **5 seconds** (hardcoded for MVP) between stamps per card.
+- Vendor cooldown configuration is not supported in MVP.
 
 **FR-D5 Fraud throttles**
 - Rate limits (defaults):

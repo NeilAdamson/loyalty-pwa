@@ -267,9 +267,8 @@ Primary key: (vendor_id, token_jti)
 ## 5. Cooldown and fraud rules
 
 ### 5.1 Cooldown
-- Global default: `COOLDOWN_MINUTES_DEFAULT = 30`.
-- Vendor can set `vendor_cooldown_minutes` where:
-  - `vendor_cooldown_minutes >= COOLDOWN_MINUTES_DEFAULT`.
+- Global default: `COOLDOWN_SECONDS = 5` (hardcoded).
+- Vendor specific cooldowns: Not supported in MVP.
 - Cooldown enforcement:
   - For a card_id, deny stamping if last stamp_at is within cooldown window.
 
@@ -532,7 +531,7 @@ A scheduled job runs daily:
 - `TWILIO_ACCOUNT_SID`
 - `TWILIO_AUTH_TOKEN`
 - `TWILIO_FROM_NUMBER`
-- `COOLDOWN_MINUTES_DEFAULT=30`
+- `STAMP_COOLDOWN_SECONDS=5`
 - `REDIS_URL` (recommended)
 - `CORS_ALLOWED_ORIGIN`
 
