@@ -118,6 +118,24 @@ export class AdminVendorService {
             })
         }
 
+        // Branch Update (Update first branch found)
+        const { branch_city, branch_region } = data
+        if (branch_city !== undefined || branch_region !== undefined) {
+            const firstBranch = await this.prisma.branch.findFirst({
+                where: { vendor_id: vendorId }
+            })
+
+            if (firstBranch) {
+                await this.prisma.branch.update({
+                    where: { branch_id: firstBranch.branch_id },
+                    data: {
+                        city: branch_city,
+                        region: branch_region
+                    }
+                })
+            }
+        }
+
         // Prepare Branding Update
         let brandingUpdate = undefined
         if (branding) {
