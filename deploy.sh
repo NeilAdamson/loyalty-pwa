@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Navigate to project directory
-cd /home/neil/loyalty
+# Navigate to project directory (using $HOME for flexibility)
+cd "$HOME/loyalty-pwa"
 
 # Pull latest code
 git pull origin main
