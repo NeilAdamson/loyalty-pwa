@@ -2,12 +2,19 @@
     email admin@loyaltyladies.com
 }
 
-loyaltyladies.com, www.loyaltyladies.com {
-    # Serve API requests
-    handle_path /api/* {
+# Redirect www to non-www (Best for SEO & CORS)
+www.loyaltyladies.com {
+    redir https://loyaltyladies.com{uri}
+}
+
+loyaltyladies.com {
+    # Serve API requests (Keep path prefix /api so backend receives /api/v1/...)
+    handle /api/* {
         reverse_proxy api:8000
     }
 
     # Serve Frontend
-    reverse_proxy web:80
+    handle /* {
+        reverse_proxy web:80
+    }
 }

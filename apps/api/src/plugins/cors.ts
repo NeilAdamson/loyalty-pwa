@@ -8,7 +8,8 @@ export default fp(async (fastify) => {
     ];
 
     if (process.env.CORS_ALLOWED_ORIGIN) {
-        allowedOrigins.push(process.env.CORS_ALLOWED_ORIGIN);
+        const origins = process.env.CORS_ALLOWED_ORIGIN.split(',').map(o => o.trim());
+        allowedOrigins.push(...origins);
     }
 
     await fastify.register(cors, {

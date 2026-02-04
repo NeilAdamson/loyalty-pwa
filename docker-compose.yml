@@ -63,8 +63,8 @@ services:
       dockerfile: Dockerfile
       target: prod
       args:
-        VITE_API_BASE_URL: https://loyaltyladies.com/api
-        VITE_API_URL: https://loyaltyladies.com/api
+        VITE_API_BASE_URL: https://loyaltyladies.com
+        VITE_API_URL: https://loyaltyladies.com
         VITE_APP_URL: https://loyaltyladies.com
     restart: always
     expose:
