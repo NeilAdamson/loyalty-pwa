@@ -20,7 +20,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 2. Provide strict tenant isolation: vendor data and programs are separated by `vendor_id`.
 3. Provide fraud-resistant stamping/redeeming with full auditability.
 4. Support multi-branch vendors from day 1.
-5. Deploy on Afrihost Cloud/VPS with HTTPS (AutoSSL).
+5. Deploy on Hetzner VPS with HTTPS (AutoSSL).
 
 ## 4. Non-goals (MVP)
 - Cross-vendor customer identity or “aggregator” consumer account.
@@ -39,7 +39,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 - Data retention: **purge/anonymize after 24 months inactivity**
 - Support impersonation: **platform admin allowed; strict audit logs**
 - Billing: **manual invoicing; suspend for non-payment**
-- Hosting: **Afrihost Cloud/VPS (Node allowed)**
+- Hosting: **Hetzner VPS (Node allowed)**
 
 ## 6. Glossary
 - Vendor / Tenant: A business using the system.

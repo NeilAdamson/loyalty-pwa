@@ -32,3 +32,19 @@ services:
   # (Optional: you can keep it if you want to test routing, but mapped ports above allow direct access)
   caddy:
     restart: no
+
+  # DB Management (Dev Mode Only)
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - db
+
+volumes:
+  pgadmin-data:

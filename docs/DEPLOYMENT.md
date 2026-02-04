@@ -35,12 +35,13 @@ Create a `.env` file in the root of your deployment directory. **Do not commit t
 
 ```ini
 # Database
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=YOUR_SECURE_PASSWORD
+POSTGRES_USER=loyalty_app
+POSTGRES_PASSWORD=YOUR_STRONG_RANDOM_PASSWORD
 POSTGRES_DB=loyalty
 # HOST set to service name 'db' for internal docker networking
 DB_HOST=db
-DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@${DB_HOST}:5432/loyalty?schema=public
+# Use hardcoded values to ensure reliability
+DATABASE_URL=postgresql://loyalty_app:YOUR_STRONG_RANDOM_PASSWORD@db:5432/loyalty?schema=public
 
 # API Configuration
 NODE_ENV=production

@@ -3,7 +3,7 @@
 ## 0. Document control
 - Version: 1.1
 - Date: 2026-01-20
-- Hosting: Afrihost Cloud/VPS
+- Hosting: Hetzner VPS
 - HTTPS: required (AutoSSL)
 
 ## 1. Architectural goals

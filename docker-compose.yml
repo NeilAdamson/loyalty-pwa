@@ -4,15 +4,16 @@ services:
     image: postgres:16-alpine
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: loyalty
+      POSTGRES_USER: ${POSTGRES_USER:-loyalty_app}
+      # Default local dev password (strong random hex)
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-e74a89c3120d4f5b9e8c2a3b}
+      POSTGRES_DB: ${POSTGRES_DB:-loyalty}
     volumes:
       - db_data:/var/lib/postgresql/data
     expose:
       - "5432" # Internal only, use networks
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-loyalty_app} -d ${POSTGRES_DB:-loyalty}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,7 +28,7 @@ services:
       target: prod
     restart: always
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/loyalty
+      - DATABASE_URL=${DATABASE_URL:-postgresql://loyalty_app:e74a89c3120d4f5b9e8c2a3b@db:5432/loyalty}
       - JWT_SECRET=${JWT_SECRET}
       - TOKEN_SIGNING_SECRET=${TOKEN_SIGNING_SECRET}
       - WHATSAPP_PROVIDER=${WHATSAPP_PROVIDER:-twilio}

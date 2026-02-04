@@ -63,7 +63,7 @@ To minimize hardware costs for the merchant, we use a "Scan-to-Stamp" model.
 │   └── server.js
 ├── /public (PWA assets: manifest.json, service-worker.js)
 ├── .env (VENDORS_DB_URL, JWT_SECRET, SMS_API_KEY)
-└── docker-compose.yml (For local dev before Afrihost deploy)
+└── docker-compose.yml (For local dev before Hetzner deploy)
 
 ```
 
@@ -121,11 +121,11 @@ The `manifest.json` must be served dynamically.
 * **Endpoint:** `/v1/:vendor_slug/manifest.json`
 * **Logic:** Fetch `branding_config` from DB and return a JSON object with the Vendor's name and icons. This allows each "App" on the home screen to have the specific business's icon.
 
-## 3. Afrihost VPS Deployment Checklist
+## 3. Hetzner VPS Deployment Checklist
 
 1. **Nginx Config:** Set up as a Reverse Proxy to port `3000`.
 2. **Environment Variables:**
-* `DB_HOST`, `DB_USER`, `DB_PASS` (Afrihost MySQL/Postgres details)
+* `DB_HOST`, `DB_USER`, `DB_PASS` (Hetzner MySQL/Postgres details)
 * `JWT_SECRET` (Long random string)
 * `SMS_GATEWAY_CREDENTIALS`
 
