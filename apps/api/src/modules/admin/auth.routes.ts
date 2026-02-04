@@ -1,34 +1,32 @@
 import { FastifyInstance } from 'fastify'
 import { AdminService } from '../../services/admin.service'
-import { PrismaClient } from '@prisma/client'
 
 export async function adminAuthRoutes(fastify: FastifyInstance) {
     const adminService = new AdminService(fastify.prisma)
 
     // Login (Set Cookie)
-    fastify.post('/login', async (request, reply) => {
+    fastify.post<{ Body: any }>('/login', async (request, reply) => {
         const { email, password } = request.body as any
         console.log(`[AdminAuth] Login attempt for: ${email}`); // Debug log
         try {
-            const admin = await adminService.login(email, password)
+            const adminUser: any = await adminService.login(email, password)
 
-            // Sign JWT
-            const token = fastify.jwt.sign({
-                sub: admin.admin_id,
-                role: admin.role,
+            const jwtToken: string = fastify.jwt.sign({
+                sub: adminUser.admin_id,
+                role: adminUser.role,
                 type: 'ADMIN'
-            }, { expiresIn: '8h' })
+            }, { expiresIn: '8h' });
 
             // Set HttpOnly Cookie
-            reply.setCookie('admin_token', token, {
+            (reply as any).setCookie('admin_token', jwtToken, {
                 path: '/',
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production', // Secure in Prod
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 maxAge: 8 * 60 * 60 // 8 hours
             })
 
-            return { success: true, admin }
+            return { success: true, admin: adminUser }
         } catch (error: any) {
             console.error('[AdminAuth] Login Error:', error);
             // Return 401 instead of crashing
@@ -37,15 +35,15 @@ export async function adminAuthRoutes(fastify: FastifyInstance) {
     })
 
     // Logout (Clear Cookie)
-    fastify.post('/logout', async (request, reply) => {
-        reply.clearCookie('admin_token', { path: '/' })
+    fastify.post<{ Body: {} }>('/logout', async (_request, reply) => {
+        (reply as any).clearCookie('admin_token', { path: '/' })
         return { success: true }
     })
 
     // Me (Verify Cookie)
-    fastify.get('/me', async (request, reply) => {
+    fastify.get<{ Params: {} }>('/me', async (request, reply) => {
         try {
-            const token = request.cookies.admin_token
+            const token = (request as any).cookies.admin_token
             if (!token) throw new Error('No token')
 
             const decoded = fastify.jwt.verify(token) as any

@@ -8,26 +8,28 @@ declare module 'fastify' {
     }
 }
 
-interface FastifyJWT {
-    payload: {
-        vendor_id?: string
-        sub?: string
-        role?: string
-        type?: 'ADMIN' | 'MEMBER' | 'STAFF'
-        staff_id?: string
-        member_id?: string
-        card_id?: string
-        jti?: string
-    }
-    user: {
-        vendor_id?: string
-        sub?: string
-        role?: string
-        type?: 'ADMIN' | 'MEMBER' | 'STAFF'
-        staff_id?: string
-        member_id?: string
-        card_id?: string
-        jti?: string
+declare module '@fastify/jwt' {
+    interface FastifyJWT {
+        payload: {
+            vendor_id?: string
+            sub?: string
+            role?: string
+            type?: 'ADMIN' | 'MEMBER' | 'STAFF'
+            staff_id?: string
+            member_id?: string
+            card_id?: string
+            jti?: string
+        }
+        user: {
+            vendor_id?: string
+            sub?: string
+            role?: string
+            type?: 'ADMIN' | 'MEMBER' | 'STAFF'
+            staff_id?: string
+            member_id?: string
+            card_id?: string
+            jti?: string
+        }
     }
 }
 

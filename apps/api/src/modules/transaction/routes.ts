@@ -52,6 +52,7 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.status(403).send({ code: 'STAFF_DISABLED', message: 'Staff disabled' })
             }
 
+            if (!vendor_id) return reply.status(401).send();
             // Perform Stamp
             const result = await transactionService.stamp(vendor_id, staff_id, staff.branch_id, payload)
 
@@ -84,6 +85,7 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.status(403).send({ code: 'STAFF_DISABLED', message: 'Staff disabled' })
             }
 
+            if (!vendor_id) return reply.status(401).send();
             const result = await transactionService.redeem(vendor_id, staff_id, staff.branch_id, payload)
 
             return { success: true, ...result }

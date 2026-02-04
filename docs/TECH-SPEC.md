@@ -13,7 +13,7 @@
 - API framework: Fastify (preferred) or NestJS (acceptable)
 - DB: PostgreSQL
 - Cache/rate-limit: Redis (recommended)
-- Reverse proxy: Nginx
+- Reverse proxy: Caddy
 - Frontend: PWA static bundle (React/Vite or lightweight equivalent)
 
 ---
@@ -533,7 +533,12 @@ A scheduled job runs daily:
 - `TWILIO_FROM_NUMBER`
 - `STAMP_COOLDOWN_SECONDS=5`
 - `REDIS_URL` (recommended)
+- `REDIS_URL` (recommended)
 - `CORS_ALLOWED_ORIGIN`
+- `DB_HOST` (e.g. 'db', 'localhost')
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
 
 ---
 

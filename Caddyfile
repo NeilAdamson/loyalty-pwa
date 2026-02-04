@@ -1,0 +1,13 @@
+{
+    email admin@loyaltyladies.com
+}
+
+loyaltyladies.com, www.loyaltyladies.com {
+    # Serve API requests
+    handle_path /api/* {
+        reverse_proxy api:8000
+    }
+
+    # Serve Frontend
+    reverse_proxy web:80
+}

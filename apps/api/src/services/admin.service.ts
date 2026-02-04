@@ -11,12 +11,12 @@ export class AdminService {
         })
 
         if (!admin) {
-            throw { statusCode: 401, code: ERROR_CODES.AUTH_INVALID, message: 'Invalid credentials' }
+            throw { statusCode: 401, code: ERROR_CODES.UNAUTHORIZED, message: 'Invalid credentials' }
         }
 
         const valid = await bcrypt.compare(password, admin.password_hash)
         if (!valid) {
-            throw { statusCode: 401, code: ERROR_CODES.AUTH_INVALID, message: 'Invalid credentials' }
+            throw { statusCode: 401, code: ERROR_CODES.UNAUTHORIZED, message: 'Invalid credentials' }
         }
 
         // Return admin info to be encoded in JWT

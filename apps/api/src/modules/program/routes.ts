@@ -36,6 +36,7 @@ const programRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Admin access required' })
             }
 
+            if (!vendor_id) return reply.status(401).send(); // Should be handled by auth
             const draft = await programService.createDraft(vendor_id, request.body)
             return draft
         }
@@ -55,6 +56,7 @@ const programRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Admin access required' })
             }
 
+            if (!vendor_id) return reply.status(401).send();
             const program = await programService.activateProgram(vendor_id, id)
             return program
         }

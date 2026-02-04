@@ -1,6 +1,6 @@
 # API Documentation
 
-Base URL: `{host}` (e.g., `http://localhost:8000`)
+Base URL: 	`https://loyaltyladies.com/api` (Production) or `http://localhost:8000` (Local)
 
 ## Error Handling
 Standard Error Envelope:

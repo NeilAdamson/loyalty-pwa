@@ -85,3 +85,9 @@
     - [x] Feature: Enhanced Card Design (Text Color, Outlines, Phone Simulator) <!-- id: 118 -->
     - [x] Feature: Customizable Card Text (Reward Title) <!-- id: 119 -->
     - [x] Verification: Update Documentation (PRD, Tech Spec) <!-- id: 120 -->
+
+- [x] Milestone 8: Production Deployment & URL Resolution <!-- id: 130 -->
+    - [x] Configuration: Env Vars, Docker, Caddy <!-- id: 131 -->
+    - [x] Code Changes: CORS, API URL, TypeScript Fixes <!-- id: 132 -->
+    - [x] Infrastructure: deploy.sh, GitHub Actions <!-- id: 133 -->
+    - [x] Documentation: DEPLOYMENT.md, Architecture Updates <!-- id: 134 -->

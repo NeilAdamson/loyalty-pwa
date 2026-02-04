@@ -46,8 +46,8 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
             // but we set it in `auth.service`.
             // Let's assume having `member_id` is sufficient.
 
-            if (!member_id) {
-                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Member access required' })
+            if (!member_id || !vendor_id) {
+                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Access denied' })
             }
 
             const card = await cardService.getOrCreateActiveCard(vendor_id, member_id)

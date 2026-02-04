@@ -16,13 +16,13 @@
 
 ```mermaid
 flowchart LR
-  M[Member Browser/PWA] -->|HTTPS| N[Nginx]
-  S[Staff Browser] -->|HTTPS| N
-  VA[Vendor Admin Browser] -->|HTTPS| N
-  PA[Platform Admin Browser] -->|HTTPS| N
+  M[Member Browser/PWA] -->|HTTPS| P[Caddy]
+  S[Staff Browser] -->|HTTPS| P
+  VA[Vendor Admin Browser] -->|HTTPS| P
+  PA[Platform Admin Browser] -->|HTTPS| P
 
-  N --> API[Node API]
-  N --> PWA[Static PWA Assets]
+  P --> API[Node API]
+  P --> WEB[Web Container]
 
   API --> DB[(PostgreSQL)]
   API --> WA[WhatsApp Provider API]
@@ -41,7 +41,7 @@ flowchart LR
 ## 3. Components
 
 ### 3.1 Static PWA
-- Served by Nginx.
+- Served by internal Web container / Caddy.
 - Tenant routing via URL path `/v/{vendor_slug}`.
 - UI themed via vendor branding fetched from API.
 
@@ -139,7 +139,8 @@ flowchart LR
 ```
 
 ## 10. Deployment model (VPS)
-- Nginx reverse proxy
+- Caddy reverse proxy (Auto HTTPS)
+- Web container (Static Assets)
 - Node API running under systemd or PM2
 - PostgreSQL service
 - Redis service (recommended)

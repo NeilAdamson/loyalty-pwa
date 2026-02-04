@@ -20,7 +20,10 @@ export class ProgramService {
                 vendor_id: vendorId,
                 version: nextVersion,
                 is_active: false, // DRAFT
-                ...data
+                stamps_required: data.stamps_required,
+                reward_title: data.reward_title,
+                reward_description: data.reward_description || '',
+                terms_text: data.terms_text || ''
             }
         })
     }

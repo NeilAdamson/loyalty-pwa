@@ -61,3 +61,7 @@ If you see errors related to missing tables or invalid credentials immediately a
 ### Docker-Only Rule
 Do not try to run `pnpm install` or `pnpm dev` on your host machine.
 Always use `docker compose run --rm api ...` for backend commands.
+
+## Production Deployment
+
+For detailed instructions on deploying to a VPS (including Caddy, SSL, and CI/CD), see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
