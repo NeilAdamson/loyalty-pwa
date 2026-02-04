@@ -41,7 +41,7 @@ flowchart LR
 ## 3. Components
 
 ### 3.1 Static PWA
-- Served by internal Web container / Caddy.
+- Served by **Caddy** (internal web container).
 - Tenant routing via URL path `/v/{vendor_slug}`.
 - UI themed via vendor branding fetched from API.
 
@@ -116,7 +116,7 @@ flowchart LR
 
 ## 9. Operational concerns
 - Backups: daily DB backup + weekly full snapshot.
-- Logs: structured JSON logs (API) + Nginx access logs.
+- Logs: structured JSON logs (API) + Caddy access logs.
 - Admin audit logs stored in DB.
 
 
@@ -139,11 +139,11 @@ flowchart LR
 ```
 
 ## 10. Deployment model (VPS)
-- Caddy reverse proxy (Auto HTTPS)
-- Web container (Static Assets)
-- Node API running under systemd or PM2
-- PostgreSQL service
-- Redis service (recommended)
+- **All services containerized via Docker Compose.**
+- **Caddy**: Reverse proxy (Auto HTTPS) & Web Server.
+- **Node API**: Docker container.
+- **PostgreSQL**: Docker container with volume persistence.
+- **Redis**: Docker container (optional/future).
 - AutoSSL configured for HTTPS
 
 ## 11. Security baseline

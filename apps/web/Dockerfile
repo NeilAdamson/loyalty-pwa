@@ -33,4 +33,6 @@ FROM caddy:alpine AS prod
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
 # Serve files on port 80 internally. The root Caddy will proxy to this.
-CMD ["caddy", "file-server", "--root", "dist", "--listen", ":80"]
+COPY Caddyfile /etc/caddy/Caddyfile
+# Serve files using the config (which handles SPA fallback)
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]

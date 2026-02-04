@@ -65,7 +65,23 @@ TWILIO_AUTH_TOKEN=
 TWILIO_FROM_NUMBER=
 ```
 
-### 3.3 Deployment Script
+
+
+### 3.3 Database Initialization (First Run)
+When setting up the server for the first time, you need to create the tables and the admin user.
+
+1.  **Deploy first**: Run `./deploy.sh` (or let GitHub Actions do it) to get the containers running.
+2.  **Run Migrations**:
+    ```bash
+    docker compose exec api pnpm db:deploy
+    ```
+3.  **Seed Data (Create Admin User)**:
+    ```bash
+    docker compose exec api pnpm db:seed
+    ```
+    *This creates the default admin user using `ADMIN_EMAIL` and `ADMIN_PASSWORD` from your `.env`.*
+
+### 3.4 Deployment Script
 The repository includes a `deploy.sh` script. Ensure it is executable on the server:
 
 ```bash
@@ -99,14 +115,31 @@ If you need to deploy manually without GitHub Actions:
 3. Pull changes: `git pull origin main`.
 4. Run the script: `./deploy.sh`.
 
-## 6. Verification
+## 6. Local Development
+
+To run the production setup locally (for testing exactly what is on the server):
+```bash
+docker compose up -d --build
+```
+
+To run the **development** setup (with hot-reloading):
+```bash
+# Start Dev Containers
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# Rebuild specific service (e.g. api) after dependencies change
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build api
+docker compose -f docker-compose.yml -f docker-compose.dev.yml restart api
+```
+
+## 7. Verification
 
 After deployment:
 1. Visit `https://loyaltyladies.com`. The PWA should load.
 2. Check `https://loyaltyladies.com/api/health`. Should return `{"status":"ok"}`.
 3. Check logs if needed: `docker compose logs -f api`.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 - **502 Bad Gateway**: Usually means the API container is crashing or starting up. Check logs: `docker compose logs api`.
 - **CORS Errors**: Ensure `CORS_ALLOWED_ORIGIN` in `.env` matches your browser URL exactly (no trailing slash).
