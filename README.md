@@ -19,7 +19,7 @@ A multi-tenant digital loyalty stamp card system built with Node.js, Prisma, Pos
 2.  **Start the environment**
     Start all services (API, Web, Database, pgAdmin) in the background:
     ```bash
-    docker compose up -d
+    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
     ```
     *Wait a few moments for the database to become healthy.*
 

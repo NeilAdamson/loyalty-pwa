@@ -1,0 +1,34 @@
+services:
+  # Backend API (Dev Mode)
+  api:
+    build:
+      target: dev
+    environment:
+      # Allow requests from local frontend
+      - CORS_ALLOWED_ORIGIN=http://localhost:5173
+      # Host/Port for internal binding
+      - HOST=0.0.0.0
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+
+  # Frontend Web (Dev Mode)
+  web:
+    build:
+      target: dev
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_API_BASE_URL=http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+
+  # Disable Caddy for local dev to access services directly
+  # (Optional: you can keep it if you want to test routing, but mapped ports above allow direct access)
+  caddy:
+    restart: no
