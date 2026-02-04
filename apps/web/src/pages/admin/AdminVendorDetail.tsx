@@ -78,7 +78,9 @@ export default function AdminVendorDetail() {
                 trading_name: rest.trading_name,
                 vendor_slug: rest.vendor_slug,
                 billing_email: rest.billing_email,
-                status: rest.status
+                status: rest.status,
+                branch_city: rest.branches?.[0]?.city || '',
+                branch_region: rest.branches?.[0]?.region || ''
             });
         } catch (error) {
             console.error("Failed to load vendor", error);
@@ -250,6 +252,21 @@ export default function AdminVendorDetail() {
                                         { value: 'TRIAL', label: 'Trial' }
                                     ]}
                                 />
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                    <AdminInput
+                                        label="Branch (Region)"
+                                        type="text"
+                                        value={details.branch_region || ''}
+                                        onChange={e => setDetails({ ...details, branch_region: e.target.value })}
+                                    />
+                                    <AdminInput
+                                        label="City"
+                                        type="text"
+                                        value={details.branch_city || ''}
+                                        onChange={e => setDetails({ ...details, branch_city: e.target.value })}
+                                    />
+                                </div>
                             </div>
                         </div>
 
