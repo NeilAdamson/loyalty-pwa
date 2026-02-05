@@ -9,10 +9,11 @@ RUN apk add --no-cache curl openssl
 FROM base AS dev
 WORKDIR /app
 COPY package.json .
-# Install dependencies
+COPY prisma ./prisma
+# Install dependencies (Prisma postinstall will generate client from schema)
 RUN pnpm install
-# Startup
-CMD ["pnpm", "dev"]
+# Regenerate Prisma client on every start so bind-mounted schema changes are picked up
+CMD ["sh", "-c", "pnpm db:generate && pnpm dev"]
 
 FROM base AS builder
 WORKDIR /app

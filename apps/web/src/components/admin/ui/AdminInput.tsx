@@ -5,6 +5,8 @@ interface AdminInputProps extends InputHTMLAttributes<HTMLInputElement | HTMLSel
     error?: string;
     helperText?: string;
     options?: { value: string; label: string }[];
+    /** Show asterisk for required fields */
+    required?: boolean;
 }
 
 const AdminInput: React.FC<AdminInputProps> = ({
@@ -14,6 +16,7 @@ const AdminInput: React.FC<AdminInputProps> = ({
     style,
     options,
     type,
+    required,
     ...props
 }) => {
     return (
@@ -25,10 +28,12 @@ const AdminInput: React.FC<AdminInputProps> = ({
                     color: 'var(--text-secondary)'
                 }}>
                     {label}
+                    {required && <span style={{ color: 'var(--danger)', marginLeft: '2px' }}>*</span>}
                 </label>
             )}
             {type === 'select' ? (
                 <select
+                    required={required}
                     style={{
                         padding: '10px 12px',
                         borderRadius: 'var(--radius)',
@@ -51,6 +56,7 @@ const AdminInput: React.FC<AdminInputProps> = ({
             ) : (
                 <input
                     type={type}
+                    required={required}
                     style={{
                         padding: '10px 12px',
                         borderRadius: 'var(--radius)',

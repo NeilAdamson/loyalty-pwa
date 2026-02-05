@@ -43,5 +43,8 @@
         "@typescript-eslint/parser": "^7.0.0",
         "eslint": "^8.56.0",
         "typescript": "^5.3.3"
+    },
+    "prisma": {
+        "seed": "tsx prisma/seed.ts"
     }
 }

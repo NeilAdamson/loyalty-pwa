@@ -7,6 +7,18 @@ import AdminInput from '../../components/admin/ui/AdminInput';
 import ImageUpload from '../../components/admin/ui/ImageUpload';
 import CardPreview from '../../components/CardPreview';
 
+/** Format phone as XXX XXXXXXX (3 + 7 digits). Accept only digits, max 10. */
+function formatContactPhone(value: string): string {
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    if (digits.length <= 3) return digits;
+    return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+}
+
+/** Extract digits only for API submission */
+function contactPhoneDigits(value: string): string {
+    return value.replace(/\D/g, '');
+}
+
 export default function AdminVendorDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -23,6 +35,9 @@ export default function AdminVendorDetail() {
     const [staffList, setStaffList] = useState<any[]>([]);
     const [isAddingStaff, setIsAddingStaff] = useState(false);
     const [newStaff, setNewStaff] = useState({ name: '', pin: '' });
+
+    // Validation
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (id) {
@@ -80,7 +95,12 @@ export default function AdminVendorDetail() {
                 billing_email: rest.billing_email,
                 status: rest.status,
                 branch_city: rest.branches?.[0]?.city || '',
-                branch_region: rest.branches?.[0]?.region || ''
+                branch_region: rest.branches?.[0]?.region || '',
+                monthly_billing_amount: rest.monthly_billing_amount,
+                billing_start_date: rest.billing_start_date ? new Date(rest.billing_start_date).toISOString().split('T')[0] : '',
+                contact_name: rest.contact_name,
+                contact_surname: rest.contact_surname,
+                contact_phone: typeof rest.contact_phone === 'string' ? formatContactPhone(rest.contact_phone) : (rest.contact_phone ? formatContactPhone(String(rest.contact_phone)) : '')
             });
         } catch (error) {
             console.error("Failed to load vendor", error);
@@ -90,22 +110,63 @@ export default function AdminVendorDetail() {
         }
     };
 
+    const validateForm = (): boolean => {
+        const err: Record<string, string> = {};
+        if (!details.legal_name?.trim()) err.legal_name = 'Please enter legal name';
+        if (!details.trading_name?.trim()) err.trading_name = 'Please enter trading name';
+        if (!details.vendor_slug?.trim()) err.vendor_slug = 'Please enter URL slug';
+        else if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(details.vendor_slug)) {
+            err.vendor_slug = 'Slug can only contain lowercase letters, numbers and hyphens';
+        }
+        if (!details.contact_name?.trim()) err.contact_name = 'Please enter contact name';
+        if (!details.contact_surname?.trim()) err.contact_surname = 'Please enter contact surname';
+        const phoneDigits = contactPhoneDigits(details.contact_phone || '');
+        if (!phoneDigits) err.contact_phone = 'Please enter contact number (e.g. 082 123 4567)';
+        else if (phoneDigits.length !== 10) err.contact_phone = 'Contact number must be 10 digits';
+        if (!details.billing_email?.trim()) err.billing_email = 'Please enter billing email';
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.billing_email)) {
+            err.billing_email = 'Please enter a valid email address';
+        }
+        if (!details.monthly_billing_amount?.toString().trim()) err.monthly_billing_amount = 'Please enter monthly billing amount';
+        if (!details.billing_start_date?.trim()) err.billing_start_date = 'Please select billing start date';
+        if (!program.reward_title?.trim()) err.reward_title = 'Please enter reward title';
+        const sr = parseInt(program.stamps_required, 10);
+        if (Number.isNaN(sr) || sr < 2 || sr > 30) err.stamps_required = 'Stamps required must be between 2 and 30';
+
+        setFieldErrors(err);
+        return Object.keys(err).length === 0;
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        setFieldErrors({});
+        if (!validateForm()) return;
+
         setSaving(true);
         try {
-            // Clean up: explicitly send what we want to update
             const payload = {
                 ...details,
+                contact_phone: contactPhoneDigits(details.contact_phone || ''),
+                monthly_billing_amount: details.monthly_billing_amount ? Number(details.monthly_billing_amount) : 0,
                 branding,
-                program
+                program: {
+                    ...program,
+                    stamps_required: parseInt(program.stamps_required, 10) || 10
+                }
             };
             await api.patch(`/api/v1/admin/vendors/${id}`, payload);
             alert('Updated successfully');
-            fetchVendor(); // Refresh
-        } catch (error) {
+            fetchVendor();
+        } catch (error: any) {
             console.error(error);
-            alert('Failed to save');
+            const res = error.response?.data;
+            const detailsObj = res?.details as Record<string, string> | undefined;
+            if (detailsObj && typeof detailsObj === 'object') {
+                setFieldErrors(detailsObj);
+                alert(res?.message || Object.values(detailsObj)[0] || 'Failed to save');
+            } else {
+                alert(res?.message || error.message || 'Failed to save');
+            }
         } finally {
             setSaving(false);
         }
@@ -206,9 +267,20 @@ export default function AdminVendorDetail() {
                 margin: '0 auto',
                 paddingBottom: '40px'
             }}>
-
                 {/* LEFT MAIN CONTENT */}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {Object.keys(fieldErrors).length > 0 && (
+                        <div style={{
+                            padding: '12px 20px',
+                            background: 'rgba(255, 77, 77, 0.1)',
+                            color: 'var(--danger)',
+                            borderRadius: 'var(--radius)',
+                            fontSize: '14px',
+                            border: '1px solid var(--danger)'
+                        }}>
+                            {Object.values(fieldErrors)[0]}
+                        </div>
+                    )}
 
                     {/* Top Row: Properties + Branding in a Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
@@ -222,24 +294,24 @@ export default function AdminVendorDetail() {
                                     type="text"
                                     value={details.trading_name || ''}
                                     onChange={e => setDetails({ ...details, trading_name: e.target.value })}
+                                    error={fieldErrors.trading_name}
+                                    required
                                 />
                                 <AdminInput
                                     label="Legal Name"
                                     type="text"
                                     value={details.legal_name || ''}
                                     onChange={e => setDetails({ ...details, legal_name: e.target.value })}
+                                    error={fieldErrors.legal_name}
+                                    required
                                 />
                                 <AdminInput
                                     label="Slug (URL Path)"
                                     type="text"
                                     value={details.vendor_slug || ''}
-                                    onChange={e => setDetails({ ...details, vendor_slug: e.target.value })}
-                                />
-                                <AdminInput
-                                    label="Billing Email"
-                                    type="email"
-                                    value={details.billing_email || ''}
-                                    onChange={e => setDetails({ ...details, billing_email: e.target.value })}
+                                    onChange={e => setDetails({ ...details, vendor_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                                    error={fieldErrors.vendor_slug}
+                                    required
                                 />
                                 <AdminInput
                                     label="Status"
@@ -253,6 +325,37 @@ export default function AdminVendorDetail() {
                                     ]}
                                 />
 
+                                <h4 style={{ fontSize: '14px', margin: '12px 0 8px 0', opacity: 0.7 }}>Contact Person</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                    <AdminInput
+                                        label="Name"
+                                        type="text"
+                                        value={details.contact_name || ''}
+                                        onChange={e => setDetails({ ...details, contact_name: e.target.value })}
+                                        error={fieldErrors.contact_name}
+                                        required
+                                    />
+                                    <AdminInput
+                                        label="Surname"
+                                        type="text"
+                                        value={details.contact_surname || ''}
+                                        onChange={e => setDetails({ ...details, contact_surname: e.target.value })}
+                                        error={fieldErrors.contact_surname}
+                                        required
+                                    />
+                                </div>
+                                <AdminInput
+                                    label="Telephone Number"
+                                    type="text"
+                                    placeholder="082 123 4567"
+                                    maxLength={12}
+                                    value={details.contact_phone || ''}
+                                    onChange={e => setDetails({ ...details, contact_phone: formatContactPhone(e.target.value) })}
+                                    error={fieldErrors.contact_phone}
+                                    required
+                                />
+
+                                <h4 style={{ fontSize: '14px', margin: '20px 0 8px 0', opacity: 0.7 }}>Location</h4>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                     <AdminInput
                                         label="Branch (Region)"
@@ -265,6 +368,36 @@ export default function AdminVendorDetail() {
                                         type="text"
                                         value={details.branch_city || ''}
                                         onChange={e => setDetails({ ...details, branch_city: e.target.value })}
+                                    />
+                                </div>
+
+                                <h4 style={{ fontSize: '14px', margin: '20px 0 8px 0', opacity: 0.7 }}>Billing Setup</h4>
+                                <AdminInput
+                                    label="Billing Email"
+                                    type="email"
+                                    value={details.billing_email || ''}
+                                    onChange={e => setDetails({ ...details, billing_email: e.target.value })}
+                                    error={fieldErrors.billing_email}
+                                    required
+                                />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                    <AdminInput
+                                        label="Monthly Billing (R)"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={details.monthly_billing_amount ?? ''}
+                                        onChange={e => setDetails({ ...details, monthly_billing_amount: e.target.value })}
+                                        error={fieldErrors.monthly_billing_amount}
+                                        required
+                                    />
+                                    <AdminInput
+                                        label="Billing Start Date"
+                                        type="date"
+                                        value={details.billing_start_date || ''}
+                                        onChange={e => setDetails({ ...details, billing_start_date: e.target.value })}
+                                        error={fieldErrors.billing_start_date}
+                                        required
                                     />
                                 </div>
                             </div>
@@ -309,14 +442,18 @@ export default function AdminVendorDetail() {
                                         type="text"
                                         value={program.reward_title || ''}
                                         onChange={e => setProgram({ ...program, reward_title: e.target.value })}
+                                        error={fieldErrors.reward_title}
+                                        required
                                     />
                                     <AdminInput
                                         label="Stamps Req."
                                         type="number"
-                                        value={program.stamps_required || 10}
-                                        onChange={e => setProgram({ ...program, stamps_required: parseInt(e.target.value) })}
-                                        min="2"
-                                        max="30"
+                                        value={program.stamps_required ?? 10}
+                                        onChange={e => setProgram({ ...program, stamps_required: e.target.value })}
+                                        min={2}
+                                        max={30}
+                                        error={fieldErrors.stamps_required}
+                                        required
                                     />
                                 </div>
 

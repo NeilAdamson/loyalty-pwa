@@ -106,5 +106,11 @@ Returns:
 `GET /v/:vendorSlug/programs/active`
 
 ### Platform Admin
+**Create Vendor**
+`POST /api/v1/admin/vendors`
+Body: `{ legal_name, trading_name, vendor_slug, contact_name, contact_surname, contact_phone, billing_email, monthly_billing_amount, billing_start_date, ... }`
+
+Validation (400): Returns `{ code: "VALIDATION_ERROR", message, details: { field: "error message" } }` for missing/invalid fields.
+
 **Delete Vendor**
 `DELETE /api/v1/admin/vendors/:id`

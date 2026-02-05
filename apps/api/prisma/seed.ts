@@ -17,6 +17,11 @@ async function main() {
             status: 'ACTIVE',
             billing_plan_id: 'pro_monthly',
             billing_status: 'PAID',
+            billing_start_date: new Date(),
+            monthly_billing_amount: 199.00,
+            contact_name: 'John',
+            contact_surname: 'Manager',
+            contact_phone: '+1234567890'
         }
     })
     console.log('Created/Found vendor:', vendor.trading_name)

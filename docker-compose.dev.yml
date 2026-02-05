@@ -9,6 +9,9 @@ services:
       # Host/Port for internal binding
       - HOST=0.0.0.0
       - PORT=8000
+      # Dev Secrets
+      - JWT_SECRET=dev_jwt_secret_12345
+      - TOKEN_SIGNING_SECRET=dev_token_secret_12345
     ports:
       - "8000:8000"
     volumes:

@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 
 export async function verifyAdmin(request: FastifyRequest, reply: FastifyReply) {
+    console.log('[Middleware] Entering verifyAdmin for', request.url)
     try {
         const req = request as any;
         const token = req.cookies.admin_token;

@@ -44,7 +44,12 @@ export class AdminVendorService {
         vendor_slug: string,
         billing_email?: string,
         initial_branch_city?: string,
-        initial_branch_region?: string
+        initial_branch_region?: string,
+        monthly_billing_amount: number | string,
+        billing_start_date: string;
+        contact_name: string;
+        contact_surname: string;
+        contact_phone: string;
     }) {
         const { initial_branch_city, initial_branch_region, ...vendorData } = data
 
@@ -55,6 +60,8 @@ export class AdminVendorService {
                 status: 'ACTIVE', // or TRIAL
                 billing_plan_id: 'FREE',
                 billing_status: 'TRIAL',
+                monthly_billing_amount: Number(vendorData.monthly_billing_amount),
+                billing_start_date: new Date(vendorData.billing_start_date || Date.now()),
                 // Create default branding?
                 branding: {
                     create: {
@@ -90,7 +97,9 @@ export class AdminVendorService {
             where: { vendor_id: vendorId },
             include: {
                 branding: true,
-                branches: true,
+                branches: {
+                    orderBy: { branch_id: 'asc' }
+                },
                 programs: true,
                 _count: { select: { members: true, staff: true } }
             }
@@ -100,37 +109,68 @@ export class AdminVendorService {
     async update(vendorId: string, data: any) {
         const { branding, program, ...rest } = data
 
-        // Pick allowed fields for Vendor (avoid passing _count, branches etc)
+        // Pick and sanitize allowed fields (Prisma rejects empty strings for DateTime/Decimal)
         const vendorUpdate: any = {}
-        const allowed = ['legal_name', 'trading_name', 'vendor_slug', 'billing_email', 'status']
-        allowed.forEach(k => {
-            if (rest[k] !== undefined) vendorUpdate[k] = rest[k]
-        })
+        if (rest.legal_name !== undefined) vendorUpdate.legal_name = String(rest.legal_name).trim()
+        if (rest.trading_name !== undefined) vendorUpdate.trading_name = String(rest.trading_name).trim()
+        if (rest.vendor_slug !== undefined) vendorUpdate.vendor_slug = String(rest.vendor_slug).trim()
+        if (rest.billing_email !== undefined) vendorUpdate.billing_email = rest.billing_email ? String(rest.billing_email).trim() : null
+        if (rest.status !== undefined) vendorUpdate.status = String(rest.status).trim() || 'ACTIVE'
+        if (rest.contact_name !== undefined) vendorUpdate.contact_name = String(rest.contact_name || '').trim()
+        if (rest.contact_surname !== undefined) vendorUpdate.contact_surname = String(rest.contact_surname || '').trim()
+        if (rest.contact_phone !== undefined) vendorUpdate.contact_phone = String(rest.contact_phone || '').trim()
+        if (rest.monthly_billing_amount !== undefined && rest.monthly_billing_amount !== '') {
+            const amt = Number(rest.monthly_billing_amount)
+            if (!Number.isNaN(amt)) vendorUpdate.monthly_billing_amount = amt
+        }
+        if (rest.billing_start_date !== undefined && rest.billing_start_date !== '') {
+            const d = new Date(rest.billing_start_date)
+            if (!Number.isNaN(d.getTime())) vendorUpdate.billing_start_date = d
+        }
 
         // Program Update (Active)
         if (program) {
-            await this.prisma.program.updateMany({
-                where: { vendor_id: vendorId, is_active: true },
-                data: {
-                    reward_title: program.reward_title,
-                    stamps_required: program.stamps_required ? parseInt(program.stamps_required) : undefined
-                }
-            })
+            const progData: { reward_title?: string; stamps_required?: number } = {}
+            if (program.reward_title !== undefined) progData.reward_title = String(program.reward_title).trim()
+            const sr = parseInt(program.stamps_required, 10)
+            if (!Number.isNaN(sr) && sr >= 2 && sr <= 30) progData.stamps_required = sr
+            if (Object.keys(progData).length > 0) {
+                await this.prisma.program.updateMany({
+                    where: { vendor_id: vendorId, is_active: true },
+                    data: progData
+                })
+            }
         }
 
-        // Branch Update (Update first branch found)
+        // Branch Update (Update first branch or create default)
         const { branch_city, branch_region } = data
+        console.log(`[AdminVendorService] Updating branch for ${vendorId}. City: ${branch_city}, Region: ${branch_region}`)
+
         if (branch_city !== undefined || branch_region !== undefined) {
             const firstBranch = await this.prisma.branch.findFirst({
-                where: { vendor_id: vendorId }
+                where: { vendor_id: vendorId },
+                orderBy: { branch_id: 'asc' }
             })
 
             if (firstBranch) {
+                console.log(`[AdminVendorService] Updating existing branch ${firstBranch.branch_id}`)
                 await this.prisma.branch.update({
                     where: { branch_id: firstBranch.branch_id },
                     data: {
                         city: branch_city,
                         region: branch_region
+                    }
+                })
+            } else {
+                console.log(`[AdminVendorService] Creating new branch`)
+                // If no branch exists, create one with these details
+                await this.prisma.branch.create({
+                    data: {
+                        vendor_id: vendorId,
+                        name: 'Main Branch', // Default name
+                        city: branch_city || '',
+                        region: branch_region || '',
+                        is_active: true
                     }
                 })
             }

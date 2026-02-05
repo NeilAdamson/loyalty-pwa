@@ -20,10 +20,71 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
     })
 
     // Create
-    fastify.post('/', { preHandler: [verifyAdmin] }, async (request) => {
-        const body = request.body as any
-        return adminVendorService.create(body)
+    fastify.post('/', { preHandler: [verifyAdmin] }, async (request, reply) => {
+        const body = request.body as Record<string, unknown>
+
+        // Field-level validation with user-friendly messages
+        const details: Record<string, string> = {}
+        const required = [
+            ['legal_name', 'Please enter legal name'],
+            ['trading_name', 'Please enter trading name'],
+            ['vendor_slug', 'Please enter URL slug'],
+            ['contact_name', 'Please enter contact name'],
+            ['contact_surname', 'Please enter contact surname'],
+            ['contact_phone', 'Please enter contact number (e.g. 082 123 4567)'],
+            ['billing_email', 'Please enter billing email'],
+            ['monthly_billing_amount', 'Please enter monthly billing amount'],
+            ['billing_start_date', 'Please select billing start date'],
+        ] as const
+        for (const [field, msg] of required) {
+            const val = body[field]
+            if (val === undefined || val === null || String(val).trim() === '') {
+                details[field] = msg
+            }
+        }
+        const phone = String(body.contact_phone || '').replace(/\D/g, '')
+        if (!details.contact_phone && phone.length !== 10) {
+            details.contact_phone = 'Contact number must be 10 digits (e.g. 0821234567)'
+        }
+        const slug = String(body.vendor_slug || '')
+        if (!details.vendor_slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+            details.vendor_slug = 'Slug can only contain lowercase letters, numbers and hyphens'
+        }
+        const email = String(body.billing_email || '')
+        if (!details.billing_email && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            details.billing_email = 'Please enter a valid email address'
+        }
+
+        if (Object.keys(details).length > 0) {
+            return reply.code(400).send({
+                code: 'VALIDATION_ERROR',
+                message: Object.values(details)[0] || 'Validation failed',
+                details,
+            })
+        }
+
+        try {
+            return await adminVendorService.create(body as any)
+        } catch (err: any) {
+            console.error('[VendorRoutes] Error creating vendor:', err)
+            request.log.error(err, 'Failed to create vendor')
+            const details: Record<string, string> = {}
+            if (err.code === 'P2002') {
+                const target = (err.meta?.target as string[] | undefined)
+                if (target?.includes('vendor_slug')) details.vendor_slug = 'This URL slug is already in use'
+                else if (target?.length) details[target[0]] = 'This value already exists'
+            }
+            const msg = Object.keys(details).length > 0
+                ? Object.values(details)[0]
+                : (err.message || 'Failed to create vendor')
+            return reply.code(err.code === 'P2002' ? 409 : 500).send({
+                code: err.code === 'P2002' ? 'CONFLICT' : 'INTERNAL_SERVER_ERROR',
+                message: msg,
+                details: Object.keys(details).length > 0 ? details : undefined,
+            })
+        }
     })
+
 
     // Get
     fastify.get('/:id', { preHandler: [verifyAdmin] }, async (request) => {
@@ -32,10 +93,28 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
     })
 
     // Update (Suspension etc)
-    fastify.patch('/:id', { preHandler: [verifyAdmin] }, async (request) => {
-        const { id } = request.params as any
-        const body = request.body as any
-        return adminVendorService.update(id, body)
+    fastify.patch('/:id', { preHandler: [verifyAdmin] }, async (request, reply) => {
+        try {
+            const { id } = request.params as any
+            const body = request.body as any
+            return await adminVendorService.update(id, body)
+        } catch (err: any) {
+            console.error('[VendorRoutes] Error updating vendor:', err)
+            request.log.error(err, 'Failed to update vendor')
+            const details: Record<string, string> = {}
+            if (err.code === 'P2002') {
+                const target = (err.meta?.target as string[] | undefined)
+                if (target?.includes('vendor_slug')) details.vendor_slug = 'This URL slug is already in use'
+            }
+            const msg = Object.keys(details).length > 0
+                ? Object.values(details)[0]
+                : (err.message || 'Failed to update vendor')
+            return reply.code(err.code === 'P2002' ? 409 : 500).send({
+                code: err.code === 'P2002' ? 'CONFLICT' : 'INTERNAL_SERVER_ERROR',
+                message: msg,
+                details: Object.keys(details).length > 0 ? details : undefined,
+            })
+        }
     })
 
     // Delete
