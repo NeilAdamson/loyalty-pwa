@@ -8,11 +8,16 @@
 -- AlterTable: Add contact_surname
 ALTER TABLE "vendors" ADD COLUMN "contact_surname" TEXT NOT NULL DEFAULT '';
 
--- Convert NULLs to '' and set NOT NULL in one step (USING handles existing NULLs)
-ALTER TABLE "vendors" ALTER COLUMN "contact_name" TYPE TEXT USING COALESCE("contact_name", '');
-ALTER TABLE "vendors" ALTER COLUMN "contact_name" SET NOT NULL;
-ALTER TABLE "vendors" ALTER COLUMN "contact_name" SET DEFAULT '';
+-- Fill NULLs via DO block (runs before ALTER in same transaction)
+DO $$
+BEGIN
+  UPDATE "vendors" SET "contact_name" = '' WHERE "contact_name" IS NULL;
+  UPDATE "vendors" SET "contact_phone" = '' WHERE "contact_phone" IS NULL;
+END $$;
 
-ALTER TABLE "vendors" ALTER COLUMN "contact_phone" TYPE TEXT USING COALESCE("contact_phone", '');
-ALTER TABLE "vendors" ALTER COLUMN "contact_phone" SET NOT NULL;
+-- Now safe to set NOT NULL
+ALTER TABLE "vendors" ALTER COLUMN "contact_name" SET DEFAULT '';
+ALTER TABLE "vendors" ALTER COLUMN "contact_name" SET NOT NULL;
+
 ALTER TABLE "vendors" ALTER COLUMN "contact_phone" SET DEFAULT '';
+ALTER TABLE "vendors" ALTER COLUMN "contact_phone" SET NOT NULL;
