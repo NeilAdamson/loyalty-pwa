@@ -111,6 +111,7 @@ model StaffUser {
   staff_id             String   @id @default(uuid()) @db.Uuid
   vendor_id            String   @db.Uuid
   branch_id            String   @db.Uuid
+  username             String   // Short login ID (e.g. alice, bob) - unique per vendor
   name                 String
   role                 String   // 'ADMIN','STAMPER'
   status               String   // 'ENABLED','DISABLED'
@@ -124,9 +125,7 @@ model StaffUser {
   stamp_txs            StampTransaction[]
   redeem_txs           RedemptionTransaction[]
 
-  // Constraint: PIN uniqueness logic requires app logic or composite constraint via fingerprint (spec detail).
-  // For standard schema, we just model relations.
-  
+  @@unique([vendor_id, username])
   @@map("staff_users")
 }
 

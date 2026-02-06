@@ -135,10 +135,16 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
 
     // Create Staff
     fastify.post('/:id/staff', { preHandler: [verifyAdmin] }, async (request, reply) => {
-        const { id } = request.params as any
-        const body = request.body as any
-        const staff = await adminStaffService.create(id, body)
-        return { success: true, staff }
+        try {
+            const { id } = request.params as any
+            const body = request.body as any
+            const staff = await adminStaffService.create(id, body)
+            return { success: true, staff }
+        } catch (err: any) {
+            const status = err.statusCode || 500
+            const message = err.message || 'Failed to create staff'
+            return reply.code(status).send({ message })
+        }
     })
 
     // Reset PIN

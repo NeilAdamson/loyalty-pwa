@@ -109,15 +109,17 @@ export class AuthService {
         return member
     }
 
-    // --- Staff PIN ---
+    // --- Staff Login (username + PIN) ---
 
-    async verifyStaffPin(vendorId: string, staffId: string, pin: string) {
-        const staff = await this.prisma.staffUser.findUnique({
-            where: { staff_id: staffId }
+    async verifyStaffByUsername(vendorId: string, username: string, pin: string) {
+        const staff = await this.prisma.staffUser.findFirst({
+            where: {
+                vendor_id: vendorId,
+                username: username.toLowerCase().trim()
+            }
         })
 
-        if (!staff || staff.vendor_id !== vendorId) {
-            // Use generic message to avoid enumeration
+        if (!staff) {
             throw { statusCode: 401, code: ERROR_CODES.STAFF_PIN_INVALID, message: 'Invalid credentials' }
         }
 

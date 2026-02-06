@@ -44,20 +44,19 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         }
     )
 
-    // Staff Login
-    fastify.post<{ Params: { vendorSlug: string }; Body: { staff_id: string; pin: string } }>(
+    // Staff Login (username + PIN - no more UUID)
+    fastify.post<{ Params: { vendorSlug: string }; Body: { username: string; pin: string } }>(
         '/v/:vendorSlug/auth/staff/login',
         async (request, reply) => {
             const { vendorSlug } = request.params
-            const { staff_id, pin } = request.body
+            const { username, pin } = request.body
 
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!uuidRegex.test(staff_id)) {
-                return reply.code(400).send({ message: 'Invalid Staff ID format. Please use the UUID provided by your administrator.' })
+            if (!username?.trim()) {
+                return reply.code(400).send({ message: 'Username required' })
             }
 
             const vendor = await vendorService.resolveBySlug(vendorSlug)
-            const staff = await authService.verifyStaffPin(vendor.vendor_id, staff_id, pin)
+            const staff = await authService.verifyStaffByUsername(vendor.vendor_id, username.trim().toLowerCase(), pin)
 
             const token = fastify.jwt.sign({
                 vendor_id: vendor.vendor_id,

@@ -59,10 +59,13 @@ OTP_PEPPER=random_pepper_string
 ADMIN_EMAIL=admin@loyaltyladies.com
 ADMIN_PASSWORD=secure_admin_password
 
-# Third Party (If used)
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-TWILIO_FROM_NUMBER=
+# Twilio (WhatsApp OTP) - Required for real OTP delivery
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_FROM_NUMBER=14155238886
+# Or use API Key + Secret instead of Auth Token:
+# TWILIO_API_KEY=
+# TWILIO_API_SECRET=
 ```
 
 

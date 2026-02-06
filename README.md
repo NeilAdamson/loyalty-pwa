@@ -51,6 +51,7 @@ A multi-tenant digital loyalty stamp card system built with Node.js, Prisma, Pos
 
 ### Demo Vendor
 *   **Vendor Slug**: `demo-cafe` (Access at `/v/demo-cafe`)
+*   **Staff Username**: `alice`
 *   **Staff PIN**: `1234`
 
 ## Troubleshooting

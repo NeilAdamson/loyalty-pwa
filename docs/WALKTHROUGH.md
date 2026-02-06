@@ -49,7 +49,7 @@
 ### Staff Login
 1. Navigate to `http://localhost:5173/v/new-cafe/staff`.
 2. Verify the **Staff Login** UI (same theme as Member).
-3. Enter PIN -> Login.
+3. Enter Username (e.g. `alice`) and PIN (e.g. `1234`) -> Login.
 
 ## 5. Security & Troubleshooting
 

@@ -44,7 +44,7 @@ Returns: `{ "token": "JWT", "member": { ... } }`
 ### Staff Auth
 **1. Staff Login**
 `POST /v/:vendorSlug/auth/staff/login`
-Body: `{ "staff_id": "uuid", "pin": "1234" }`
+Body: `{ "username": "alice", "pin": "1234" }`
 Returns: `{ "token": "JWT", "staff": { ... } }`
 
 ## Member Experience (Protected: Member)

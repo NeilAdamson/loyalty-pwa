@@ -19,38 +19,46 @@ export class AdminStaffService {
 
     async create(vendorId: string, data: {
         name: string,
+        username: string,
         pin: string,
         role?: 'STAMPER' | 'ADMIN', // Default STAMPER
         branch_id?: string
     }) {
-        // 1. Resolve Branch
-        // If branch_id not provided, find default branch for vendor
+        const uname = (data.username || data.name || '').toString().toLowerCase().trim().replace(/[^a-z0-9_-]/g, '') || this.slugifyUsername(data.name)
+        if (!uname) throw { statusCode: 400, message: 'Username required (e.g. alice, bob)' }
+
+        const existing = await this.prisma.staffUser.findFirst({
+            where: { vendor_id: vendorId, username: uname }
+        })
+        if (existing) throw { statusCode: 409, message: `Username "${uname}" is already in use` }
+
         let branchId = data.branch_id
         if (!branchId) {
             const defaultBranch = await this.prisma.branch.findFirst({
                 where: { vendor_id: vendorId }
             })
-            if (!defaultBranch) {
-                // Should not happen if vendor created correctly, but fallback?
-                throw { statusCode: 400, message: 'Vendor has no branches. Create a branch first.' }
-            }
+            if (!defaultBranch) throw { statusCode: 400, message: 'Vendor has no branches. Create a branch first.' }
             branchId = defaultBranch.branch_id
         }
 
-        // 2. Hash PIN
         const pinHash = await bcrypt.hash(data.pin, 10)
 
-        // 3. Create
         return this.prisma.staffUser.create({
             data: {
                 vendor_id: vendorId,
                 branch_id: branchId,
+                username: uname,
                 name: data.name,
                 pin_hash: pinHash,
                 role: data.role || 'STAMPER',
                 status: 'ENABLED'
             }
         })
+    }
+
+    private slugifyUsername(name: string): string {
+        const base = name.toString().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)
+        return base || 'staff'
     }
 
     async resetPin(vendorId: string, staffId: string, newPin: string) {

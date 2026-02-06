@@ -11,7 +11,7 @@ const StaffAuth: React.FC = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
 
-    const [staffId, setStaffId] = useState('');
+    const [username, setUsername] = useState('');
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +21,7 @@ const StaffAuth: React.FC = () => {
         setIsLoading(true);
         setError('');
         try {
-            const res = await api.post(`/api/v1/v/${slug}/auth/staff/login`, { staff_id: staffId, pin });
+            const res = await api.post(`/api/v1/v/${slug}/auth/staff/login`, { username, pin });
             login(res.data.token);
             navigate('/staff');
         } catch (err: any) {
@@ -52,12 +52,12 @@ const StaffAuth: React.FC = () => {
 
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <AdminInput
-                    label="Staff ID"
+                    label="Username"
                     type="text"
-                    value={staffId}
-                    onChange={e => setStaffId(e.target.value)}
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
                     required
-                    placeholder="Enter Staff ID"
+                    placeholder="e.g. alice, bob"
                     autoFocus
                 />
                 <AdminInput

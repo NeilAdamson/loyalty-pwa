@@ -1,8 +1,9 @@
-
 import twilio from 'twilio';
 
 // Twilio credentials from Environment
+// Supports: (1) Account SID + Auth Token, OR (2) Account SID + API Key + API Secret
 const ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const API_KEY = process.env.TWILIO_API_KEY;
 const API_SECRET = process.env.TWILIO_API_SECRET;
 const FROM_NUMBER = process.env.TWILIO_FROM_NUMBER;
@@ -12,17 +13,24 @@ export class WhatsAppService {
     private enabled: boolean = false;
 
     constructor() {
-        if (ACCOUNT_SID && API_KEY && API_SECRET) {
-            try {
-                // Initialize using API Key Pair (Recommended for security/rotation)
+        if (!ACCOUNT_SID || !FROM_NUMBER) {
+            console.warn('[WhatsAppService] Missing TWILIO_ACCOUNT_SID or TWILIO_FROM_NUMBER. OTPs will be logged only.');
+            return;
+        }
+        try {
+            if (API_KEY && API_SECRET) {
                 this.client = twilio(API_KEY, API_SECRET, { accountSid: ACCOUNT_SID });
                 this.enabled = true;
-                console.log('[WhatsAppService] Initialized with Twilio');
-            } catch (error) {
-                console.error('[WhatsAppService] Failed to initialize Twilio client:', error);
+                console.log('[WhatsAppService] Initialized with Twilio (API Key)');
+            } else if (AUTH_TOKEN) {
+                this.client = twilio(ACCOUNT_SID, AUTH_TOKEN);
+                this.enabled = true;
+                console.log('[WhatsAppService] Initialized with Twilio (Auth Token)');
+            } else {
+                console.warn('[WhatsAppService] Missing TWILIO_AUTH_TOKEN or (TWILIO_API_KEY + TWILIO_API_SECRET). OTPs will be logged only.');
             }
-        } else {
-            console.warn('[WhatsAppService] Missing Twilio credentials. OTPs will be logged only.');
+        } catch (error) {
+            console.error('[WhatsAppService] Failed to initialize Twilio client:', error);
         }
     }
 

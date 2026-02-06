@@ -34,7 +34,7 @@ export default function AdminVendorDetail() {
     // Staff Management State
     const [staffList, setStaffList] = useState<any[]>([]);
     const [isAddingStaff, setIsAddingStaff] = useState(false);
-    const [newStaff, setNewStaff] = useState({ name: '', pin: '' });
+    const [newStaff, setNewStaff] = useState({ name: '', username: '', pin: '' });
 
     // Validation
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -56,13 +56,13 @@ export default function AdminVendorDetail() {
     }
 
     const handleAddStaff = async () => {
-        if (!newStaff.name || !newStaff.pin) return alert('Name and PIN required');
+        if (!newStaff.name || !newStaff.username || !newStaff.pin) return alert('Name, username and PIN required');
         setSaving(true);
         try {
             await api.post(`/api/v1/admin/vendors/${id}/staff`, newStaff);
             alert('Staff member created');
             setIsAddingStaff(false);
-            setNewStaff({ name: '', pin: '' });
+            setNewStaff({ name: '', username: '', pin: '' });
             fetchStaff();
         } catch (e) {
             console.error(e);
@@ -503,13 +503,20 @@ export default function AdminVendorDetail() {
                         {isAddingStaff && (
                             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
                                 <h4 style={{ margin: '0 0 16px 0' }}>New Staff Member</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
                                     <AdminInput
                                         label="Name"
                                         type="text"
                                         value={newStaff.name}
                                         onChange={e => setNewStaff({ ...newStaff, name: e.target.value })}
                                         placeholder="e.g. Alice"
+                                    />
+                                    <AdminInput
+                                        label="Username (for login)"
+                                        type="text"
+                                        value={newStaff.username}
+                                        onChange={e => setNewStaff({ ...newStaff, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
+                                        placeholder="e.g. alice"
                                     />
                                     <AdminInput
                                         label="PIN Code"
@@ -531,7 +538,7 @@ export default function AdminVendorDetail() {
                                 <thead>
                                     <tr style={{ textAlign: 'left', color: 'var(--text-secondary)' }}>
                                         <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Name</th>
-                                        <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Staff ID (Username)</th>
+                                        <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Username</th>
                                         <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Activity</th>
                                         <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Role</th>
                                         <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Joined</th>
@@ -544,13 +551,13 @@ export default function AdminVendorDetail() {
                                                 <div style={{ fontWeight: 500 }}>{s.name}</div>
                                                 {s.status !== 'ENABLED' && <span style={{ fontSize: '11px', color: 'red' }}>DISABLED</span>}
                                             </td>
-                                            <td style={{ padding: '12px', fontFamily: 'monospace' }}>
-                                                {s.staff_id}
+                                            <td style={{ padding: '12px' }}>
+                                                {s.username}
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(s.staff_id);
-                                                        alert('Copied Staff ID');
+                                                        navigator.clipboard.writeText(s.username);
+                                                        alert('Copied username');
                                                     }}
                                                     style={{
                                                         marginLeft: '8px',

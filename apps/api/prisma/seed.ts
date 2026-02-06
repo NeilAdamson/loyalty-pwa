@@ -92,6 +92,7 @@ async function main() {
         staff = await prisma.staffUser.update({
             where: { staff_id: existingStaff.staff_id },
             data: {
+                username: existingStaff.username || 'alice',
                 pin_hash: staffPinHash,
                 status: 'ENABLED'
             }
@@ -101,6 +102,7 @@ async function main() {
             data: {
                 vendor_id: vendor.vendor_id,
                 branch_id: branch.branch_id,
+                username: 'alice',
                 name: 'Alice Staff',
                 role: 'STAMPER',
                 status: 'ENABLED',
