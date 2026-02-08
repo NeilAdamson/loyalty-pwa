@@ -43,8 +43,16 @@ const MemberCard: React.FC = () => {
 
     useEffect(() => {
         fetchCard();
-        const interval = setInterval(fetchCard, 25000);
-        return () => clearInterval(interval);
+        const pollInterval = 8000; // Refetch every 8s so stamps appear soon after staff adds one
+        const interval = setInterval(fetchCard, pollInterval);
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') fetchCard();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
     }, []);
 
     useEffect(() => {
