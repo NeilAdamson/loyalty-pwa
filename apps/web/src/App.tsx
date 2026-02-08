@@ -41,6 +41,11 @@ function App() {
                             <Route index element={<Navigate to="login" replace />} />
                             <Route path="login" element={<MemberAuth />} />
                             <Route path="staff" element={<StaffAuth />} />
+                            <Route path="staff/scan" element={
+                                <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                                    <StaffDashboard />
+                                </ProtectedRoute>
+                            } />
                         </Route>
 
                         {/* Protected Routes */}
@@ -49,11 +54,7 @@ function App() {
                                 <MemberCard />
                             </ProtectedRoute>
                         } />
-                        <Route path="/staff" element={
-                            <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                                <StaffDashboard />
-                            </ProtectedRoute>
-                        } />
+                        <Route path="/staff" element={<Navigate to="/" replace />} />
 
                         {/* Admin Routes */}
                         <Route path="/admin/login" element={<AdminLogin />} />

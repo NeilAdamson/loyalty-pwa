@@ -23,7 +23,7 @@ const StaffAuth: React.FC = () => {
         try {
             const res = await api.post(`/api/v1/v/${slug}/auth/staff/login`, { username, pin });
             login(res.data.token);
-            navigate('/staff');
+            navigate(`/v/${slug}/staff/scan`);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Login Failed');
         } finally {

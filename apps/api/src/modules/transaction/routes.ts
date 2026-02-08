@@ -55,8 +55,10 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             if (!vendor_id) return reply.status(401).send();
             // Perform Stamp
             const result = await transactionService.stamp(vendor_id, staff_id, staff.branch_id, payload)
+            const stamps_required = result.program?.stamps_required ?? 10
+            const is_full = result.stamps_count >= stamps_required
 
-            return { success: true, new_count: result.stamps_count }
+            return { success: true, new_count: result.stamps_count, stamps_required, is_full }
         }
     )
 

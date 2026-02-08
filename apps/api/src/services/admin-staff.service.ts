@@ -62,24 +62,71 @@ export class AdminStaffService {
     }
 
     async resetPin(vendorId: string, staffId: string, newPin: string) {
-        // Verify staff belongs to vendor?
-        // simple update with where
         const staff = await this.prisma.staffUser.findFirst({
             where: { staff_id: staffId, vendor_id: vendorId }
         })
-
-        if (!staff) {
-            throw { statusCode: 404, message: 'Staff member not found' }
-        }
+        if (!staff) throw { statusCode: 404, message: 'Staff member not found' }
 
         const pinHash = await bcrypt.hash(newPin, 10)
+        return this.prisma.staffUser.update({
+            where: { staff_id: staffId },
+            data: { pin_hash: pinHash, pin_last_changed_at: new Date() }
+        })
+    }
+
+    async update(vendorId: string, staffId: string, data: {
+        name?: string
+        username?: string
+        pin?: string
+        role?: 'STAMPER' | 'ADMIN'
+        branch_id?: string
+        status?: 'ENABLED' | 'DISABLED'
+    }) {
+        const staff = await this.prisma.staffUser.findFirst({
+            where: { staff_id: staffId, vendor_id: vendorId }
+        })
+        if (!staff) throw { statusCode: 404, message: 'Staff member not found' }
+
+        const update: Record<string, unknown> = {}
+
+        if (data.name !== undefined) update.name = String(data.name).trim()
+        if (data.role !== undefined) update.role = data.role
+        if (data.status !== undefined) update.status = data.status
+        if (data.branch_id !== undefined) update.branch_id = data.branch_id
+
+        if (data.username !== undefined) {
+            const uname = String(data.username).toLowerCase().trim().replace(/[^a-z0-9_-]/g, '') || this.slugifyUsername(staff.name)
+            if (!uname) throw { statusCode: 400, message: 'Username required' }
+            const existing = await this.prisma.staffUser.findFirst({
+                where: { vendor_id: vendorId, username: uname }
+            })
+            if (existing && existing.staff_id !== staffId) {
+                throw { statusCode: 409, message: `Username "${uname}" is already in use` }
+            }
+            update.username = uname
+        }
+
+        if (data.pin !== undefined && data.pin !== '') {
+            update.pin_hash = await bcrypt.hash(data.pin, 10)
+            update.pin_last_changed_at = new Date()
+        }
+
+        if (Object.keys(update).length === 0) return staff
 
         return this.prisma.staffUser.update({
             where: { staff_id: staffId },
-            data: {
-                pin_hash: pinHash,
-                pin_last_changed_at: new Date()
-            }
+            data: update as any
         })
+    }
+
+    async delete(vendorId: string, staffId: string) {
+        const staff = await this.prisma.staffUser.findFirst({
+            where: { staff_id: staffId, vendor_id: vendorId }
+        })
+        if (!staff) throw { statusCode: 404, message: 'Staff member not found' }
+        await this.prisma.staffUser.delete({
+            where: { staff_id: staffId }
+        })
+        return { success: true }
     }
 }

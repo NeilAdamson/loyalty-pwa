@@ -1,6 +1,6 @@
 # API Documentation
 
-Base URL: 	`https://loyaltyladies.com/api` (Production) or `http://localhost:8000` (Local)
+Base URL: `https://loyaltyladies.com/api` (Production) or `http://localhost:8000` (Local). All tenant and transaction endpoints are under `/api/v1` (e.g. `/api/v1/tx/stamp`). Note: The Tech Spec examples use `/api/v1/staff/stamp` and `/api/v1/staff/redeem`; the implementation uses `/api/v1/tx/stamp` and `/api/v1/tx/redeem` as the single source of truth.
 
 ## Error Handling
 Standard Error Envelope:
@@ -67,22 +67,34 @@ Returns:
 
 ## Transactions (Protected: Staff)
 
+All transaction endpoints use the path prefix **`/api/v1/tx/`** (not `/api/v1/staff/`).
+
 ### Stamp Card
-**POST /tx/stamp**
+**POST /api/v1/tx/stamp**
 Headers: `Authorization: Bearer <StaffToken>`
 Body: `{ "token": "ROTATING_JWT_TOKEN" }`
-Returns: `{ "success": true, "new_count": 1 }`
+Returns:
+```json
+{
+  "success": true,
+  "new_count": 1,
+  "stamps_required": 10,
+  "is_full": false
+}
+```
+- `stamps_required`: from the card’s program (for UX: “X / Y stamps”).
+- `is_full`: `true` when card is ready to redeem.
 
 ### Redeem Card
-**POST /tx/redeem**
+**POST /api/v1/tx/redeem**
 Headers: `Authorization: Bearer <StaffToken>`
 Body: `{ "token": "ROTATING_JWT_TOKEN" }`
-Returns: 
+Returns:
 ```json
-{ 
-  "success": true, 
-  "redeemed_card_id": "...", 
-  "new_card": { "card_id": "...", "status": "ACTIVE", "stamps_count": 0 } 
+{
+  "success": true,
+  "redeemed_card_id": "...",
+  "new_card": { "card_id": "...", "status": "ACTIVE", "stamps_count": 0 }
 }
 ```
 
@@ -114,3 +126,10 @@ Validation (400): Returns `{ code: "VALIDATION_ERROR", message, details: { field
 
 **Delete Vendor**
 `DELETE /api/v1/admin/vendors/:id`
+
+### Vendor Staff (Platform Admin)
+- **List staff**: `GET /api/v1/admin/vendors/:id/staff`
+- **Create staff**: `POST /api/v1/admin/vendors/:id/staff` — Body: `{ name, username, pin, role?, branch_id? }`
+- **Update staff**: `PATCH /api/v1/admin/vendors/:id/staff/:staffId` — Body: `{ name?, username?, pin?, role?, branch_id?, status? }`. Leave `pin` blank to keep current PIN.
+- **Reset PIN**: `PATCH /api/v1/admin/vendors/:id/staff/:staffId/pin` — Body: `{ pin }`
+- **Delete staff**: `DELETE /api/v1/admin/vendors/:id/staff/:staffId`

@@ -92,7 +92,71 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
         return adminVendorService.get(id)
     })
 
-    // Update (Suspension etc)
+    // Staff routes (must be before generic PATCH/DELETE /:id so /:id/staff/:staffId matches)
+    const adminStaffService = new AdminStaffService(prisma)
+    // List Staff
+    fastify.get('/:id/staff', { preHandler: [verifyAdmin] }, async (request) => {
+        const { id } = request.params as any
+        return adminStaffService.listByVendor(id)
+    })
+
+    // Create Staff
+    fastify.post('/:id/staff', { preHandler: [verifyAdmin] }, async (request, reply) => {
+        try {
+            const { id } = request.params as any
+            const body = request.body as any
+            const staff = await adminStaffService.create(id, body)
+            return { success: true, staff }
+        } catch (err: any) {
+            const status = err.statusCode || 500
+            const message = err.message || 'Failed to create staff'
+            return reply.code(status).send({ message })
+        }
+    })
+
+    // Update Staff (name, username, pin, role, branch_id, status) — before /:id/staff/:staffId/pin so full path is unambiguous
+    fastify.patch('/:id/staff/:staffId', { preHandler: [verifyAdmin] }, async (request, reply) => {
+        try {
+            const { id, staffId } = request.params as any
+            const body = request.body as any
+            const staff = await adminStaffService.update(id, staffId, {
+                name: body.name,
+                username: body.username,
+                pin: body.pin,
+                role: body.role,
+                branch_id: body.branch_id,
+                status: body.status
+            })
+            return { success: true, staff }
+        } catch (err: any) {
+            const status = err.statusCode || 500
+            const message = err.message || 'Failed to update staff'
+            return reply.code(status).send({ message })
+        }
+    })
+
+    // Reset PIN (more specific: .../staff/:staffId/pin)
+    fastify.patch('/:id/staff/:staffId/pin', { preHandler: [verifyAdmin] }, async (request) => {
+        const { id, staffId } = request.params as any
+        const { pin } = request.body as any
+        await adminStaffService.resetPin(id, staffId, pin)
+        return { success: true, message: 'PIN updated' }
+    })
+
+    // Delete Staff
+    fastify.delete('/:id/staff/:staffId', { preHandler: [verifyAdmin] }, async (request, reply) => {
+        try {
+            const { id, staffId } = request.params as any
+            await adminStaffService.delete(id, staffId)
+            return { success: true, message: 'Staff deleted' }
+        } catch (err: any) {
+            const status = err.statusCode || 500
+            const message = err.message || 'Failed to delete staff'
+            return reply.code(status).send({ message })
+        }
+    })
+
+    // Update Vendor (Suspension etc) — generic PATCH /:id after staff routes
     fastify.patch('/:id', { preHandler: [verifyAdmin] }, async (request, reply) => {
         try {
             const { id } = request.params as any
@@ -122,36 +186,5 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
         const { id } = request.params as any
         await adminVendorService.delete(id)
         return { success: true, message: 'Vendor deleted' }
-    })
-
-    // --- Staff Management ---
-    const adminStaffService = new AdminStaffService(prisma)
-
-    // List Staff
-    fastify.get('/:id/staff', { preHandler: [verifyAdmin] }, async (request) => {
-        const { id } = request.params as any
-        return adminStaffService.listByVendor(id)
-    })
-
-    // Create Staff
-    fastify.post('/:id/staff', { preHandler: [verifyAdmin] }, async (request, reply) => {
-        try {
-            const { id } = request.params as any
-            const body = request.body as any
-            const staff = await adminStaffService.create(id, body)
-            return { success: true, staff }
-        } catch (err: any) {
-            const status = err.statusCode || 500
-            const message = err.message || 'Failed to create staff'
-            return reply.code(status).send({ message })
-        }
-    })
-
-    // Reset PIN
-    fastify.patch('/:id/staff/:staffId/pin', { preHandler: [verifyAdmin] }, async (request) => {
-        const { id, staffId } = request.params as any
-        const { pin } = request.body as any
-        await adminStaffService.resetPin(id, staffId, pin)
-        return { success: true, message: 'PIN updated' }
     })
 }

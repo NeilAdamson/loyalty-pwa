@@ -51,6 +51,15 @@
 1. Navigate to `http://localhost:5173/v/new-cafe/staff`.
 2. Verify the **Staff Login** UI (same theme as Member).
 3. Enter Username (e.g. `alice`) and PIN (e.g. `1234`) -> Login.
+4. You should be redirected to `/v/new-cafe/staff/scan` (vendor-styled scan screen).
+
+### Staff Scan (Vendor Staff Portal)
+1. On `/v/:slug/staff/scan`, verify vendor branding (logo/wordmark, colours, background) matches the member screen for that vendor.
+2. Verify two modes: **Add stamp** (default) and **Redeem reward** (toggle before scanning).
+3. **Add stamp**: Scan a member’s rotating QR (e.g. from `/me/card`). Verify success message “Stamped! X / Y” and **Scan next** to continue.
+4. If the card is full after a stamp: verify “Card is full — ready to redeem.” and the **Redeem reward** button; click it, then **Scan next**.
+5. **Redeem reward**: Select “Redeem reward”, then scan a full card’s QR. Verify “Redeemed! New card created.” and **Scan next**.
+6. Verify **Sign Out** in the header and that the scanner area is large and easy to use (not small/hard to navigate).
 
 ## 5. Security & Troubleshooting
 

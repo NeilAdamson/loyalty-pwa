@@ -35,6 +35,8 @@ export default function AdminVendorDetail() {
     const [staffList, setStaffList] = useState<any[]>([]);
     const [isAddingStaff, setIsAddingStaff] = useState(false);
     const [newStaff, setNewStaff] = useState({ name: '', username: '', pin: '' });
+    const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+    const [editStaffForm, setEditStaffForm] = useState<{ name: string; username: string; pin: string; role: string; branch_id: string; status: string }>({ name: '', username: '', pin: '', role: 'STAMPER', branch_id: '', status: 'ENABLED' });
 
     // Validation
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -67,6 +69,67 @@ export default function AdminVendorDetail() {
         } catch (e) {
             console.error(e);
             alert('Failed to create staff');
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    const openEditStaff = (s: any) => {
+        setEditingStaffId(s.staff_id);
+        setEditStaffForm({
+            name: s.name || '',
+            username: s.username || '',
+            pin: '',
+            role: s.role || 'STAMPER',
+            branch_id: s.branch_id || '',
+            status: s.status || 'ENABLED'
+        });
+        setIsAddingStaff(false);
+    }
+
+    const closeEditStaff = () => {
+        setEditingStaffId(null);
+        setEditStaffForm({ name: '', username: '', pin: '', role: 'STAMPER', branch_id: '', status: 'ENABLED' });
+    }
+
+    const handleSaveEditStaff = async () => {
+        if (!editingStaffId || !editStaffForm.name?.trim() || !editStaffForm.username?.trim()) {
+            alert('Name and username are required');
+            return;
+        }
+        setSaving(true);
+        try {
+            const body: any = {
+                name: editStaffForm.name.trim(),
+                username: editStaffForm.username.trim().toLowerCase().replace(/[^a-z0-9_-]/g, ''),
+                role: editStaffForm.role,
+                branch_id: editStaffForm.branch_id || undefined,
+                status: editStaffForm.status
+            };
+            if (editStaffForm.pin.trim()) body.pin = editStaffForm.pin.trim();
+            await api.patch(`/api/v1/admin/vendors/${id}/staff/${editingStaffId}`, body);
+            alert('Staff updated');
+            closeEditStaff();
+            fetchStaff();
+        } catch (e: any) {
+            console.error(e);
+            alert(e.response?.data?.message || 'Failed to update staff');
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    const handleDeleteStaff = async (s: any) => {
+        if (!window.confirm(`Delete staff member "${s.name}"? They will no longer be able to log in.`)) return;
+        setSaving(true);
+        try {
+            await api.delete(`/api/v1/admin/vendors/${id}/staff/${s.staff_id}`);
+            alert('Staff deleted');
+            if (editingStaffId === s.staff_id) closeEditStaff();
+            fetchStaff();
+        } catch (e: any) {
+            console.error(e);
+            alert(e.response?.data?.message || 'Failed to delete staff');
         } finally {
             setSaving(false);
         }
@@ -533,6 +596,69 @@ export default function AdminVendorDetail() {
                             </div>
                         )}
 
+                        {editingStaffId && (
+                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
+                                <h4 style={{ margin: '0 0 16px 0' }}>Edit Staff Member</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', alignItems: 'end' }}>
+                                    <AdminInput
+                                        label="Name"
+                                        type="text"
+                                        value={editStaffForm.name}
+                                        onChange={e => setEditStaffForm({ ...editStaffForm, name: e.target.value })}
+                                        placeholder="e.g. Alice"
+                                    />
+                                    <AdminInput
+                                        label="Username (for login)"
+                                        type="text"
+                                        value={editStaffForm.username}
+                                        onChange={e => setEditStaffForm({ ...editStaffForm, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
+                                        placeholder="e.g. alice"
+                                    />
+                                    <AdminInput
+                                        label="New PIN (leave blank to keep current)"
+                                        type="text"
+                                        value={editStaffForm.pin}
+                                        onChange={e => setEditStaffForm({ ...editStaffForm, pin: e.target.value })}
+                                        placeholder="e.g. 1234"
+                                    />
+                                    <AdminInput
+                                        label="Role"
+                                        type="select"
+                                        value={editStaffForm.role}
+                                        onChange={e => setEditStaffForm({ ...editStaffForm, role: e.target.value })}
+                                        options={[
+                                            { value: 'STAMPER', label: 'Stamper' },
+                                            { value: 'ADMIN', label: 'Admin' }
+                                        ]}
+                                    />
+                                    <AdminInput
+                                        label="Branch"
+                                        type="select"
+                                        value={editStaffForm.branch_id}
+                                        onChange={e => setEditStaffForm({ ...editStaffForm, branch_id: e.target.value })}
+                                        options={[
+                                            { value: '', label: '— Select —' },
+                                            ...(vendor?.branches || []).map((b: any) => ({ value: b.branch_id, label: b.name || b.city || b.branch_id?.slice(0, 8) }))
+                                        ]}
+                                    />
+                                    <AdminInput
+                                        label="Status"
+                                        type="select"
+                                        value={editStaffForm.status}
+                                        onChange={e => setEditStaffForm({ ...editStaffForm, status: e.target.value })}
+                                        options={[
+                                            { value: 'ENABLED', label: 'Enabled' },
+                                            { value: 'DISABLED', label: 'Disabled' }
+                                        ]}
+                                    />
+                                    <div style={{ display: 'flex', gap: '8px', gridColumn: '1 / -1' }}>
+                                        <AdminButton type="button" onClick={handleSaveEditStaff} isLoading={saving}>Save</AdminButton>
+                                        <AdminButton type="button" variant="secondary" onClick={closeEditStaff}>Cancel</AdminButton>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
@@ -542,6 +668,7 @@ export default function AdminVendorDetail() {
                                         <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Activity</th>
                                         <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Role</th>
                                         <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Joined</th>
+                                        <th style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -584,11 +711,21 @@ export default function AdminVendorDetail() {
                                             <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>
                                                 {new Date(s.created_at).toLocaleDateString()}
                                             </td>
+                                            <td style={{ padding: '12px' }}>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <AdminButton type="button" variant="secondary" onClick={() => openEditStaff(s)} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                                                        Edit
+                                                    </AdminButton>
+                                                    <AdminButton type="button" variant="danger" onClick={() => handleDeleteStaff(s)} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                                                        Delete
+                                                    </AdminButton>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                     {staffList.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} style={{ padding: '24px', textAlign: 'center', opacity: 0.5 }}>
+                                            <td colSpan={6} style={{ padding: '24px', textAlign: 'center', opacity: 0.5 }}>
                                                 No staff members found. Add one to enable POS access.
                                             </td>
                                         </tr>

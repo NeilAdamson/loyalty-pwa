@@ -91,3 +91,11 @@
     - [x] Code Changes: CORS, API URL, TypeScript Fixes <!-- id: 132 -->
     - [x] Infrastructure: deploy.sh, GitHub Actions <!-- id: 133 -->
     - [x] Documentation: DEPLOYMENT.md, Architecture Updates <!-- id: 134 -->
+
+- [x] Milestone 9: Vendor Staff Portal Upgrade <!-- id: 140 -->
+    - [x] Routing: /v/:slug/staff/scan, redirect after login, /staff -> / <!-- id: 141 -->
+    - [x] API paths: Staff UI calls /api/v1/tx/stamp and /api/v1/tx/redeem <!-- id: 142 -->
+    - [x] Stamp response: stamps_required, is_full in API <!-- id: 143 -->
+    - [x] Staff scan UI under VendorLayout (header, CSS vars, vendor styling) <!-- id: 144 -->
+    - [x] Scan UX: large scanner, Stamp vs Redeem mode, Scan next loop <!-- id: 145 -->
+    - [x] Documentation: WALKTHROUGH.md, TASK.md, API.md <!-- id: 146 -->
