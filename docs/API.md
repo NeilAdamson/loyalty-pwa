@@ -132,6 +132,12 @@ Validation (400): Returns `{ code: "VALIDATION_ERROR", message, details: { field
 **Delete Vendor**
 `DELETE /api/v1/admin/vendors/:id`
 
+### Admin Users (Platform)
+- **List admins**: `GET /api/v1/admin/users` — Returns `{ admins: [{ admin_id, email, name, role, status, created_at, last_login_at }] }`
+- **Create admin**: `POST /api/v1/admin/users` — Body: `{ name, email, password, role? }`. Role: `SUPPORT` \| `SUPER_ADMIN`.
+- **Get admin (for edit)**: `GET /api/v1/admin/users/:id` — Returns `{ admin }` (no password). 404 if not found.
+- **Update admin**: `PATCH /api/v1/admin/users/:id` — Body: `{ name?, email?, role?, status?, password? }`. Leave `password` blank to keep current. Cannot disable own account (400).
+
 ### Vendor Staff (Platform Admin)
 - **List staff**: `GET /api/v1/admin/vendors/:id/staff`
 - **Create staff**: `POST /api/v1/admin/vendors/:id/staff` — Body: `{ name, username, pin, role?, branch_id? }`

@@ -13,6 +13,7 @@ import AdminVendorList from './pages/admin/AdminVendorList';
 import AdminVendorCreate from './pages/admin/AdminVendorCreate';
 import AdminUserList from './pages/admin/AdminUserList';
 import AdminUserCreate from './pages/admin/AdminUserCreate';
+import AdminUserEdit from './pages/admin/AdminUserEdit';
 import AdminMemberList from './pages/admin/AdminMemberList';
 import AdminVendorQr from './pages/admin/AdminVendorQr';
 import AdminVendorDetail from './pages/admin/AdminVendorDetail';
@@ -67,6 +68,7 @@ function App() {
                             <Route path="members" element={<AdminMemberList />} />
                             <Route path="users" element={<AdminUserList />} />
                             <Route path="users/new" element={<AdminUserCreate />} />
+                            <Route path="users/:id/edit" element={<AdminUserEdit />} />
                             <Route path="settings" element={<div>Settings</div>} />
                         </Route>
 

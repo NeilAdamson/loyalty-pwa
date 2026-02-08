@@ -325,12 +325,12 @@ export default function AdminVendorDetail() {
             <form onSubmit={handleSave} style={{
                 display: 'flex',
                 gap: '40px',
-                alignItems: 'start',
+                alignItems: 'stretch',
                 maxWidth: '1600px',
                 margin: '0 auto',
                 paddingBottom: '40px'
             }}>
-                {/* LEFT MAIN CONTENT */}
+                {/* LEFT MAIN CONTENT - scrollable form */}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {Object.keys(fieldErrors).length > 0 && (
                         <div style={{
@@ -754,11 +754,17 @@ export default function AdminVendorDetail() {
 
                 </div>
 
-                {/* RIGHT SIDEBAR (Preview) */}
-                <div style={{ width: '350px', flexShrink: 0 }}>
+                {/* RIGHT SIDEBAR (Preview) - stretches to form height so sticky preview stays visible while scrolling */}
+                <div style={{
+                    width: '350px',
+                    flexShrink: 0,
+                    minHeight: 0,
+                    borderLeft: '1px solid var(--border, rgba(255,255,255,0.08))',
+                    paddingLeft: '24px'
+                }}>
                     <div style={{
                         position: 'sticky',
-                        top: '20px',
+                        top: '24px',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center'

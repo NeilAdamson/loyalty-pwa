@@ -70,7 +70,14 @@ export default function AdminUserList() {
         {
             header: 'Actions',
             render: (u: AdminUser) => (
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <AdminButton
+                        variant="secondary"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/admin/users/${u.admin_id}/edit`); }}
+                    >
+                        Edit
+                    </AdminButton>
                     {u.admin_id !== currentUser?.admin_id && (
                         <AdminButton
                             variant={u.status === 'ACTIVE' ? 'danger' : 'secondary'}
