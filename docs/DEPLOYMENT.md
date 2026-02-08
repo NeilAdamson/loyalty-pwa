@@ -59,14 +59,17 @@ OTP_PEPPER=random_pepper_string
 ADMIN_EMAIL=admin@loyaltyladies.com
 ADMIN_PASSWORD=secure_admin_password
 
-# Twilio (WhatsApp OTP) - Required for real OTP delivery
+# Twilio (OTP) - Required for real OTP delivery. If unset, OTP is logged only (no Twilio call).
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_FROM_NUMBER=14155238886
+# TWILIO_OTP_CHANNEL=sms   use "sms" with trial "My Twilio phone number" (verified numbers only); use "whatsapp" with WhatsApp sandbox/approved From
 # Or use API Key + Secret instead of Auth Token:
 # TWILIO_API_KEY=
 # TWILIO_API_SECRET=
 ```
+
+**Verifying Twilio:** Call `GET /health` (or `https://your-domain/api/health`). The response includes `twilio_configured: true|false`. If `false`, uncomment and set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` in `.env`, then restart the API container. Check API logs at startup for `[WhatsAppService] Twilio ENABLED` or `Twilio DISABLED`.
 
 
 

@@ -2,6 +2,11 @@
 
 Base URL: `https://loyaltyladies.com/api` (Production) or `http://localhost:8000` (Local). All tenant and transaction endpoints are under `/api/v1` (e.g. `/api/v1/tx/stamp`). Note: The Tech Spec examples use `/api/v1/staff/stamp` and `/api/v1/staff/redeem`; the implementation uses `/api/v1/tx/stamp` and `/api/v1/tx/redeem` as the single source of truth.
 
+## Health
+**GET /health** (no auth)  
+Returns: `{ "status": "ok", "timestamp": "...", "twilio_configured": true|false }`.  
+Use `twilio_configured` to verify Twilio WhatsApp OTP is enabled. If `false`, OTP is logged only (no Twilio call); set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` in `.env` and restart the API.
+
 ## Error Handling
 Standard Error Envelope:
 ```json

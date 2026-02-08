@@ -36,9 +36,10 @@ const CONSTRAINT_MAP: Record<string, string> = {
 }
 
 export default fp(async (fastify) => {
-    fastify.setErrorHandler((error: FastifyError, request, reply) => {
-        // Minimal error handler for debugging
-        console.error('CRITICAL:', error)
-        reply.status(500).send({ message: 'Critical Error' })
+    fastify.setErrorHandler((error: FastifyError & { statusCode?: number; message?: string }, request, reply) => {
+        const status = typeof error.statusCode === 'number' ? error.statusCode : 500
+        const message = typeof error.message === 'string' && error.message ? error.message : 'Critical Error'
+        if (status >= 500) console.error('Server error:', error)
+        return reply.status(status).send({ message })
     })
 })

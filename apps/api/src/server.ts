@@ -83,7 +83,13 @@ server.register(require('./modules/admin/member.routes').adminMemberRoutes, { pr
 server.register(require('./modules/admin/users.routes').adminUserRoutes, { prefix: '/api/v1/admin/users' })
 
 server.get('/health', async (request, reply) => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    const { WhatsAppService } = require('./services/whatsapp.service');
+    const ws = new WhatsAppService();
+    return {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        twilio_configured: ws.isConfigured(),
+    };
 });
 
 const start = async () => {
