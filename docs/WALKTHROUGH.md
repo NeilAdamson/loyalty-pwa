@@ -3,7 +3,8 @@
 **Goal**: Verify the new Backoffice features and the updated Member/Staff authentication flows.
 
 ## Prerequisites
-- Services running: `docker compose up -d`
+- Services running: `.\dev.ps1 up -d --build` (or `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`)
+- Database initialized: `.\dev.ps1 exec api pnpm db:deploy` and `.\dev.ps1 exec api pnpm db:seed`
 - Admin User Seeded: `admin@loyalty.com` / `password123`
 
 ## 1. Accessing Admin Portal
@@ -60,5 +61,5 @@
 4. Verify cookie is removed.
 
 ### Troubleshooting
-- **Blank Screen / 404**: Check Docker logs `docker compose logs -f api`.
+- **Blank Screen / 404**: Check Docker logs: `.\dev.ps1 logs -f api` (or `docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f api`).
 - **CORS Errors**: Ensure you are accessing via `localhost:5173` not `127.0.0.1` if cookies are failing, or vice versa depending on config.

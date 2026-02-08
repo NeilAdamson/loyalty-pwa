@@ -35,7 +35,7 @@ The official PostgreSQL Docker image creates the user and database automatically
 | DB user | `docker-compose.yml` / `.env` | `POSTGRES_USER` (default: `loyalty_app`) |
 | DB password | `docker-compose.yml` / `.env` | `POSTGRES_PASSWORD` (default: `e74a89c3120d4f5b9e8c2a3b`) |
 | `DATABASE_URL` | `.env` or compose default | Must match user/password above |
-| Admin login | Seeded via `db:seed` | `admin@loyalty.com` / `password123` (hardcoded in seed) |
+| Admin login | Seeded via `db:seed` | `admin@loyalty.com` / `password123` (default); override with `ADMIN_EMAIL` / `ADMIN_PASSWORD` |
 
 If you do **not** create a `.env`, the compose defaults apply:
 - `loyalty_app` / `e74a89c3120d4f5b9e8c2a3b` / `loyalty`
@@ -47,7 +47,7 @@ If you do **not** create a `.env`, the compose defaults apply:
 | DB user | `.env` on VPS | `POSTGRES_USER` (e.g. `loyalty_app`) |
 | DB password | `.env` on VPS | Strong random value |
 | `DATABASE_URL` | `.env` on VPS | `postgresql://loyalty_app:PASSWORD@db:5432/loyalty?schema=public` |
-| Admin login | Seeded via `db:seed` | From `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env` |
+| Admin login | Seeded via `db:seed` | From `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env` (defaults to `admin@loyalty.com` / `password123` if unset) |
 
 **Important:** `POSTGRES_*` and `DATABASE_URL` must be consistent. The API connects using `DATABASE_URL`; the DB container creates the user from `POSTGRES_*`.
 
@@ -71,9 +71,8 @@ If you do **not** create a `.env`, the compose defaults apply:
 | Step | Command | When |
 |------|---------|------|
 | 1 | Pull code | `git pull` |
-| 2 | Build & start | `docker compose up -d --build` |
-| 3 | Run new migrations | `docker compose exec api pnpm db:deploy` |
-| 4 | (Optional) Re-seed | Only if seed script is updated; usually not needed |
+| 2 | Deploy | `./deploy.sh` (builds, starts, runs migrations) |
+| 3 | (Optional) Re-seed | Only if seed script is updated; usually not needed |
 
 ---
 
@@ -101,11 +100,10 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api pnpm db:
 
 | Action | Command |
 |--------|---------|
-| Deploy (build + start) | `./deploy.sh` |
-| Migrate (after deploy) | `docker compose exec api pnpm db:deploy` |
+| Deploy (build + start + migrations) | `./deploy.sh` |
 | Seed (first run only) | `docker compose exec api pnpm db:seed` |
 
-**Note:** `deploy.sh` does *not* run migrations. You must run `db:deploy` after each deploy that includes schema changes.
+**Note:** `deploy.sh` runs `db:deploy` automatically, so migrations are applied on every deploy.
 
 ---
 
@@ -208,9 +206,7 @@ ALTER TABLE "vendors" ALTER COLUMN "contact_name" SET NOT NULL;
 
 ### deploy.sh and Migrations
 
-**Issue:** `deploy.sh` does not run migrations. Docs previously implied it did.
-
-**Fix:** Document clearly that migrations are a separate step. Optionally, add `docker compose exec api pnpm db:deploy` to `deploy.sh` so deployments apply pending migrations automatically (idempotent for unchanged schema).
+**Fixed:** `deploy.sh` now runs `docker compose run --rm api pnpm db:deploy` after `docker compose up`, so migrations are applied automatically on every deploy.
 
 ---
 
@@ -252,11 +248,9 @@ or with dev.ps1:
 
 ### First-Time Production Setup
 - [ ] Create `.env` with `POSTGRES_*` and `DATABASE_URL`
-- [ ] `./deploy.sh`
-- [ ] `docker compose exec api pnpm db:deploy`
-- [ ] `docker compose exec api pnpm db:seed`
+- [ ] `./deploy.sh` (runs migrations automatically)
+- [ ] `docker compose exec api pnpm db:seed` (first run only)
 
 ### After Schema Changes (Production)
 - [ ] Commit migration files
-- [ ] Deploy (`./deploy.sh` or CI)
-- [ ] `docker compose exec api pnpm db:deploy`
+- [ ] Deploy (`./deploy.sh` or CI) — migrations run automatically

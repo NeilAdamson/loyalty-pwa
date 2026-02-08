@@ -1,1 +1,35 @@
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# Development Environment — Docker Startup
+
+This file documents the commands for starting and using the local development stack.
+
+## Start the dev environment
+
+  .\dev.ps1 up -d --build
+
+  Or without dev.ps1:
+
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+
+## First run: Initialize the database
+
+After starting, run migrations and seed:
+
+  .\dev.ps1 exec api pnpm db:deploy
+  .\dev.ps1 exec api pnpm db:seed
+
+  Or without dev.ps1:
+
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api pnpm db:deploy
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api pnpm db:seed
+
+## Access
+
+  Web:    http://localhost:5173
+  Admin:  http://localhost:5173/admin/login  (admin@loyalty.com / password123)
+  API:    http://localhost:8000/health
+  pgAdmin: http://localhost:5050 (admin@admin.com / root)
+
+## Full reference
+
+  See docs/DATABASE-SETUP.md for database setup, migrations, and credentials.
+  See README.md for quick start and troubleshooting.

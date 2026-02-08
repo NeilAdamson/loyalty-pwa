@@ -23,7 +23,7 @@
 ### 1.1 Local development (mandatory: Docker Compose)
 The supported local development path MUST run the full stack in Docker containers (no host installs of DB/web servers/middleware).
 - Host prerequisites: Docker Desktop (WSL2 engine), Git, Antigravity IDE.
-- Local stack MUST be started with a single command: `docker compose up --build`.
+- Local stack MUST be started with a single command: `.\dev.ps1 up -d --build` (or `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`).
 - Hot reload MUST work for both:
   - `apps/api` (Node dev server with watch)
   - `apps/web` (Vite dev server)
@@ -41,7 +41,7 @@ The supported local development path MUST run the full stack in Docker container
 - `redis`: 6379:6379 (optional)
 
 **Minimum docker-compose requirements**
-- Compose file path: `infra/docker-compose.yml`
+- Compose files: `docker-compose.yml` (base) + `docker-compose.dev.yml` (dev override) at project root
 - Uses a dedicated network (default compose network acceptable)
 - Uses named volumes for DB persistence
 - Uses bind mounts for source code to enable hot reload

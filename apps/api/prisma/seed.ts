@@ -131,13 +131,15 @@ async function main() {
     console.log('Created/Found member:', member.name)
 
 
-    // 6a. Admin User (Upsert) - Fix for missing Admin Login
-    const adminPassword = await bcrypt.hash('password123', 10)
+    // 6a. Admin User (Upsert) - Use ADMIN_EMAIL/ADMIN_PASSWORD from env in production, defaults for dev
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@loyalty.com'
+    const adminPasswordPlain = process.env.ADMIN_PASSWORD || 'password123'
+    const adminPassword = await bcrypt.hash(adminPasswordPlain, 10)
     const admin = await prisma.adminUser.upsert({
-        where: { email: 'admin@loyalty.com' },
+        where: { email: adminEmail },
         update: {},
         create: {
-            email: 'admin@loyalty.com',
+            email: adminEmail,
             password_hash: adminPassword,
             name: 'Super Admin',
             role: 'SUPER_ADMIN',

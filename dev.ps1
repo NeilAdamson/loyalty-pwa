@@ -24,10 +24,12 @@ if ($args.Count -eq 0) {
     Write-Host "This script runs 'docker compose' with the dev configuration files."
     Write-Host ""
     Write-Host "Usage examples:"
-    Write-Host "  .\dev.ps1 up -d        (Start everything)"
-    Write-Host "  .\dev.ps1 down         (Stop everything)"
-    Write-Host "  .\dev.ps1 restart api  (Restart backend only)"
-    Write-Host "  .\dev.ps1 logs -f      (Follow logs)"
+    Write-Host "  .\dev.ps1 up -d --build     (Start everything)"
+    Write-Host "  .\dev.ps1 down              (Stop everything)"
+    Write-Host "  .\dev.ps1 restart api       (Restart backend only)"
+    Write-Host "  .\dev.ps1 logs -f api       (Follow logs)"
+    Write-Host "  .\dev.ps1 exec api pnpm db:deploy   (Run migrations)"
+    Write-Host "  .\dev.ps1 exec api pnpm db:seed     (Seed admin + demo)"
     exit
 }
 

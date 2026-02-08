@@ -78,7 +78,7 @@ When setting up the server for the first time, you need to create the tables and
     ```bash
     docker compose exec api pnpm db:seed
     ```
-    *This creates the default admin user using `ADMIN_EMAIL` and `ADMIN_PASSWORD` from your `.env`.*
+    *This creates the admin user. If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set in `.env`, those are used; otherwise defaults to `admin@loyalty.com` / `password123`.*
 
 For full database details (users, credentials, safe schema changes), see [docs/DATABASE-SETUP.md](DATABASE-SETUP.md).
 
@@ -125,13 +125,14 @@ docker compose up -d --build
 
 To run the **development** setup (with hot-reloading):
 ```bash
-# Start Dev Containers
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# Start Dev Containers (use dev.ps1 on Windows: .\dev.ps1 up -d --build)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 # Rebuild specific service (e.g. api) after dependencies change
 docker compose -f docker-compose.yml -f docker-compose.dev.yml build api
 docker compose -f docker-compose.yml -f docker-compose.dev.yml restart api
 ```
+See [development-Docker-startup.txt](development-Docker-startup.txt) and [DATABASE-SETUP.md](DATABASE-SETUP.md).
 
 ## 7. Verification
 
