@@ -51,29 +51,21 @@ Example (illustrative only; implementation may vary):
 services:
   api:
     build: ./apps/api
-    ports: ["8000:8000"]
-    volumes:
-      - ./:/workspace
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/loyalty
+      - DATABASE_URL=postgresql://loyalty_app:PASSWORD@db:5432/loyalty
     depends_on: [db]
-  web:
-    build: ./apps/web
-    ports: ["5173:5173"]
-    volumes:
-      - ./:/workspace
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8000/api/v1
   db:
     image: postgres:16
     environment:
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=loyalty_app
+      - POSTGRES_PASSWORD=PASSWORD
       - POSTGRES_DB=loyalty
     volumes:
       - dbdata:/var/lib/postgresql/data
 volumes:
   dbdata:
 ```
+See [DATABASE-SETUP.md](DATABASE-SETUP.md) for full DB setup details.
 
 **Antigravity rule**
 All run/test instructions in this repo MUST assume Docker Compose (no “install Postgres locally”, no “run node on host” as the supported path).

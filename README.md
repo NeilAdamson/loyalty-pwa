@@ -24,17 +24,13 @@ A multi-tenant digital loyalty stamp card system built with Node.js, Prisma, Pos
     *Wait a few moments for the database to become healthy.*
 
 3.  **Initialize the Database (Crucial for first run)**
-    On a fresh clone, the database is empty. You must push the schema and seed default data.
+    On a fresh clone, the database is empty. You must run migrations and seed.
     
-    a. **Push Schema (Migrations)**
     ```bash
-    docker compose run --rm api pnpm db:deploy
+    .\dev.ps1 exec api pnpm db:deploy
+    .\dev.ps1 exec api pnpm db:seed
     ```
-    
-    b. **Seed Data (Create Admin User & Defaults)**
-    ```bash
-    docker compose run --rm api sh -c "npx prisma generate && pnpm db:seed"
-    ```
+    Or without dev.ps1: `docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api pnpm db:deploy` (then same for seed).
 
 4.  **Access the App**
     *   **Web App**: [http://localhost:5173](http://localhost:5173)
@@ -61,7 +57,10 @@ If you see errors related to missing tables or invalid credentials immediately a
 
 ### Docker-Only Rule
 Do not try to run `pnpm install` or `pnpm dev` on your host machine.
-Always use `docker compose run --rm api ...` for backend commands.
+Always use `.\dev.ps1 exec api ...` (or `docker compose ... exec api ...`) for backend commands.
+
+### Database Setup
+For migrations, seeding, safe schema changes, and credentials, see [docs/DATABASE-SETUP.md](docs/DATABASE-SETUP.md).
 
 ## Production Deployment
 

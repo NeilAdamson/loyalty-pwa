@@ -73,16 +73,14 @@ TWILIO_FROM_NUMBER=14155238886
 ### 3.3 Database Initialization (First Run)
 When setting up the server for the first time, you need to create the tables and the admin user.
 
-1.  **Deploy first**: Run `./deploy.sh` (or let GitHub Actions do it) to get the containers running.
-2.  **Run Migrations**:
-    ```bash
-    docker compose exec api pnpm db:deploy
-    ```
-3.  **Seed Data (Create Admin User)**:
+1.  **Deploy first**: Run `./deploy.sh` (or let GitHub Actions do it). This starts containers and **runs migrations automatically**.
+2.  **Seed Data (Create Admin User)** — first run only:
     ```bash
     docker compose exec api pnpm db:seed
     ```
     *This creates the default admin user using `ADMIN_EMAIL` and `ADMIN_PASSWORD` from your `.env`.*
+
+For full database details (users, credentials, safe schema changes), see [docs/DATABASE-SETUP.md](DATABASE-SETUP.md).
 
 ### 3.4 Deployment Script
 The repository includes a `deploy.sh` script. Ensure it is executable on the server:
@@ -107,7 +105,7 @@ Go to **Settings > Secrets and variables > Actions** in your GitHub repository a
 2. Navigates to the deployment directory (`~/loyalty-pwa`).
 3. Pulls the latest code using `git pull`.
 4. Executes `./deploy.sh`.
-5. `deploy.sh` builds the Docker images, generates Prisma client, runs migrations, and restarts containers.
+5. `deploy.sh` builds Docker images, starts containers, runs `db:deploy` (migrations), and prunes unused images.
 
 ## 5. Manual Deployment
 
