@@ -253,9 +253,22 @@ export default function AdminVendorDetail() {
 
     // Helper for color input with preview
     const ColorPicker = ({ label, value, onChange }: any) => (
-        <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '8px' }}>{label}</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ marginBottom: '12px', minWidth: 0 }}>
+            <label
+                style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    color: 'var(--text-secondary)',
+                    marginBottom: '6px',
+                    lineHeight: 1.3,
+                    textAlign: 'left',
+                    whiteSpace: 'normal'
+                }}
+            >
+                {label}
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{
                     width: '40px',
                     height: '40px',
@@ -292,10 +305,10 @@ export default function AdminVendorDetail() {
                         border: '1px solid var(--border)',
                         color: 'var(--text-primary)',
                         borderRadius: '6px',
-                        padding: '8px 12px',
-                        width: '100px',
+                        padding: '6px 8px',
+                        width: '86px',
                         fontFamily: 'monospace',
-                        fontSize: '14px'
+                        fontSize: '12px'
                     }}
                 />
             </div>
@@ -471,29 +484,29 @@ export default function AdminVendorDetail() {
                             <h3 style={{ marginBottom: '24px', fontSize: '18px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>Branding Setup</h3>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '20px' }}>
                                     <ColorPicker
-                                        label="Primary"
+                                        label="Primary (card background)"
                                         value={branding.primary_color}
                                         onChange={(val: string) => setBranding({ ...branding, primary_color: val })}
                                     />
                                     <ColorPicker
-                                        label="Secondary"
+                                        label="Secondary (gradient end)"
                                         value={branding.secondary_color}
                                         onChange={(val: string) => setBranding({ ...branding, secondary_color: val })}
                                     />
                                     <ColorPicker
-                                        label="Accent"
+                                        label="Accent (stamps)"
                                         value={branding.accent_color}
                                         onChange={(val: string) => setBranding({ ...branding, accent_color: val })}
                                     />
                                     <ColorPicker
-                                        label="Background"
+                                        label="Background (screen)"
                                         value={branding.background_color}
                                         onChange={(val: string) => setBranding({ ...branding, background_color: val })}
                                     />
                                     <ColorPicker
-                                        label="Text"
+                                        label="Text (card labels)"
                                         value={branding.card_text_color}
                                         onChange={(val: string) => setBranding({ ...branding, card_text_color: val })}
                                     />
