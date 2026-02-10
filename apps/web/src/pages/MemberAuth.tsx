@@ -17,6 +17,9 @@ const MemberAuth: React.FC = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // Strict lock to prevent double-fire
+    const isSubmittingRef = React.useRef(false);
+
     // Derived phone for API
     const phone = `+27${phoneParts.network.replace(/^0/, '')}${phoneParts.number}`;
 
@@ -38,12 +41,15 @@ const MemberAuth: React.FC = () => {
     const requestOtp = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (isSubmittingRef.current) return; // Block double clicks
+
         // Validation
         if (phoneParts.network.length !== 3 || phoneParts.number.length !== 7) {
             setError('Please enter a valid SA mobile number (e.g. 082 123 4567)');
             return;
         }
 
+        isSubmittingRef.current = true;
         setIsLoading(true);
         setError('');
         try {
@@ -51,8 +57,14 @@ const MemberAuth: React.FC = () => {
             setStep('OTP');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to send OTP');
+            // Release lock immediately on error so they can retry
+            isSubmittingRef.current = false;
         } finally {
             setIsLoading(false);
+            // Keep lock held for a moment to prevent accidental double-tap on success/transition
+            setTimeout(() => {
+                isSubmittingRef.current = false;
+            }, 1000);
         }
     };
 

@@ -24,6 +24,9 @@ export class AuthService {
         // For MVP/Milestone 2, we skip complex sliding window.
         // Spec: "Rate limiting: enforce per (vendor_id, phone)"
 
+        const requestId = randomInt(1000, 9999);
+        console.log(`[AuthService.requestMemberOtp] req=${requestId} phone=${phone} vendor=${vendorId}`);
+
         // 2. Generate OTP
         const plainOtp = randomInt(100000, 999999).toString();
         const hash = await bcrypt.hash(plainOtp + OTP_PEPPER, 10)

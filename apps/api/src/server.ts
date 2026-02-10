@@ -82,17 +82,20 @@ server.register(require('./modules/admin/vendor.routes').adminVendorRoutes, { pr
 server.register(require('./modules/admin/member.routes').adminMemberRoutes, { prefix: '/api/v1/admin/members' })
 server.register(require('./modules/admin/users.routes').adminUserRoutes, { prefix: '/api/v1/admin/users' })
 
+import { SMSFlowService } from './services/smsflow.service';
+import { WhatsAppService } from './services/whatsapp.service';
+
+const OTP_PROVIDER_HEALTH = (process.env.OTP_PROVIDER || process.env.SMS_PROVIDER || 'smsflow').toLowerCase();
+// Instantiate once for health checks to avoid log spam and cache config
+const healthCheckSender = OTP_PROVIDER_HEALTH === 'smsflow' ? new SMSFlowService() : new WhatsAppService();
+
 server.get('/health', async (request, reply) => {
-    const provider = (process.env.OTP_PROVIDER || process.env.SMS_PROVIDER || 'smsflow').toLowerCase();
-    const { WhatsAppService } = require('./services/whatsapp.service');
-    const { SMSFlowService } = require('./services/smsflow.service');
-    const otpSender = provider === 'smsflow' ? new SMSFlowService() : new WhatsAppService();
     return {
         status: 'ok',
         timestamp: new Date().toISOString(),
-        otp_provider: provider,
-        otp_configured: otpSender.isConfigured(),
-        twilio_configured: provider === 'twilio' ? otpSender.isConfigured() : undefined,
+        otp_provider: OTP_PROVIDER_HEALTH,
+        otp_configured: healthCheckSender.isConfigured(),
+        twilio_configured: OTP_PROVIDER_HEALTH === 'twilio' ? healthCheckSender.isConfigured() : undefined,
     };
 });
 
