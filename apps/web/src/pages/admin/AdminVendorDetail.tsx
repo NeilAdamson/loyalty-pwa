@@ -789,6 +789,8 @@ export default function AdminVendorDetail() {
                             border: '10px solid #2a2a2a',
                             borderRadius: '36px',
                             overflow: 'hidden',
+                            overflowY: 'auto',
+                            scrollbarWidth: 'none', // Firefox
                             position: 'relative',
                             padding: '20px',
                             boxShadow: '0 30px 60px rgba(0,0,0,0.6)',
@@ -796,6 +798,9 @@ export default function AdminVendorDetail() {
                             flexDirection: 'column',
                             transition: 'background 0.3s ease'
                         }}>
+                            <style>{`
+                                .phone-preview::-webkit-scrollbar { display: none; } 
+                            `}</style>
                             {/* Status Bar Mock */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', height: '14px', marginBottom: '20px', opacity: 0.5 }}>
                                 <span style={{ fontSize: '10px', color: '#fff' }}>9:41</span>

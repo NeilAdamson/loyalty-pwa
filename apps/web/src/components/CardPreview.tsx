@@ -38,14 +38,14 @@ const CardPreview: React.FC<CardPreviewProps> = ({ branding, program, stampsCoun
     // Layout: aim for two rows. For even counts, split evenly across 2 rows.
     // Example: 6 -> 3x2 grid (3 per row); 4 -> 2x2; 3 -> 2 + 1.
     const stampColumns = Math.max(2, Math.ceil(stampsRequired / 2));
-    const isSmallProgram = stampsRequired <= 6;
 
     // For smaller programs (e.g. 4–6 stamps) the dots can feel oversized
     // and risk visually crowding the card. Apply a gentle scale-down.
-    const stampScale =
-        stampsRequired <= 4 ? 0.6 :
-            stampsRequired <= 6 ? 0.75 :
-                0.9;
+    // Simplified sizing logic - use width directly to control layout flow
+    const stampWidth =
+        stampsRequired <= 4 ? '50%' :
+            stampsRequired <= 6 ? '70%' :
+                '90%';
 
     // Tighter spacing for small programs so the grid feels more compact
     // and stays visually centred on the card.
@@ -58,7 +58,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ branding, program, stampsCoun
         <div style={{
             background: getBackground(),
             color: textColor,
-            padding: '24px',
+            padding: '24px 24px 32px 24px',
             borderRadius: '24px',
             boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
             position: 'relative',
@@ -115,11 +115,12 @@ const CardPreview: React.FC<CardPreviewProps> = ({ branding, program, stampsCoun
                     display: 'grid',
                     gridTemplateColumns: `repeat(${stampColumns}, 1fr)`,
                     gap: `${stampGap}px`,
-                    justifyItems: 'center'
+                    justifyItems: 'center',
+                    alignItems: 'center'
                 }}>
                     {Array.from({ length: stampsRequired }).map((_, i) => (
                         <div key={i} style={{
-                            width: isSmallProgram ? '70%' : '100%',
+                            width: stampWidth,
                             aspectRatio: '1',
                             borderRadius: '50%',
                             background: i < stampsCount
@@ -137,9 +138,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ branding, program, stampsCoun
                                 ? `0 4px 12px ${accentColor}66, inset 0 2px 4px rgba(255,255,255,0.3)`
                                 : 'inset 0 2px 4px rgba(0,0,0,0.1)',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            transform: i < stampsCount
-                                ? `scale(${stampScale})`
-                                : `scale(${stampScale * 0.93})`
+                            transform: i < stampsCount ? 'scale(1)' : 'scale(0.93)'
                         }}>
                             {i < stampsCount && (
                                 <svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
