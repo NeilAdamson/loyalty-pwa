@@ -90,10 +90,10 @@ export class SMSFlowService {
             ? json.expiresInMinutes
             : 60; // sensible default if API omits it
 
-        this.authToken = json.token;
+        this.authToken = json.token as string;
         this.authTokenExpiresAt = Date.now() + expiresInMinutes * 60_000;
 
-        return this.authToken;
+        return this.authToken as string;
     }
 
     async sendOtp(to: string, code: string): Promise<void> {
