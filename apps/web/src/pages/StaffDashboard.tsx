@@ -9,7 +9,7 @@ type ScanMode = 'stamp' | 'redeem';
 function friendlyMessage(code: string | undefined, defaultMsg: string): string {
     const map: Record<string, string> = {
         TOKEN_REPLAYED: "Token already used. Ask customer to refresh their screen.",
-        CARD_FULL: "Card is full — scan the NEW code to redeem.",
+        CARD_FULL: "Card is already full! content Switch to 'Redeem Reward' mode and scan this code again.",
         CARD_NOT_ELIGIBLE: "Card not full yet.",
         RATE_LIMITED: "Please wait a moment before stamping again.",
         TOKEN_EXPIRED: "Code expired. Ask customer to refresh their screen.",

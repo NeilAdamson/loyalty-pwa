@@ -58,7 +58,8 @@ const MemberCard: React.FC = () => {
 
     // Confetti effect when card becomes full
     useEffect(() => {
-        if (data?.card?.stamps_count >= data?.card?.stamps_required && data?.card?.status === 'ACTIVE') {
+        const required = data?.card?.program?.stamps_required || 10;
+        if (data?.card?.stamps_count >= required && data?.card?.status === 'ACTIVE') {
             confetti({
                 particleCount: 150,
                 spread: 70,
@@ -71,7 +72,7 @@ const MemberCard: React.FC = () => {
                 ]
             });
         }
-    }, [data?.card?.stamps_count, data?.card?.status]);
+    }, [data?.card?.stamps_count, data?.card?.status, data?.card?.program?.stamps_required]);
 
     useEffect(() => {
         if (!timeLeft) return;
@@ -93,7 +94,9 @@ const MemberCard: React.FC = () => {
     const { card, token, vendor } = data;
     const branding = vendor?.branding || {};
     const stamps = card.stamps_count;
-    const isFull = stamps >= card.stamps_required;
+    // Fix: Validating against program requirements, with fallback
+    const required = card.program?.stamps_required || 10;
+    const isFull = stamps >= required;
 
 
     // Modern Mesh Gradient Background
