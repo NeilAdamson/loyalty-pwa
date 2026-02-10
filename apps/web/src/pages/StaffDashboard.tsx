@@ -63,6 +63,7 @@ const StaffDashboard: React.FC = () => {
     const [scanResult, setScanResult] = useState<string | null>(null);
     const [status, setStatus] = useState<string>('');
     const [resetCounter, setResetCounter] = useState(0);
+    const [syncing, setSyncing] = useState(false);
 
     const resetToScan = useCallback(() => {
         setScanResult(null);
@@ -89,7 +90,13 @@ const StaffDashboard: React.FC = () => {
             const { new_count, stamps_required, is_full } = res.data;
 
             if (is_full) {
-                setStatus(`Stamped! Card FULL (${new_count}/${stamps_required}). Scan NEW code to Redeem.`);
+                setStatus(`Stamped! Card FULL (${new_count}/${stamps_required}). Waiting for customer screen to sync...`);
+                // Block scanner for 4s
+                setSyncing(true);
+                setTimeout(() => {
+                    setSyncing(false);
+                    setStatus(`Card FULL. Scan NEW code to Redeem.`);
+                }, 4000);
             } else {
                 setStatus(`Stamped! ${new_count} / ${stamps_required}`);
             }
@@ -142,7 +149,7 @@ const StaffDashboard: React.FC = () => {
 
     // Show scanner if we don't have a result OR if we are showing a success/error message but user wants to scan again
     // In this simplified UI, we hide scanner when we have a result status to show.
-    const showScanner = !scanResult;
+    const showScanner = !scanResult && !syncing;
 
     return (
         <div style={pageStyle}>

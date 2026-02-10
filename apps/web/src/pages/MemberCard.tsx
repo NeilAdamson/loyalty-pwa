@@ -58,7 +58,7 @@ const MemberCard: React.FC = () => {
 
     // Confetti effect when card becomes full
     useEffect(() => {
-        if (data?.card?.stamps_count === data?.card?.stamps_required && data?.card?.status === 'ACTIVE') {
+        if (data?.card?.stamps_count >= data?.card?.stamps_required && data?.card?.status === 'ACTIVE') {
             confetti({
                 particleCount: 150,
                 spread: 70,
@@ -303,10 +303,10 @@ const MemberCard: React.FC = () => {
                             color: branding.accent_color || '#fff',
                             textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                         }}>
-                            Card Full! 🎉
+                            Congratulations! 🎉
                         </h3>
                         <p style={{ margin: 0, opacity: 0.9, fontSize: '1rem', fontWeight: 500 }}>
-                            Show this code to redeem your reward!
+                            Ask your server to scan to redeem your reward!
                         </p>
                     </>
                 ) : (
