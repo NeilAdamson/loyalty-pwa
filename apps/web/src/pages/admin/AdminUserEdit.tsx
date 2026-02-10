@@ -36,7 +36,6 @@ export default function AdminUserEdit() {
     const [error, setError] = useState('');
 
     const pwdChecks = passwordChecks(formData.newPassword);
-    const pwdOk = formData.newPassword === '' || passwordAcceptable(formData.newPassword);
 
     useEffect(() => {
         if (!id) return;
