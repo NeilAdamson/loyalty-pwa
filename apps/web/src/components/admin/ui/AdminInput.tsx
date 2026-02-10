@@ -43,6 +43,7 @@ const AdminInput: React.FC<AdminInputProps> = ({
                         fontSize: '14px',
                         outline: 'none',
                         transition: 'border-color 0.2s',
+                        width: '100%',
                         ...style
                     }}
                     onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
@@ -66,6 +67,7 @@ const AdminInput: React.FC<AdminInputProps> = ({
                         fontSize: '14px',
                         outline: 'none',
                         transition: 'border-color 0.2s',
+                        width: '100%',
                         ...style
                     }}
                     onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}

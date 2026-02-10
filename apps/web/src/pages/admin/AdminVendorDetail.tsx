@@ -402,7 +402,7 @@ export default function AdminVendorDetail() {
                                 />
 
                                 <h4 style={{ fontSize: '14px', margin: '12px 0 8px 0', opacity: 0.7 }}>Contact Person</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', maxWidth: '800px' }}>
                                     <AdminInput
                                         label="Name"
                                         type="text"
@@ -432,7 +432,7 @@ export default function AdminVendorDetail() {
                                 />
 
                                 <h4 style={{ fontSize: '14px', margin: '20px 0 8px 0', opacity: 0.7 }}>Location</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', maxWidth: '800px' }}>
                                     <AdminInput
                                         label="Branch (Region)"
                                         type="text"
@@ -456,7 +456,7 @@ export default function AdminVendorDetail() {
                                     error={fieldErrors.billing_email}
                                     required
                                 />
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', maxWidth: '800px' }}>
                                     <AdminInput
                                         label="Monthly Billing (R)"
                                         type="number"
