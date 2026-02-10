@@ -1,13 +1,22 @@
 import { FastifyPluginAsync } from 'fastify'
 import { VendorService } from '../../services/vendor.service'
 import { AuthService } from '../../services/auth.service'
-
 import { WhatsAppService } from '../../services/whatsapp.service'
+import { SMSFlowService } from '../../services/smsflow.service'
+
+const OTP_PROVIDER = (process.env.OTP_PROVIDER || process.env.SMS_PROVIDER || 'smsflow').toLowerCase()
+
+function getOtpSender() {
+    if (OTP_PROVIDER === 'smsflow') {
+        return new SMSFlowService()
+    }
+    return new WhatsAppService()
+}
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
     const vendorService = new VendorService(fastify.prisma)
-    const whatsAppService = new WhatsAppService()
-    const authService = new AuthService(fastify.prisma, whatsAppService)
+    const otpSender = getOtpSender()
+    const authService = new AuthService(fastify.prisma, otpSender)
 
     // Member OTP Request
     fastify.post<{ Params: { vendorSlug: string }; Body: { phone: string } }>(

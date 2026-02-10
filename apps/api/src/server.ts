@@ -83,12 +83,16 @@ server.register(require('./modules/admin/member.routes').adminMemberRoutes, { pr
 server.register(require('./modules/admin/users.routes').adminUserRoutes, { prefix: '/api/v1/admin/users' })
 
 server.get('/health', async (request, reply) => {
+    const provider = (process.env.OTP_PROVIDER || process.env.SMS_PROVIDER || 'smsflow').toLowerCase();
     const { WhatsAppService } = require('./services/whatsapp.service');
-    const ws = new WhatsAppService();
+    const { SMSFlowService } = require('./services/smsflow.service');
+    const otpSender = provider === 'smsflow' ? new SMSFlowService() : new WhatsAppService();
     return {
         status: 'ok',
         timestamp: new Date().toISOString(),
-        twilio_configured: ws.isConfigured(),
+        otp_provider: provider,
+        otp_configured: otpSender.isConfigured(),
+        twilio_configured: provider === 'twilio' ? otpSender.isConfigured() : undefined,
     };
 });
 

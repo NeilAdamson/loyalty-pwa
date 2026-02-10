@@ -4,8 +4,11 @@ Base URL: `https://loyaltyladies.com/api` (Production) or `http://localhost:8000
 
 ## Health
 **GET /health** (no auth)  
-Returns: `{ "status": "ok", "timestamp": "...", "twilio_configured": true|false }`.  
-Use `twilio_configured` to verify Twilio WhatsApp OTP is enabled. If `false`, OTP is logged only (no Twilio call); set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` in `.env` and restart the API.
+Returns: `{ "status": "ok", "timestamp": "...", "otp_provider": "twilio"|"smsflow", "otp_configured": true|false, "twilio_configured": true|false? }`.  
+Default provider is `smsflow`. Set `OTP_PROVIDER=twilio` to use Twilio. Configure the chosen provider:  
+- **SMSFlow** (portal integration): `SMSFLOW_CLIENT_ID`, `SMSFLOW_CLIENT_SECRET`, optional `SMSFLOW_SENDER_ID`  
+- **Twilio**: `TWILIO_*` credentials as per Twilio docs  
+If no provider is fully configured, OTP is logged only (check API container logs for the code).
 
 ## Error Handling
 Standard Error Envelope:

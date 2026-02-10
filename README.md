@@ -55,6 +55,19 @@ A multi-tenant digital loyalty stamp card system built with Node.js, Prisma, Pos
 ### "Table does not exist" or "Admin User not found"
 If you see errors related to missing tables or invalid credentials immediately after `docker compose up`, it means you skipped **Step 3**. The database volume is empty by default. Run the migration and seed commands above to fix it.
 
+### OTP / SMS not sending
+
+- Check `http://localhost:8000/health` and confirm:
+  - `"otp_provider": "smsflow"` (or `"twilio"`) and
+  - `"otp_configured": true`.
+- For **SMSFlow** (default provider):
+  - Set `OTP_PROVIDER=smsflow` in `.env`.
+  - Configure `SMSFLOW_CLIENT_ID`, `SMSFLOW_CLIENT_SECRET`, and optional `SMSFLOW_SENDER_ID`.
+  - The API uses the Portal Integration flow: it first calls `/api/integration/authentication` with Basic Auth (ClientID/ClientSecret), then sends OTPs via `/api/integration/BulkMessages`.
+- For **Twilio**:
+  - Set `OTP_PROVIDER=twilio` and configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` or API key/secret, and `TWILIO_FROM_NUMBER`.
+- If a provider is misconfigured, OTPs are not sent externally but the API logs the OTP code to assist local testing.
+
 ### Docker-Only Rule
 Do not try to run `pnpm install` or `pnpm dev` on your host machine.
 Always use `.\dev.ps1 exec api ...` (or `docker compose ... exec api ...`) for backend commands.

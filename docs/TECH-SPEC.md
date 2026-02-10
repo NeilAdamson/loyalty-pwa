@@ -297,14 +297,12 @@ Record fraud flags in transaction `flags` JSON when:
 ```
 
 ### 6.2 Encoding
-- `payload_b64 = base64url(JSON(payload))`
-- `sig = HMAC_SHA256(TOKEN_SIGNING_SECRET, payload_b64)`
-- `token = payload_b64 + "." + base64url(sig)`
+- Encoded as a JWT (JWS) signed with `TOKEN_SIGNING_SECRET`.
 
 ### 6.3 Validation rules
-- signature valid
-- exp > now
-- token_use insert (vendor_id, jti) must succeed; if duplicate => `TOKEN_REPLAYED`
+- JWT signature valid.
+- `exp` > now.
+- `token_use` insert (vendor_id, jti) must succeed; if duplicate => `TOKEN_REPLAYED`.
 
 ---
 
@@ -315,8 +313,10 @@ Record fraud flags in transaction `flags` JSON when:
 - Store only `otp_hash = bcrypt(code + OTP_PEPPER)`.
 - TTL: 5 minutes.
 
-### 7.2 WhatsApp delivery
-- Send WhatsApp message to `phone_e164` containing OTP.
+### 7.2 Delivery
+- Send OTP to `phone_e164` via the configured provider:
+  - **SMSFlow** (SMS) or
+  - **Twilio** (WhatsApp or SMS, depending on configuration).
 - Message template (exact text):
   - `Your {VENDOR_TRADING_NAME} verification code is: {OTP}. It expires in 5 minutes.`
 
@@ -355,21 +355,18 @@ Response:
 ```
 
 ### 8.2 Member OTP request
-**POST** `/api/v1/vendors/{vendor_slug}/members/otp/request`
+**POST** `/api/v1/v/{vendor_slug}/auth/member/otp/request`
 Body:
 ```json
-{ "phone_e164": "+2782...", "name": "Neil" }
+{ "phone": "+2782..." }
 ```
-Response:
-```json
-{ "otp_id": "uuid", "expires_in_seconds": 300 }
-```
+Response: `200 OK` on success (no body contract required for clients beyond `{ success: true }`).
 
 ### 8.3 Member OTP verify
-**POST** `/api/v1/vendors/{vendor_slug}/members/otp/verify`
+**POST** `/api/v1/v/{vendor_slug}/auth/member/otp/verify`
 Body:
 ```json
-{ "otp_id": "uuid", "otp_code": "123456" }
+{ "phone": "+2782...", "code": "123456" }
 ```
 Behavior:
 - Create or update member.
@@ -377,16 +374,11 @@ Behavior:
 Response:
 ```json
 {
-  "member_token": "JWT...",
-  "member": { "member_id": "uuid" },
-  "card": {
-    "card_id": "uuid",
-    "status": "ACTIVE",
-    "stamps_count": 0,
-    "stamps_required": 10
-  }
+  "token": "JWT...",
+  "member": { "member_id": "uuid" }
 }
 ```
+Clients then call `GET /api/v1/me/card` to retrieve card + rotating token.
 
 ### 8.4 Member card view + rotating token
 **GET** `/api/v1/me/card`
@@ -400,21 +392,24 @@ Response:
     "stamps_count": 3,
     "stamps_required": 10
   },
-  "rotating_token": {
-    "token": "...",
-    "expires_in_seconds": 30
+  "member": {
+    "name": "Neil",
+    "phone": "+2782..."
   },
-  "history": [
-    { "type": "STAMP", "at": "2026-01-20T10:00:00Z" }
-  ]
+  "token": "...",
+  "expires_in_seconds": 30,
+  "vendor": {
+    "trading_name": "ACME Car Wash",
+    "branding": { "logo_url": "...", "primary_color": "#...", "secondary_color": "#..." }
+  }
 }
 ```
 
-### 8.5 Staff login (PIN-only)
-**POST** `/api/v1/vendors/{vendor_slug}/staff/login`
+### 8.5 Staff login (username + PIN)
+**POST** `/api/v1/v/{vendor_slug}/auth/staff/login`
 Body:
 ```json
-{ "pin": "123456" }
+{ "username": "alice", "pin": "1234" }
 ```
 Response:
 ```json
@@ -425,11 +420,11 @@ Response:
 ```
 
 ### 8.6 Stamp
-**POST** `/api/v1/staff/stamp`
+**POST** `/api/v1/tx/stamp`
 Auth: `Bearer staff_token`
 Body:
 ```json
-{ "member_rotating_token": "...", "device_fingerprint": "optional" }
+{ "token": "...", "device_fingerprint": "optional" }
 ```
 Response:
 ```json
@@ -437,11 +432,11 @@ Response:
 ```
 
 ### 8.7 Redeem
-**POST** `/api/v1/staff/redeem`
+**POST** `/api/v1/tx/redeem`
 Auth: `Bearer staff_token`
 Body:
 ```json
-{ "member_rotating_token": "...", "device_fingerprint": "optional" }
+{ "token": "...", "device_fingerprint": "optional" }
 ```
 Response:
 ```json
@@ -455,7 +450,7 @@ Response:
 ### 8.8 Error format (standard)
 All errors MUST be returned as:
 ```json
-{ "error": { "code": "SOME_CODE", "message": "Human readable" } }
+{ "code": "SOME_CODE", "message": "Human readable", "details": { "field": "optional validation message" } }
 ```
 
 Required error codes:
@@ -520,6 +515,10 @@ A scheduled job runs daily:
 - `JWT_SECRET`
 - `TOKEN_SIGNING_SECRET`
 - `OTP_PEPPER`
+- `OTP_PROVIDER` (smsflow \| twilio)
+- `SMSFLOW_CLIENT_ID`
+- `SMSFLOW_CLIENT_SECRET`
+- `SMSFLOW_SENDER_ID`
 - `TWILIO_ACCOUNT_SID`
 - `TWILIO_AUTH_TOKEN`
 - `TWILIO_FROM_NUMBER`

@@ -59,10 +59,12 @@ flowchart LR
 - MVP option A: Postgres (simple) with time-window counters.
 - Preferred: Redis (recommended on VPS) for efficient rate limits + token replay cache.
 
-### 3.5 WhatsApp OTP provider
-- WhatsApp OTP is implemented by sending a WhatsApp message containing a one-time code.
-- Provider: **Twilio Programmable Messaging (WhatsApp)**.
-- Integration requires valid `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`.
+### 3.5 OTP provider(s)
+- OTP is implemented by sending a one-time code to the member's phone.
+- Providers:
+  - **SMSFlow** — SMS via the Portal Integration API (ClientID/ClientSecret → bearer token → BulkMessages).
+  - **Twilio Programmable Messaging** — WhatsApp or SMS, depending on configuration.
+- Integration requires valid provider-specific credentials (`SMSFLOW_CLIENT_ID` / `SMSFLOW_CLIENT_SECRET` or `TWILIO_*`).
 - The system supports “send OTP” and “verify OTP” using internal code generation + storage.
 
 ## 4. Tenant isolation
@@ -76,13 +78,13 @@ flowchart LR
 ## 5. Identity and session model
 
 ### 5.1 Member auth
-- Passwordless: phone + WhatsApp OTP.
+- Passwordless: phone + OTP delivered via configured provider (SMSFlow SMS or Twilio WhatsApp/SMS).
 - Session token: JWT (access token) stored as httpOnly cookie (preferred) OR in memory/local storage (fallback).
 - Session TTL: 30 days; refresh on activity.
 
-### 5.2 Staff auth (PIN-only)
-- Staff portal is vendor-scoped. Staff enters only PIN.
-- PIN uniquely identifies staff within vendor.
+### 5.2 Staff auth (username + PIN)
+- Staff portal is vendor-scoped. Staff enters username + PIN.
+- PIN is stored as a hash and must be unique per staff account within a vendor.
 - Session token: JWT, TTL 12 hours, idle timeout 30 minutes.
 
 ### 5.3 Admin auth

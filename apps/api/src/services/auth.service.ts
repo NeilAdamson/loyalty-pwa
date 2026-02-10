@@ -1,14 +1,20 @@
 import { PrismaClient } from '@prisma/client'
 import { ERROR_CODES } from '../plugins/errors'
 import bcrypt from 'bcryptjs'
-import { randomInt } from 'crypto';
+import { randomInt } from 'crypto'
 
-import { WhatsAppService } from './whatsapp.service'
+/** OTP delivery: Twilio (WhatsApp/SMS) or SMSFlow (SMS). */
+export interface IOtpSender {
+    sendOtp(to: string, code: string): Promise<void>
+    isConfigured(): boolean
+}
+
+const OTP_PEPPER = process.env.OTP_PEPPER || ''
 
 export class AuthService {
     constructor(
         private prisma: PrismaClient,
-        private whatsAppService: WhatsAppService
+        private otpSender: IOtpSender
     ) { }
 
     // --- Member OTP ---
@@ -20,7 +26,7 @@ export class AuthService {
 
         // 2. Generate OTP
         const plainOtp = randomInt(100000, 999999).toString();
-        const hash = await bcrypt.hash(plainOtp, 10)
+        const hash = await bcrypt.hash(plainOtp + OTP_PEPPER, 10)
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
 
         // 3. Store in DB
@@ -39,8 +45,8 @@ export class AuthService {
             }
         })
 
-        // 4. Send via WhatsApp
-        await this.whatsAppService.sendOtp(phone, plainOtp);
+        // 4. Send OTP (Twilio or SMSFlow)
+        await this.otpSender.sendOtp(phone, plainOtp);
 
         return { success: true, dev_otp: plainOtp }
     }
@@ -70,7 +76,7 @@ export class AuthService {
         }
 
         // 3. Verify Hash
-        const valid = await bcrypt.compare(code, otpReq.otp_hash)
+        const valid = await bcrypt.compare(code + OTP_PEPPER, otpReq.otp_hash)
         if (!valid) {
             // Increment attempts
             await this.prisma.otpRequest.update({

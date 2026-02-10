@@ -3,13 +3,18 @@ services:
   api:
     build:
       target: dev
+    env_file:
+      - .env
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       # Allow requests from local frontend
       - CORS_ALLOWED_ORIGIN=http://localhost:5173
       # Host/Port for internal binding
       - HOST=0.0.0.0
       - PORT=8000
-      # Dev Secrets
+      # Dev Secrets (override .env if present)
       - JWT_SECRET=dev_jwt_secret_12345
       - TOKEN_SIGNING_SECRET=dev_token_secret_12345
     ports:

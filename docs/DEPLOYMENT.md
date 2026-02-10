@@ -59,17 +59,25 @@ OTP_PEPPER=random_pepper_string
 ADMIN_EMAIL=admin@loyaltyladies.com
 ADMIN_PASSWORD=secure_admin_password
 
-# Twilio (OTP) - Required for real OTP delivery. If unset, OTP is logged only (no Twilio call).
+# OTP delivery: default is smsflow. Set OTP_PROVIDER=twilio to use Twilio. If provider not configured, OTP is logged only.
+# OTP_PROVIDER=smsflow   (default)
+# OTP_PROVIDER=twilio
+
+# --- Twilio (when OTP_PROVIDER=twilio) ---
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_FROM_NUMBER=14155238886
 # TWILIO_OTP_CHANNEL=sms   use "sms" with trial "My Twilio phone number" (verified numbers only); use "whatsapp" with WhatsApp sandbox/approved From
-# Or use API Key + Secret instead of Auth Token:
 # TWILIO_API_KEY=
 # TWILIO_API_SECRET=
+
+# --- SMSFlow (when OTP_PROVIDER=smsflow) ---
+# POST https://api.smsflow.co.za/v1/messages — Bearer token = Client Secret (not Client ID). Phones: international without + (e.g. 27821234567).
+# SMSFLOW_API_KEY=your_client_secret
+# SMSFLOW_SENDER_ID=Loyalty   (optional; branding may require pre-approval)
 ```
 
-**Verifying Twilio:** Call `GET /health` (or `https://your-domain/api/health`). The response includes `twilio_configured: true|false`. If `false`, uncomment and set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` in `.env`, then restart the API container. Check API logs at startup for `[WhatsAppService] Twilio ENABLED` or `Twilio DISABLED`.
+**Verifying OTP:** Call `GET /health`. The response includes `otp_provider` (`twilio` \| `smsflow`) and `otp_configured: true|false`. If `false`, set the chosen provider’s env vars (Twilio or SMSFlow) and restart the API. Check API logs for `[WhatsAppService] Twilio ENABLED`, `[SMSFlowService] SMSFlow ENABLED`, or `DISABLED`.
 
 
 
