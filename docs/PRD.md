@@ -149,6 +149,10 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
   - progress (stamps_count / stamps_required)
   - reward details + terms
   - last 20 transactions summary (stamp/redeem timestamps)
+- **Celebration State**: When card is full (`stamps >= required`), MUST display:
+  - "Congratulations!" headline.
+  - "Ask your server to scan..." instruction.
+  - Confetti animation (even on refresh/login).
 
 **FR-C4 Rotating member token (anti-screenshot)**
 - Member card screen MUST display a rotating QR/token:
@@ -173,6 +177,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
   5) card ACTIVE and not full
   6) cooldown satisfied
 - On success: increment stamps_count by 1 and record append-only stamp transaction.
+- **Sync Delay**: If stamp results in a full card, Staff App MUST wait 4 seconds before allowing redemption scan (to allow Member App to refresh token).
 - Idempotency: token_jti MUST be idempotent (same jti cannot double-stamp).
 
 **FR-D3 Redeem**

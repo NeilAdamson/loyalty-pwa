@@ -263,6 +263,13 @@ Primary key: (vendor_id, token_jti)
 - Vendor specific cooldowns: Not supported in MVP.
 - Cooldown enforcement:
   - For a card_id, deny stamping if last stamp_at is within cooldown window.
+  - Returns `429 RATE_LIMITED` if violated.
+ 
+### 5.4 Client-Side Sync Delay (Race Condition Prevention)
+- **Problem**: When a card becomes full via a stamp transaction, the Member App (PWA) may still be showing an old, used token until its next poll (3s interval).
+- **Solution**: The Staff App MUST enforce a **4-second blocking delay** after a stamp that results in a full card (`is_full=true`).
+- **UI Behavior**: Staff app shows "Waiting for customer screen...", hides scanner, and only re-enables scanning (for Redemption) after the delay.
+- **Goal**: Allow Member App time to receive the update, trigger confetti, and generate a new valid redemption token.
 
 ### 5.2 Rate limits (defaults)
 - Staff PIN login attempts:
@@ -390,7 +397,9 @@ Response:
     "card_id": "uuid",
     "status": "ACTIVE",
     "stamps_count": 3,
-    "stamps_required": 10
+    "program": {
+        "stamps_required": 10
+    }
   },
   "member": {
     "name": "Neil",
