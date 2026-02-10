@@ -8,12 +8,13 @@ type ScanMode = 'stamp' | 'redeem';
 
 function friendlyMessage(code: string | undefined, defaultMsg: string): string {
     const map: Record<string, string> = {
-        TOKEN_REPLAYED: "This code was already used. Ask the customer to show the updated screen.",
-        CARD_FULL: "Card is full — ready to redeem.",
-        CARD_NOT_ELIGIBLE: "This card doesn't have enough stamps yet.",
-        RATE_LIMITED: "Please wait a few seconds before stamping again.",
-        TOKEN_EXPIRED: "Code expired or invalid. Ask the customer to refresh their card screen.",
-        TOKEN_INVALID: "Code invalid. Ask the customer to refresh their card screen.",
+        TOKEN_REPLAYED: "Token already used. Ask customer to refresh their screen.",
+        CARD_FULL: "Card is full — scan the NEW code to redeem.",
+        CARD_NOT_ELIGIBLE: "Card not full yet.",
+        RATE_LIMITED: "Please wait a moment before stamping again.",
+        TOKEN_EXPIRED: "Code expired. Ask customer to refresh their screen.",
+        TOKEN_INVALID: "Code invalid. Ask customer to refresh their screen.",
+        STAFF_DISABLED: "Your staff account is disabled.",
     };
     return (code && map[code]) || defaultMsg;
 }
@@ -34,7 +35,7 @@ const ScannerArea: React.FC<ScannerAreaProps> = ({ onScan }) => {
                 scanner.clear().catch(console.error);
                 onScan(decodedText);
             },
-            () => {}
+            () => { }
         );
         return () => {
             scanner.clear().catch(console.error);
@@ -88,29 +89,32 @@ const StaffDashboard: React.FC = () => {
         try {
             const res = await api.post('/api/v1/tx/stamp', { token });
             const { new_count, stamps_required, is_full } = res.data;
-            setStatus(`Stamped! ${new_count} / ${stamps_required}`);
-            setCardData({ ...res.data, token, is_full });
 
             if (is_full) {
-                setStatus('Card is full — ready to redeem.');
+                setStatus(`Stamped! Card FULL (${new_count}/${stamps_required}). Scan NEW code to Redeem.`);
+                setCardData({ ...res.data, token, is_full });
+            } else {
+                setStatus(`Stamped! ${new_count} / ${stamps_required}`);
+                setCardData({ ...res.data, token, is_full });
             }
+
         } catch (err: any) {
             const code = err.response?.data?.code;
             const msg = err.response?.data?.message || err.message;
             setStatus(friendlyMessage(code, 'Error: ' + msg));
             if (code === 'CARD_FULL') {
-                setCardData({ is_full: true, token });
+                setCardData({ is_full: true, token }); // Show info but don't allow immediate redeem with old token
             }
         }
     };
 
     const handleRedeem = async (tokenArg?: string) => {
-        const token = tokenArg ?? scanResult ?? cardData?.token;
+        const token = tokenArg ?? scanResult;
         if (!token) return;
         setStatus('Redeeming...');
         try {
             await api.post('/api/v1/tx/redeem', { token });
-            setStatus('Redeemed! New card created.');
+            setStatus('Redeemed! Success. New card created.');
             setCardData({ redeemed: true });
         } catch (err: any) {
             const code = err.response?.data?.code;
@@ -141,7 +145,9 @@ const StaffDashboard: React.FC = () => {
         overflow: 'hidden',
     };
 
-    const showScanner = !scanResult && !cardData?.redeemed;
+    // Show scanner if we don't have a result OR if we are showing a success/error message but user wants to scan again
+    // In this simplified UI, we hide scanner when we have a result status to show.
+    const showScanner = !scanResult;
 
     return (
         <div style={pageStyle}>
@@ -312,34 +318,13 @@ const StaffDashboard: React.FC = () => {
                             marginBottom: '24px',
                             borderRadius: '12px',
                             background: 'rgba(255,255,255,0.08)',
-                            fontSize: '1.1rem',
-                            fontWeight: 500,
+                            fontSize: '1.2rem',
+                            fontWeight: 600,
+                            lineHeight: 1.4,
                         }}
                     >
                         {status}
                     </div>
-
-                    {cardData?.is_full && !cardData?.redeemed && (
-                        <button
-                            type="button"
-                            onClick={() => handleRedeem()}
-                            style={{
-                                width: '100%',
-                                padding: '16px 24px',
-                                borderRadius: '16px',
-                                border: 'none',
-                                background: accentColor,
-                                color: '#fff',
-                                fontWeight: 700,
-                                fontSize: '1.1rem',
-                                cursor: 'pointer',
-                                marginBottom: '16px',
-                                boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
-                            }}
-                        >
-                            Redeem reward
-                        </button>
-                    )}
 
                     <button
                         type="button"

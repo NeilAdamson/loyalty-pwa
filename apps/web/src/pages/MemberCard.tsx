@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import confetti from 'canvas-confetti';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import CardPreview from '../components/CardPreview';
@@ -43,7 +44,7 @@ const MemberCard: React.FC = () => {
 
     useEffect(() => {
         fetchCard();
-        const pollInterval = 8000; // Refetch every 8s so stamps appear soon after staff adds one
+        const pollInterval = 3000; // Poll faster (3s) to catch the stamp event quickly
         const interval = setInterval(fetchCard, pollInterval);
         const onVisible = () => {
             if (document.visibilityState === 'visible') fetchCard();
@@ -54,6 +55,23 @@ const MemberCard: React.FC = () => {
             document.removeEventListener('visibilitychange', onVisible);
         };
     }, []);
+
+    // Confetti effect when card becomes full
+    useEffect(() => {
+        if (data?.card?.stamps_count === data?.card?.stamps_required && data?.card?.status === 'ACTIVE') {
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: [
+                    data.vendor?.branding?.primary_color || '#4f46e5',
+                    data.vendor?.branding?.secondary_color || '#9333ea',
+                    data.vendor?.branding?.accent_color || '#38bdf8',
+                    '#ffffff'
+                ]
+            });
+        }
+    }, [data?.card?.stamps_count, data?.card?.status]);
 
     useEffect(() => {
         if (!timeLeft) return;
@@ -75,6 +93,7 @@ const MemberCard: React.FC = () => {
     const { card, token, vendor } = data;
     const branding = vendor?.branding || {};
     const stamps = card.stamps_count;
+    const isFull = stamps >= card.stamps_required;
 
 
     // Modern Mesh Gradient Background
@@ -112,6 +131,11 @@ const MemberCard: React.FC = () => {
                     -webkit-backdrop-filter: blur(12px);
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+                }
+                @keyframes pulse-ring {
+                    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+                    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+                    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
                 }
                 `}
             </style>
@@ -252,23 +276,49 @@ const MemberCard: React.FC = () => {
                 borderRadius: '32px',
                 textAlign: 'center',
                 color: '#fff',
-                zIndex: 10
+                zIndex: 10,
+                ...(isFull ? {
+                    border: `2px solid ${branding.accent_color || '#fff'}`,
+                    boxShadow: `0 0 20px ${branding.accent_color || 'rgba(255,255,255,0.4)'}`
+                } : {})
             }}>
                 <div style={{
                     background: '#fff',
                     padding: '16px',
                     borderRadius: '20px',
                     display: 'inline-block',
-                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.1)'
+                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.1)',
+                    marginBottom: '20px'
                 }}>
                     <QRCodeSVG value={token} size={180} />
                 </div>
-                <h3 style={{ marginTop: '20px', marginBottom: '8px', fontSize: '1.1rem', fontWeight: 600 }}>
-                    Scan to Earn
-                </h3>
-                <p style={{ margin: 0, opacity: 0.7, fontSize: '0.9rem' }}>
-                    Code refreshes automatically
-                </p>
+
+                {isFull ? (
+                    <>
+                        <h3 style={{
+                            marginTop: '0',
+                            marginBottom: '8px',
+                            fontSize: '1.4rem',
+                            fontWeight: 700,
+                            color: branding.accent_color || '#fff',
+                            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                        }}>
+                            Card Full! 🎉
+                        </h3>
+                        <p style={{ margin: 0, opacity: 0.9, fontSize: '1rem', fontWeight: 500 }}>
+                            Show this code to redeem your reward!
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <h3 style={{ marginTop: '0', marginBottom: '8px', fontSize: '1.1rem', fontWeight: 600 }}>
+                            Scan to Earn
+                        </h3>
+                        <p style={{ margin: 0, opacity: 0.7, fontSize: '0.9rem' }}>
+                            Code refreshes automatically
+                        </p>
+                    </>
+                )}
 
                 <div style={{
                     marginTop: '24px',
