@@ -62,12 +62,10 @@ const StaffDashboard: React.FC = () => {
     const [mode, setMode] = useState<ScanMode>('stamp');
     const [scanResult, setScanResult] = useState<string | null>(null);
     const [status, setStatus] = useState<string>('');
-    const [cardData, setCardData] = useState<any>(null);
     const [resetCounter, setResetCounter] = useState(0);
 
     const resetToScan = useCallback(() => {
         setScanResult(null);
-        setCardData(null);
         setStatus('');
         setResetCounter((c) => c + 1);
     }, []);
@@ -92,10 +90,8 @@ const StaffDashboard: React.FC = () => {
 
             if (is_full) {
                 setStatus(`Stamped! Card FULL (${new_count}/${stamps_required}). Scan NEW code to Redeem.`);
-                setCardData({ ...res.data, token, is_full });
             } else {
                 setStatus(`Stamped! ${new_count} / ${stamps_required}`);
-                setCardData({ ...res.data, token, is_full });
             }
 
         } catch (err: any) {
@@ -103,7 +99,7 @@ const StaffDashboard: React.FC = () => {
             const msg = err.response?.data?.message || err.message;
             setStatus(friendlyMessage(code, 'Error: ' + msg));
             if (code === 'CARD_FULL') {
-                setCardData({ is_full: true, token }); // Show info but don't allow immediate redeem with old token
+                // Show info but don't allow immediate redeem with old token
             }
         }
     };
@@ -115,7 +111,6 @@ const StaffDashboard: React.FC = () => {
         try {
             await api.post('/api/v1/tx/redeem', { token });
             setStatus('Redeemed! Success. New card created.');
-            setCardData({ redeemed: true });
         } catch (err: any) {
             const code = err.response?.data?.code;
             const msg = err.response?.data?.message || err.message;
