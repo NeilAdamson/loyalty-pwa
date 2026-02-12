@@ -3,11 +3,16 @@
 }
 
 # Redirect www to non-www (Best for SEO & CORS)
+# Redirect www to non-www (Best for SEO & CORS)
 www.loyaltyladies.com {
     redir https://loyaltyladies.com{uri}
 }
 
-loyaltyladies.com {
+www.punchcard.co.za {
+    redir https://punchcard.co.za{uri}
+}
+
+loyaltyladies.com, punchcard.co.za {
     # Serve API requests (Keep path prefix /api so backend receives /api/v1/...)
     handle /api/* {
         reverse_proxy api:8000
