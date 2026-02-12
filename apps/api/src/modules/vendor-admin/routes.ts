@@ -231,6 +231,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
         subRequest.post<{ Body: { name: string, pin: string, role: string } }>('/staff', async (request, reply) => {
             const { name, pin, role } = request.body
             const vendorId = request.user.vendor_id
+            if (!vendorId) throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
 
             const pin_hash = await bcrypt.hash(pin, 10)
 
