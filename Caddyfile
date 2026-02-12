@@ -2,24 +2,22 @@
     email admin@loyaltyladies.com
 }
 
-# Redirect www to non-www (Best for SEO & CORS)
-# Redirect www to non-www (Best for SEO & CORS)
+# Redirect www -> apex
 www.loyaltyladies.com {
-    redir https://loyaltyladies.com{uri}
+    redir https://loyaltyladies.com{uri} permanent
 }
 
 www.punchcard.co.za {
-    redir https://punchcard.co.za{uri}
+    redir https://punchcard.co.za{uri} permanent
 }
 
+# Serve both domains from the same app
 loyaltyladies.com, punchcard.co.za {
-    # Serve API requests (Keep path prefix /api so backend receives /api/v1/...)
     handle /api/* {
         reverse_proxy api:8000
     }
 
-    # Serve Frontend
-    handle /* {
+    handle {
         reverse_proxy web:80
     }
 }
