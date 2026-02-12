@@ -27,14 +27,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
                 const decoded: any = jwtDecode(token);
                 // Determine role based on payload structure
-                let role: 'MEMBER' | 'STAFF' | 'ADMIN' = 'MEMBER';
+                let role: 'MEMBER' | 'STAFF' | 'ADMIN' = decoded.role || 'MEMBER';
                 let id = decoded.sub; // Standard subject
 
                 if (decoded.staff_id) {
-                    role = 'STAFF';
+                    if (!role) role = 'STAFF'; // Fallback
                     id = decoded.staff_id;
                 } else if (decoded.member_id) {
-                    role = 'MEMBER';
+                    if (!role) role = 'MEMBER';
                     id = decoded.member_id;
                 }
 

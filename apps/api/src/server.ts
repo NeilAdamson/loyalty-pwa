@@ -43,6 +43,8 @@ server.register(vendorRoutes, { prefix: '/api/v1' })
 server.register(programRoutes, { prefix: '/api/v1' })
 server.register(memberRoutes, { prefix: '/api/v1' })
 server.register(transactionRoutes, { prefix: '/api/v1' })
+import vendorAdminRoutes from './modules/vendor-admin/routes'
+server.register(vendorAdminRoutes, { prefix: '/api/v1' })
 
 // Inline Upload Route
 server.register(async function (fastify) {

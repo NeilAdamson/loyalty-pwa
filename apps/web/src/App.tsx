@@ -21,6 +21,13 @@ import AdminVendorDetail from './pages/admin/AdminVendorDetail';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import LandingPage from './pages/LandingPage';
 
+import VendorAdminLayout from './pages/admin/vendor/VendorAdminLayout';
+import VendorDashboard from './pages/admin/vendor/VendorDashboard';
+import VendorMembers from './pages/admin/vendor/VendorMembers';
+import VendorStaff from './pages/admin/vendor/VendorStaff';
+import VendorSettings from './pages/admin/vendor/VendorSettings';
+import VendorLookup from './pages/VendorLookup';
+
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles?: string[] }) => {
     const { token, user, isLoading } = useAuth();
@@ -49,6 +56,19 @@ function App() {
                             } />
                         </Route>
 
+                        {/* Vendor Admin Routes */}
+                        <Route path="/v/:slug/admin" element={
+                            <ProtectedRoute allowedRoles={['ADMIN']}>
+                                <VendorAdminLayout />
+                            </ProtectedRoute>
+                        }>
+                            <Route index element={<Navigate to="dashboard" replace />} />
+                            <Route path="dashboard" element={<VendorDashboard />} />
+                            <Route path="members" element={<VendorMembers />} />
+                            <Route path="staff" element={<VendorStaff />} />
+                            <Route path="settings" element={<VendorSettings />} />
+                        </Route>
+
                         {/* Protected Routes */}
                         <Route path="/me/card" element={
                             <ProtectedRoute allowedRoles={['MEMBER']}>
@@ -56,6 +76,9 @@ function App() {
                             </ProtectedRoute>
                         } />
                         <Route path="/staff" element={<Navigate to="/" replace />} />
+
+                        {/* Generic Routes */}
+                        <Route path="/vendor/login" element={<VendorLookup />} />
 
                         {/* Admin Routes */}
                         <Route path="/admin/login" element={<AdminLogin />} />

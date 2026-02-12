@@ -12,157 +12,261 @@ const LandingPage: React.FC = () => {
             color: '#fff',
             fontFamily: 'var(--font-family)',
         },
+        nav: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '1rem 0',
+            marginBottom: '4rem',
+        },
+        logo: {
+            fontWeight: 800,
+            fontSize: '1.8rem',
+            background: 'linear-gradient(to right, #fff, #94a3b8)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.02em',
+        },
         hero: {
             textAlign: 'center' as const,
-            padding: '4rem 1rem',
+            padding: '6rem 1rem',
+            position: 'relative' as const,
+            animation: 'fadeIn 0.8s ease-out',
         },
         heroTitle: {
-            fontSize: '3.5rem',
+            fontSize: 'min(4.5rem, 12vw)',
             fontWeight: 800,
-            marginBottom: '1rem',
-            background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+            lineHeight: 1.1,
+            marginBottom: '1.5rem',
+            letterSpacing: '-0.03em',
+        },
+        heroTitleGradient: {
+            background: 'linear-gradient(to right, #ec4899, #8b5cf6, #3b82f6)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
         },
         heroSubtitle: {
-            fontSize: '1.5rem',
-            color: '#a1a1aa',
-            marginBottom: '2rem',
+            fontSize: '1.25rem',
+            color: 'var(--text-muted)',
+            marginBottom: '3rem',
             maxWidth: '600px',
             marginLeft: 'auto',
             marginRight: 'auto',
+            lineHeight: 1.6,
         },
-        button: {
-            backgroundColor: '#ec4899',
+        ctaButton: {
+            backgroundColor: 'var(--primary)',
             color: 'white',
             border: 'none',
-            padding: '1rem 2rem',
-            fontSize: '1.2rem',
-            borderRadius: '8px',
+            padding: '1rem 2.5rem',
+            fontSize: '1.1rem',
+            borderRadius: '50px',
             cursor: 'pointer',
             fontWeight: 600,
-            transition: 'transform 0.2s',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 4px 15px rgba(236, 72, 153, 0.4)',
+        },
+        secondaryButton: {
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            color: 'white',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: '0.8rem 1.5rem',
+            fontSize: '0.9rem',
+            borderRadius: '50px',
+            cursor: 'pointer',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+            marginLeft: '1rem',
         },
         section: {
-            padding: '4rem 1rem',
+            padding: '6rem 1rem',
+        },
+        sectionHeader: {
+            textAlign: 'center' as const,
+            marginBottom: '4rem',
         },
         sectionTitle: {
-            textAlign: 'center' as const,
             fontSize: '2.5rem',
-            marginBottom: '3rem',
+            fontWeight: 700,
+            marginBottom: '1rem',
+        },
+        sectionText: {
+            color: 'var(--text-muted)',
+            fontSize: '1.1rem',
         },
         grid: {
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
             gap: '2rem',
         },
         card: {
-            backgroundColor: '#1f2937',
-            padding: '2rem',
-            borderRadius: '12px',
-            border: '1px solid #374151',
+            backgroundColor: 'var(--bg-card)',
+            padding: '2.5rem',
+            borderRadius: '24px',
+            border: 'var(--glass-border)',
+            backdropFilter: 'blur(10px)',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        },
+        cardIcon: {
+            fontSize: '2.5rem',
+            marginBottom: '1.5rem',
+            display: 'inline-block',
+            padding: '1rem',
+            borderRadius: '16px',
+            backgroundColor: 'rgba(255, 255, 255, 0.03)',
         },
         cardTitle: {
-            fontSize: '1.5rem',
-            marginBottom: '1rem',
-            color: '#f472b6',
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            marginBottom: '0.75rem',
+            color: '#fff',
         },
         cardText: {
-            color: '#d1d5db',
+            color: 'var(--text-muted)',
             lineHeight: 1.6,
         },
         footer: {
             textAlign: 'center' as const,
             padding: '4rem 1rem',
-            borderTop: '1px solid #374151',
-            color: '#6b7280',
+            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+            color: 'var(--text-muted)',
             marginTop: '4rem',
+        },
+        highlight: {
+            color: 'var(--accent)',
+            fontWeight: 600,
         }
     };
 
     return (
         <div style={styles.container}>
-            {/* Nav */}
-            <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 0' }}>
-                <div style={{ fontWeight: 700, fontSize: '1.5rem' }}>Loyalty Ladies</div>
-                <button
-                    onClick={() => navigate('/admin/login')}
-                    style={{ ...styles.button, padding: '0.5rem 1rem', fontSize: '1rem', backgroundColor: 'transparent', border: '1px solid #ec4899' }}
-                >
-                    Vendor Login
-                </button>
+            {/* Navigation */}
+            <nav style={styles.nav}>
+                <div style={styles.logo}>Punch Card</div>
+                <div>
+                    <button
+                        onClick={() => navigate('/vendor/login')}
+                        style={{ ...styles.secondaryButton, marginLeft: 0 }}
+                    >
+                        Vendor Login
+                    </button>
+                </div>
             </nav>
 
-            {/* Hero */}
+            {/* Hero Section */}
             <header style={styles.hero}>
-                <h1 style={styles.heroTitle}>Digital Loyalty.<br />No App Required.</h1>
+                <h1 style={styles.heroTitle}>
+                    Smart Digital Loyalty for<br />
+                    <span style={styles.heroTitleGradient}>Growing Businesses</span>
+                </h1>
                 <p style={styles.heroSubtitle}>
-                    Replace paper stamp cards with a stunning, fraud-resistant digital solution.
-                    Your customers just scan and go.
+                    Punch Card replaces paper stamp cards with a simple, branded digital loyalty experience.
+                    No app required.
                 </p>
-                <button style={styles.button} onClick={() => window.location.href = 'mailto:hello@loyaltyladies.com'}>
-                    Get Started
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                    <button
+                        style={styles.ctaButton}
+                        onClick={() => window.location.href = 'mailto:hello@punchcard.loyalty'}
+                        onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                        Get Started
+                    </button>
+                    <button
+                        style={styles.secondaryButton}
+                        onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                    >
+                        Learn More
+                    </button>
+                </div>
             </header>
 
-            {/* Benefits */}
-            <section style={styles.section}>
-                <h2 style={styles.sectionTitle}>Why Go Digital?</h2>
+            {/* Value Props */}
+            <section id="features" style={styles.section}>
+                <div style={styles.sectionHeader}>
+                    <h2 style={styles.sectionTitle}>Why Choose Punch Card?</h2>
+                    <p style={styles.sectionText}>Turn occasional customers into regulars.</p>
+                </div>
+
                 <div style={styles.grid}>
                     <div style={styles.card}>
-                        <h3 style={styles.cardTitle}>📱 No App Install</h3>
+                        <div style={styles.cardIcon}>📱</div>
+                        <h3 style={styles.cardTitle}>No App Required</h3>
                         <p style={styles.cardText}>
-                            Customers join in seconds by scanning a QR code and verifying via WhatsApp.
-                            No friction, higher conversion.
+                            Customers scan a QR code and verify via WhatsApp. No downloads, no account passwords, no friction.
                         </p>
                     </div>
+
                     <div style={styles.card}>
-                        <h3 style={styles.cardTitle}>🛡️ Fraud Resistant</h3>
+                        <div style={styles.cardIcon}>🔄</div>
+                        <h3 style={styles.cardTitle}>Increase Repeat Visits</h3>
                         <p style={styles.cardText}>
-                            Say goodbye to fake stamps. Our rotating encrypted tokens and server-side verification
-                            ensure every stamp is legitimate.
+                            Loyalty programs drive frequency. With a digital card, the reward goal is always visible on their phone.
                         </p>
                     </div>
+
                     <div style={styles.card}>
-                        <h3 style={styles.cardTitle}>📊 Real Analytics</h3>
+                        <div style={styles.cardIcon}>🛡️</div>
+                        <h3 style={styles.cardTitle}>Reduce Fraud</h3>
                         <p style={styles.cardText}>
-                            Know exactly who your loyal customers are. Track visits, redemptions, and staff performance
-                            in real-time.
+                            Eliminate fake stamps. Our system requires staff login, logs every transaction, and enforces cooldowns.
+                        </p>
+                    </div>
+
+                    <div style={styles.card}>
+                        <div style={styles.cardIcon}>🎨</div>
+                        <h3 style={styles.cardTitle}>Your Brand, Front & Center</h3>
+                        <p style={styles.cardText}>
+                            Fully customizable with your logo and colors. It transforms a loyalty mechanic into a brand channel.
+                        </p>
+                    </div>
+
+                    <div style={styles.card}>
+                        <div style={styles.cardIcon}>📊</div>
+                        <h3 style={styles.cardTitle}>Real Insights</h3>
+                        <p style={styles.cardText}>
+                            Track visits, redemptions, and staff performance. Capture basic customer data without complexity.
+                        </p>
+                    </div>
+
+                    <div style={styles.card}>
+                        <div style={styles.cardIcon}>⚡</div>
+                        <h3 style={styles.cardTitle}>Fast & Professional</h3>
+                        <p style={styles.cardText}>
+                            Staff interface is built for speed. Scan, confirm, done. It feels modern, controlled, and professional.
                         </p>
                     </div>
                 </div>
             </section>
 
-            {/* How it Works */}
-            <section style={styles.section}>
-                <h2 style={styles.sectionTitle}>How It Works</h2>
-                <div style={styles.grid}>
-                    <div style={styles.card}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>1️⃣</div>
-                        <h3 style={styles.cardTitle}>Scan to Join</h3>
-                        <p style={styles.cardText}>
-                            Customers scan your unique QR code at the counter to join your program instantly.
-                        </p>
+            {/* How It Works */}
+            <section style={{ ...styles.section, background: 'rgba(255,255,255,0.02)', borderRadius: '32px' }}>
+                <div style={styles.sectionHeader}>
+                    <h2 style={styles.sectionTitle}>Simple for Everyone</h2>
+                </div>
+
+                <div style={{ ...styles.grid, maxWidth: '900px', margin: '0 auto' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.8 }}>1</div>
+                        <h3 style={styles.cardTitle}>Scan</h3>
+                        <p style={styles.cardText}>Customer scans your QR code to join.</p>
                     </div>
-                    <div style={styles.card}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>2️⃣</div>
-                        <h3 style={styles.cardTitle}>Collect Stamps</h3>
-                        <p style={styles.cardText}>
-                            They present their phone. Your staff enters a PIN to stamp their digital card securely.
-                        </p>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.8 }}>2</div>
+                        <h3 style={styles.cardTitle}>Verify</h3>
+                        <p style={styles.cardText}>One-tap verification via WhatsApp.</p>
                     </div>
-                    <div style={styles.card}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>3️⃣</div>
-                        <h3 style={styles.cardTitle}>Get Rewarded</h3>
-                        <p style={styles.cardText}>
-                            When the card is full, the system alerts your staff to redeem the reward and reset the card.
-                        </p>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.8 }}>3</div>
+                        <h3 style={styles.cardTitle}>Stamp</h3>
+                        <p style={styles.cardText}>Staff stamps digitally in seconds.</p>
                     </div>
                 </div>
             </section>
 
             <footer style={styles.footer}>
-                &copy; {new Date().getFullYear()} Loyalty Ladies. All rights reserved.
+                <div style={{ marginBottom: '1rem', fontWeight: 700, color: '#fff' }}>Punch Card</div>
+                <p>&copy; {new Date().getFullYear()} Punch Card Loyalty. All rights reserved.</p>
             </footer>
         </div>
     );
