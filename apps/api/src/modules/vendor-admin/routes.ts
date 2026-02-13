@@ -313,6 +313,83 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             return updated
         })
 
+        // --- EPIC E: Branding ---
+        subRequest.get('/branding', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            const branding = await fastify.prisma.vendorBranding.findUnique({
+                where: { vendor_id: vendorId }
+            })
+            return branding || {}
+        })
+
+        subRequest.put<{
+            Body: {
+                primary_color: string,
+                secondary_color: string,
+                accent_color: string,
+                background_color: string,
+                card_text_color: string,
+                card_style: string,
+                logo_url?: string,
+                wordmark_url?: string,
+                welcome_text?: string,
+                reward_title?: string,
+                stamps_required?: number
+            }
+        }>('/branding', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
+            const data = request.body
+
+            // Upsert branding
+            const branding = await fastify.prisma.vendorBranding.upsert({
+                where: { vendor_id: vendorId },
+                create: {
+                    vendor_id: vendorId,
+                    primary_color: data.primary_color,
+                    secondary_color: data.secondary_color,
+                    accent_color: data.accent_color,
+                    background_color: data.background_color,
+                    card_text_color: data.card_text_color,
+                    card_style: data.card_style,
+                    logo_url: data.logo_url,
+                    wordmark_url: data.wordmark_url,
+                    welcome_text: data.welcome_text
+                },
+                update: {
+                    primary_color: data.primary_color,
+                    secondary_color: data.secondary_color,
+                    accent_color: data.accent_color,
+                    background_color: data.background_color,
+                    card_text_color: data.card_text_color,
+                    card_style: data.card_style,
+                    logo_url: data.logo_url,
+                    wordmark_url: data.wordmark_url,
+                    welcome_text: data.welcome_text
+                }
+            })
+
+            // Update Program (if reward info provided)
+            if (data.reward_title || data.stamps_required) {
+                // Find active program
+                let program = await fastify.prisma.program.findFirst({
+                    where: { vendor_id: vendorId, is_active: true }
+                })
+
+                if (program) {
+                    await fastify.prisma.program.update({
+                        where: { program_id: program.program_id },
+                        data: {
+                            reward_title: data.reward_title || program.reward_title,
+                            stamps_required: data.stamps_required || program.stamps_required
+                        }
+                    })
+                }
+            }
+
+            return branding
+        })
+
     }, { prefix: '/v/:slug/admin' })
 }
 

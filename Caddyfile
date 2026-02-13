@@ -1,22 +1,21 @@
 {
-    email admin@loyaltyladies.com
+    email admin@punchcard.co.za
 }
 
 # Redirect www -> apex
-www.loyaltyladies.com {
-    redir https://loyaltyladies.com{uri} permanent
-}
+www.loyaltyladies.com { redir https://loyaltyladies.com{uri} permanent }
+www.punchcard.co.za    { redir https://punchcard.co.za{uri} permanent }
 
-www.punchcard.co.za {
+# Redirect old brand to new brand (everything)
+loyaltyladies.com {
     redir https://punchcard.co.za{uri} permanent
 }
 
-# Serve both domains from the same app
-loyaltyladies.com, punchcard.co.za {
+# Serve the app on punchcard
+punchcard.co.za {
     handle /api/* {
         reverse_proxy api:8000
     }
-
     handle {
         reverse_proxy web:80
     }

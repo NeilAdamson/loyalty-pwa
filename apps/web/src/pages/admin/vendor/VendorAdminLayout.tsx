@@ -18,6 +18,7 @@ const VendorAdminLayout: React.FC = () => {
         { name: 'Dashboard', path: `/v/${slug}/admin/dashboard`, icon: '📊' },
         { name: 'Members', path: `/v/${slug}/admin/members`, icon: '👥' },
         { name: 'Staff', path: `/v/${slug}/admin/staff`, icon: '🛡️' },
+        { name: 'Branding', path: `/v/${slug}/admin/branding`, icon: '🎨' },
         { name: 'Settings', path: `/v/${slug}/admin/settings`, icon: '⚙️' },
     ];
 

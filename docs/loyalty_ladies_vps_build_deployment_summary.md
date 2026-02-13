@@ -95,13 +95,13 @@ This confirms:
 
 ## 6. Domain & DNS Configuration
 
-- **Domain:** `loyaltyladies.com`
+- **Domain:** `punchcard.co.za`
 - **DNS Provider:** Cloudflare
 
 ### Active DNS Records
 
 ```
-A   loyaltyladies.com     → 78.47.78.234
+A   punchcard.co.za     → 78.47.78.234
 A   www                   → 78.47.78.234
 ```
 
@@ -109,7 +109,7 @@ A   www                   → 78.47.78.234
 - TTL: Auto
 
 Resulting state:
-- `https://loyaltyladies.com` resolves to the Hetzner VPS
+- `https://punchcard.co.za` resolves to the Hetzner VPS
 - HTTPS is live and verified
 
 ---
@@ -141,7 +141,7 @@ The LoyaltyLadies VPS is now in the following state:
 - ✅ Firewall enabled and restrictive
 - ✅ Docker & Docker Compose installed
 - ✅ Caddy installed and serving HTTPS
-- ✅ Domain (`loyaltyladies.com`) correctly mapped
+- ✅ Domain (`punchcard.co.za`) correctly mapped
 - ✅ Ready for application deployment via Docker Compose
 
 This represents a **production-ready foundation** onto which the LoyaltyLadies application stack can now be deployed in a controlled, repeatable way.

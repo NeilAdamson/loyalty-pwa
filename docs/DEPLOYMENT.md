@@ -5,7 +5,7 @@ This guide details how to deploy the Loyalty PWA to a Linux VPS using Docker Com
 ## 1. Prerequisites
 
 - **VPS**: Ubuntu 22.04 LTS (or similar) with at least 2GB RAM.
-- **Domain**: A domain name pointed to your VPS IP (e.g., `loyaltyladies.com`).
+- **Domain**: A domain name pointed to your VPS IP (e.g., `punchcard.co.za`).
 - **Software**: Docker Engine and Docker Compose installed on the VPS.
 
 ## 2. Infrastructure Overview
@@ -48,7 +48,7 @@ NODE_ENV=production
 PORT=8000
 API_HOST=0.0.0.0
 # The domain where the app is hosted
-CORS_ALLOWED_ORIGIN=https://loyaltyladies.com
+CORS_ALLOWED_ORIGIN=https://punchcard.co.za
 
 # Security Secrets (Generate new random strings)
 JWT_SECRET=long_random_string_here
@@ -56,7 +56,7 @@ TOKEN_SIGNING_SECRET=another_long_random_string
 OTP_PEPPER=random_pepper_string
 
 # Admin Setup (For seeding)
-ADMIN_EMAIL=admin@loyaltyladies.com
+ADMIN_EMAIL=admin@punchcard.co.za
 ADMIN_PASSWORD=secure_admin_password
 
 # OTP delivery: default is smsflow. Set OTP_PROVIDER=twilio to use Twilio. If provider not configured, OTP is logged only.
@@ -148,8 +148,8 @@ See [development-Docker-startup.txt](development-Docker-startup.txt) and [DATABA
 ## 7. Verification
 
 After deployment:
-1. Visit `https://loyaltyladies.com`. The PWA should load.
-2. Check `https://loyaltyladies.com/api/health`. Should return `{"status":"ok"}`.
+1. Visit `https://punchcard.co.za`. The PWA should load.
+2. Check `https://punchcard.co.za/api/health`. Should return `{"status":"ok"}`.
 3. Check logs if needed: `docker compose logs -f api`.
 
 ## 8. Troubleshooting
