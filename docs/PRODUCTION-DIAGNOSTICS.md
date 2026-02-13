@@ -1,10 +1,23 @@
 # Running Diagnostics in Production
 
-## Running the Admin Diagnostic Script
+## Running Diagnostic Scripts
 
-The `diagnose-admin.ts` script can be run in production to check admin user status and password verification.
+All diagnostic and verification scripts are included in the container at build time, so you can run them directly without copying files.
 
-### Method 1: Copy JavaScript Script and Run (Recommended - No TypeScript needed)
+### Method 1: Run JavaScript Scripts (Recommended - No TypeScript compilation needed)
+
+**Available scripts:**
+- `diagnose-admin.js` - Check admin user status and password verification
+- `verify-admin.ts` - Verify admin authentication
+- `verify-auth.ts` - Verify authentication flows
+- `verify-constraints.ts` - Verify database constraints
+- `verify-error-mapping.ts` - Verify error handling
+- `verify-member-card.ts` - Verify member card functionality
+- `verify-modules.ts` - Verify API modules
+- `verify-tx.ts` - Verify transactions
+- `test_api_create.ts` - Test API creation
+
+**Run diagnostic scripts:**
 
 1. **SSH into your VPS:**
    ```bash
@@ -16,32 +29,26 @@ The `diagnose-admin.ts` script can be run in production to check admin user stat
    cd ~/loyalty-pwa
    ```
 
-3. **Copy the JavaScript diagnostic script into the API container:**
-   ```bash
-   docker compose cp apps/api/diagnose-admin.js api:/app/diagnose-admin.js
-   ```
-
-4. **Run the diagnostic (no compilation needed):**
+3. **Run the JavaScript diagnostic (scripts are already in container):**
    ```bash
    docker compose exec api node diagnose-admin.js
    ```
 
-**Alternative: If you prefer TypeScript version:**
+**Run TypeScript scripts:**
 
-3. **Copy the TypeScript script:**
-   ```bash
-   docker compose cp apps/api/diagnose-admin.ts api:/app/diagnose-admin.ts
-   ```
+For TypeScript scripts, you'll need `tsx` (already available in dev, install temporarily in prod):
 
-4. **Install tsx temporarily:**
-   ```bash
-   docker compose exec api pnpm add -D tsx
-   ```
+```bash
+# Install tsx temporarily (one-time)
+docker compose exec api pnpm add -D tsx
 
-5. **Run:**
-   ```bash
-   docker compose exec api pnpm tsx diagnose-admin.ts
-   ```
+# Run TypeScript scripts
+docker compose exec api pnpm tsx verify-admin.ts
+docker compose exec api pnpm tsx verify-auth.ts
+# ... etc
+```
+
+**Note:** After rebuilding the container, all scripts will be available. No need to copy files manually!
 
 ### Method 2: Use Prisma Studio (Interactive)
 
@@ -84,32 +91,20 @@ The `diagnose-admin.ts` script can be run in production to check admin user stat
    "
    ```
 
-### Method 4: Add Script to Container Build (Permanent)
+### Method 4: Scripts Are Already Included
 
-If you want the script always available, modify `apps/api/Dockerfile`:
+All diagnostic scripts are automatically included in the container build. The Dockerfile copies:
+- `diagnose-admin.js` and `diagnose-admin.ts`
+- All `verify-*.ts` scripts
+- `test_api_create.ts`
 
-```dockerfile
-FROM base AS prod
-WORKDIR /app
-COPY package.json ./
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/prisma ./prisma
-COPY diagnose-admin.ts ./diagnose-admin.ts  # Add this line
-
-ENV NODE_ENV=production
-CMD ["node", "dist/server.js"]
-```
-
-Then rebuild:
+After rebuilding the container, scripts are immediately available:
 ```bash
 docker compose build api
 docker compose up -d api
-```
 
-Then run:
-```bash
-docker compose exec api pnpm tsx diagnose-admin.ts
+# Then run directly:
+docker compose exec api node diagnose-admin.js
 ```
 
 ## Other Useful Production Commands
@@ -132,6 +127,24 @@ docker compose exec api pnpm db:seed
 ### Run Migrations
 ```bash
 docker compose exec api pnpm db:deploy
+```
+
+### Quick Diagnostic Commands
+
+All scripts are available in the container:
+
+```bash
+# Admin diagnostics
+docker compose exec api node diagnose-admin.js
+
+# Verify admin auth
+docker compose exec api pnpm tsx verify-admin.ts
+
+# Verify all modules
+docker compose exec api pnpm tsx verify-modules.ts
+
+# Test API creation
+docker compose exec api pnpm tsx test_api_create.ts
 ```
 
 ### Access Database Directly (via pgAdmin or psql)

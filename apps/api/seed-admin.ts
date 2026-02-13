@@ -8,17 +8,33 @@ async function main() {
     const password = process.env.ADMIN_PASSWORD || 'password1234'
     const hash = await bcrypt.hash(password, 10)
 
-    // Check if old admin exists (for migration from admin@loyalty.com)
-    const oldAdminEmail = 'admin@loyalty.com'
-    const oldAdmin = await prisma.adminUser.findUnique({
-        where: { email: oldAdminEmail }
-    })
+    // List of old admin emails to migrate from
+    const oldAdminEmails = ['admin@loyalty.com', 'admin@loyaltyladies.com']
+    
+    // Check if new admin already exists
     const newAdmin = await prisma.adminUser.findUnique({
         where: { email }
     })
     
+    // Check for old admin emails that need migration
+    let oldAdminToMigrate = null
+    let oldAdminEmail = null
+    
+    for (const oldEmail of oldAdminEmails) {
+        if (oldEmail !== email) {
+            const found = await prisma.adminUser.findUnique({
+                where: { email: oldEmail }
+            })
+            if (found) {
+                oldAdminToMigrate = found
+                oldAdminEmail = oldEmail
+                break
+            }
+        }
+    }
+    
     // Handle migration: if old admin exists and we're migrating to a new email
-    if (oldAdmin && email !== oldAdminEmail) {
+    if (oldAdminToMigrate && email !== oldAdminEmail) {
         if (newAdmin) {
             // Both exist - delete old one and update new one
             console.log(`Both admin emails exist. Deleting old admin (${oldAdminEmail}) and updating new admin (${email})`)

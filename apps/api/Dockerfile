@@ -30,6 +30,17 @@ COPY package.json ./
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
+# Copy diagnostic and verification scripts for production debugging
+COPY --from=builder /app/diagnose-admin.js ./diagnose-admin.js
+COPY --from=builder /app/diagnose-admin.ts ./diagnose-admin.ts
+COPY --from=builder /app/verify-admin.ts ./verify-admin.ts
+COPY --from=builder /app/verify-auth.ts ./verify-auth.ts
+COPY --from=builder /app/verify-constraints.ts ./verify-constraints.ts
+COPY --from=builder /app/verify-error-mapping.ts ./verify-error-mapping.ts
+COPY --from=builder /app/verify-member-card.ts ./verify-member-card.ts
+COPY --from=builder /app/verify-modules.ts ./verify-modules.ts
+COPY --from=builder /app/verify-tx.ts ./verify-tx.ts
+COPY --from=builder /app/test_api_create.ts ./test_api_create.ts
 
 ENV NODE_ENV=production
 CMD ["node", "dist/server.js"]
