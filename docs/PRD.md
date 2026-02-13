@@ -11,7 +11,7 @@ Small businesses run simple paper loyalty stamp cards (e.g., “every 10th coffe
 
 ## 2. Product summary
 A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital stamp card program.
-- Members join by scanning a vendor QR code and verifying their phone number via **WhatsApp OTP**.
+- Members join by scanning a vendor QR code and verifying their phone number via **SMS OTP**.
 - Staff issue stamps and redeem rewards using a **staff PIN-only** flow that is restricted to vendor staff and protected against replay/screenshot fraud.
 - Redemption automatically closes the full card and creates a new empty card.
 
@@ -30,7 +30,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 - Apple/Google Wallet passes.
 
 ## 5. Key decisions locked for MVP
-- OTP channel: **phone-based OTP via provider abstraction** (initially WhatsApp/SMS using Twilio or SMS via SMSFlow)
+- OTP channel: **phone-based OTP via SMS** (using Twilio SMS or SMSFlow)
 - Staff login: **username + PIN** (PIN stored as hash, unique per staff account within a vendor)
 - Vendor onboarding: **platform-admin-only**
 - Multi-branch: **required**
@@ -138,9 +138,9 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 **FR-C1 Vendor landing**
 - Shows branding + program summary + “Join” call-to-action.
 
-**FR-C2 Member signup/login (WhatsApp OTP)**
+**FR-C2 Member signup/login (SMS OTP)**
 - Member enters: name, phone (E.164)
-- System sends OTP via WhatsApp message.
+- System sends OTP via SMS message.
 - Member verifies OTP.
 - Member identity uniqueness: (vendor_id, phone).
 
@@ -232,7 +232,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ### Member
 - Vendor landing
-- Join + WhatsApp OTP verify
+- Join + SMS OTP verify
 - Card view (progress + rotating QR)
 - History (simple list)
 
@@ -259,7 +259,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ## 14. Acceptance test checklist (summary)
 - Vendor created with ≥ 1 branch.
-- Member joins via WhatsApp OTP.
+- Member joins via SMS OTP.
 - Staff PIN login works.
 - Stamp increments once; repeated token fails.
 - Cooldown enforced.

@@ -39,6 +39,14 @@ Standard Error Envelope:
 
 ## Authentication
 
+### Authentication Methods
+The API uses different authentication methods depending on the route:
+- **Platform Admin routes** (`/api/v1/admin/*`): Use HttpOnly cookies (set via `POST /api/v1/admin/auth/login`)
+- **Vendor Admin routes** (`/api/v1/v/:slug/admin/*`): Use Bearer tokens in `Authorization` header
+- **Member/Staff routes**: Use Bearer tokens in `Authorization` header
+
+**Important**: The frontend API client automatically injects Bearer tokens for all routes except platform admin routes. Vendor admin routes (`/v/:slug/admin/*`) require Bearer tokens, not cookies.
+
 ### Member Auth
 **1. Request OTP**
 `POST /v/:vendorSlug/auth/member/otp/request`
@@ -54,6 +62,11 @@ Returns: `{ "token": "JWT", "member": { ... } }`
 `POST /v/:vendorSlug/auth/staff/login`
 Body: `{ "username": "alice", "pin": "1234" }`
 Returns: `{ "token": "JWT", "staff": { ... } }`
+
+### Vendor Admin Auth
+Vendor admins authenticate via staff login with `role: "ADMIN"`. After login, use the returned token as a Bearer token for vendor admin endpoints.
+
+**Note**: Vendor admin routes are under `/api/v1/v/:slug/admin/*` and require Bearer token authentication (not cookies).
 
 ## Member Experience (Protected: Member)
 
@@ -118,12 +131,53 @@ Returns:
 ### Programs
 **Create Draft** (Protected: Vendor Admin)
 `POST /programs`
+Headers: `Authorization: Bearer <VendorAdminToken>`
 
 **Activate Program** (Protected: Vendor Admin)
 `PUT /programs/:id/activate`
+Headers: `Authorization: Bearer <VendorAdminToken>`
 
 **Get Active Program** (Public)
 `GET /v/:vendorSlug/programs/active`
+
+### Vendor Branding (Protected: Vendor Admin)
+All branding endpoints are under `/api/v1/v/:slug/admin/branding` and require Bearer token authentication.
+
+**Get Branding**
+`GET /api/v1/v/:slug/admin/branding`
+Headers: `Authorization: Bearer <VendorAdminToken>`
+Returns: Branding object with colors, logo, wordmark, etc.
+
+**Update Branding**
+`PUT /api/v1/v/:slug/admin/branding`
+Headers: `Authorization: Bearer <VendorAdminToken>`
+Body:
+```json
+{
+  "primary_color": "#000000",
+  "secondary_color": "#ffffff",
+  "accent_color": "#3B82F6",
+  "background_color": "#18181b",
+  "card_text_color": "#ffffff",
+  "card_style": "SOLID",
+  "logo_url": "https://...",
+  "wordmark_url": "https://...",
+  "welcome_text": "Welcome to...",
+  "reward_title": "Free Coffee",
+  "stamps_required": 10
+}
+```
+
+**Field Requirements:**
+- `primary_color` and `secondary_color` are required (defaults provided: `#000000` and `#ffffff` if missing)
+- `accent_color`, `card_text_color`, and `card_style` have defaults (`#3B82F6`, `#ffffff`, `SOLID`)
+- All other fields are optional
+- `reward_title` and `stamps_required` update the active program if provided
+
+**Error Responses:**
+- `401 UNAUTHORIZED`: Missing or invalid Bearer token
+- `403 FORBIDDEN`: User is not a vendor admin
+- `500 INTERNAL_SERVER_ERROR`: Server error (check logs for details)
 
 ### Platform Admin
 **Create Vendor**

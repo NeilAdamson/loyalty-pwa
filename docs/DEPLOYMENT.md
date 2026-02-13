@@ -67,7 +67,7 @@ ADMIN_PASSWORD=secure_admin_password
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_FROM_NUMBER=14155238886
-# TWILIO_OTP_CHANNEL=sms   use "sms" with trial "My Twilio phone number" (verified numbers only); use "whatsapp" with WhatsApp sandbox/approved From
+# TWILIO_OTP_CHANNEL=sms   use "sms" with trial "My Twilio phone number" (verified numbers only)
 # TWILIO_API_KEY=
 # TWILIO_API_SECRET=
 
@@ -77,7 +77,7 @@ TWILIO_FROM_NUMBER=14155238886
 # SMSFLOW_SENDER_ID=Loyalty   (optional; branding may require pre-approval)
 ```
 
-**Verifying OTP:** Call `GET /health`. The response includes `otp_provider` (`twilio` \| `smsflow`) and `otp_configured: true|false`. If `false`, set the chosen provider’s env vars (Twilio or SMSFlow) and restart the API. Check API logs for `[WhatsAppService] Twilio ENABLED`, `[SMSFlowService] SMSFlow ENABLED`, or `DISABLED`.
+**Verifying OTP:** Call `GET /health`. The response includes `otp_provider` (`twilio` \| `smsflow`) and `otp_configured: true|false`. If `false`, set the chosen provider’s env vars (Twilio or SMSFlow) and restart the API. Check API logs for `[SMSService] Twilio ENABLED`, `[SMSFlowService] SMSFlow ENABLED`, or `DISABLED`.
 
 
 

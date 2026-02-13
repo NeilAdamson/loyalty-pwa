@@ -1,4 +1,4 @@
-# Tech Spec — Multi-tenant Loyalty PWA (Node, Postgres, WhatsApp OTP)
+# Tech Spec — Multi-tenant Loyalty PWA (Node, Postgres, SMS OTP)
 
 ## 0. Document control
 - Version: 1.1
@@ -222,7 +222,7 @@ Index: (vendor_id, stamped_at), (card_id, stamped_at)
 
 Primary key: (vendor_id, token_jti)
 
-### 3.11 otp_requests (WhatsApp OTP)
+### 3.11 otp_requests (SMS OTP)
 - otp_id UUID PK
 - vendor_id UUID NOT NULL
 - phone_e164 TEXT NOT NULL
@@ -274,7 +274,7 @@ Primary key: (vendor_id, token_jti)
 ### 5.2 Rate limits (defaults)
 - Staff PIN login attempts:
   - max 10/min per IP; on exceed, 429 for 5 minutes.
-- WhatsApp OTP requests:
+- SMS OTP requests:
   - max 5/hour per phone; max 20/hour per IP.
 - Stamp:
   - max 60/hour per staff_id.
@@ -313,7 +313,7 @@ Record fraud flags in transaction `flags` JSON when:
 
 ---
 
-## 7. WhatsApp OTP specification
+## 7. SMS OTP specification
 
 ### 7.1 OTP generation
 - Generate 6-digit numeric code.
@@ -321,9 +321,9 @@ Record fraud flags in transaction `flags` JSON when:
 - TTL: 5 minutes.
 
 ### 7.2 Delivery
-- Send OTP to `phone_e164` via the configured provider:
+- Send OTP to `phone_e164` via SMS using the configured provider:
   - **SMSFlow** (SMS) or
-  - **Twilio** (WhatsApp or SMS, depending on configuration).
+  - **Twilio** (SMS only).
 - Message template (exact text):
   - `Your {VENDOR_TRADING_NAME} verification code is: {OTP}. It expires in 5 minutes.`
 
@@ -332,7 +332,7 @@ Record fraud flags in transaction `flags` JSON when:
 - Max attempts: 5 per otp_id; then invalidate.
 
 Failure modes:
-- If WhatsApp delivery fails, return error `OTP_DELIVERY_FAILED`.
+- If SMS delivery fails, return error `OTP_DELIVERY_FAILED`.
 
 ---
 
@@ -481,17 +481,35 @@ Required error codes:
 
 ## 9. Admin APIs (summary)
 Implement separately with admin auth:
-- Platform admin:
-  - create vendor / delete vendor
-  - suspend/reactivate
-  - set billing status
-  - audit export
-  - impersonation start/stop
-- Vendor admin:
-  - branding CRUD
-  - branch CRUD
-  - program create/activate new version
-  - staff CRUD (including PIN reset)
+
+### Authentication Methods
+- **Platform Admin** (`/api/v1/admin/*`): Uses HttpOnly cookies (set via `POST /api/v1/admin/auth/login`)
+- **Vendor Admin** (`/api/v1/v/:slug/admin/*`): Uses Bearer tokens in `Authorization` header
+
+**Important**: The frontend API client automatically injects Bearer tokens for vendor admin routes. Platform admin routes use cookies and do not require Bearer tokens.
+
+### Platform Admin APIs
+- create vendor / delete vendor
+- suspend/reactivate
+- set billing status
+- audit export
+- impersonation start/stop
+
+### Vendor Admin APIs
+All vendor admin endpoints are under `/api/v1/v/:slug/admin/*` and require Bearer token authentication.
+
+**Branding Management:**
+- `GET /api/v1/v/:slug/admin/branding` - Get current branding
+- `PUT /api/v1/v/:slug/admin/branding` - Update branding
+  - Body includes: `primary_color`, `secondary_color`, `accent_color`, `background_color`, `card_text_color`, `card_style`, `logo_url`, `wordmark_url`, `welcome_text`
+  - Optional: `reward_title`, `stamps_required` (updates active program)
+  - Required fields (`primary_color`, `secondary_color`) have defaults if missing
+  - Returns updated branding object
+
+**Other Vendor Admin APIs:**
+- branch CRUD
+- program create/activate new version
+- staff CRUD (including PIN reset)
 
 All admin actions MUST write `admin_audit_log`.
 
@@ -544,6 +562,6 @@ A scheduled job runs daily:
 
 ## 13. Test plan (minimum)
 - Unit: token signing/validation, cooldown checks, replay protection, program versioning.
-- Integration: WhatsApp OTP request/verify, staff PIN login, stamp, redeem.
+- Integration: SMS OTP request/verify, staff PIN login, stamp, redeem.
 - E2E: member join → card → staff stamp → redeem → new card.
 - Load: 10 stamps/sec sustained for 5 minutes against single vendor.

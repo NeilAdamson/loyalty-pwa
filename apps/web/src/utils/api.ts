@@ -12,9 +12,11 @@ export const api = axios.create({
 
 // Auto-inject token
 api.interceptors.request.use((config) => {
-    // Only inject Bearer token for non-admin routes
-    // Admin routes rely on Cookies
-    if (!config.url?.includes('/admin')) {
+    // Platform admin routes (/admin/*) use cookies, not Bearer tokens
+    // Vendor admin routes (/v/:slug/admin/*) use Bearer tokens
+    // Member/Staff routes also use Bearer tokens
+    const isPlatformAdminRoute = config.url?.startsWith('/admin') || config.url?.includes('/api/v1/admin');
+    if (!isPlatformAdminRoute) {
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;

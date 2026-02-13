@@ -61,6 +61,25 @@
 5. **Redeem reward**: Select “Redeem reward”, then scan a full card’s QR. Verify “Redeemed! New card created.” and **Scan next**.
 6. Verify **Sign Out** in the header and that the scanner area is large and easy to use (not small/hard to navigate).
 
+### Vendor Admin Branding
+1. Login as a staff member with `role: "ADMIN"` (or create one via Platform Admin).
+2. Navigate to `/v/:slug/admin/branding` (e.g. `/v/demo-cafe/admin/branding`).
+3. Verify the branding form loads with current values (colors, logo, wordmark, etc.).
+4. **Update Branding**:
+   - Change primary color (e.g. to `#98d80e`)
+   - Change secondary color (e.g. to `#000000`)
+   - Change accent color (e.g. to `#e71313`)
+   - Change background color (e.g. to `#420505`)
+   - Optionally update logo/wordmark URLs
+   - Update reward title and stamps required
+5. Click **Save Changes**.
+6. Verify success message "Branding updated successfully".
+7. Verify changes are reflected in the Live Preview panel.
+8. Navigate to `/v/:slug` (member landing) and verify branding changes are applied.
+9. Navigate to `/v/:slug/staff/scan` and verify staff portal also reflects branding changes.
+
+**Note**: Vendor admin routes use Bearer token authentication (not cookies). The frontend automatically injects the token from localStorage for vendor admin endpoints.
+
 ## 5. Security & Troubleshooting
 
 ### Security Check (Cookie)

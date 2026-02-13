@@ -337,57 +337,68 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                 stamps_required?: number
             }
         }>('/branding', async (request, reply) => {
-            const vendorId = request.user.vendor_id
-            if (!vendorId) throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
-            const data = request.body
+            try {
+                const vendorId = request.user.vendor_id
+                if (!vendorId) throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
+                const data = request.body
 
-            // Upsert branding
-            const branding = await fastify.prisma.vendorBranding.upsert({
-                where: { vendor_id: vendorId },
-                create: {
-                    vendor_id: vendorId,
-                    primary_color: data.primary_color,
-                    secondary_color: data.secondary_color,
-                    accent_color: data.accent_color,
-                    background_color: data.background_color,
-                    card_text_color: data.card_text_color,
-                    card_style: data.card_style,
-                    logo_url: data.logo_url,
-                    wordmark_url: data.wordmark_url,
-                    welcome_text: data.welcome_text
-                },
-                update: {
-                    primary_color: data.primary_color,
-                    secondary_color: data.secondary_color,
-                    accent_color: data.accent_color,
-                    background_color: data.background_color,
-                    card_text_color: data.card_text_color,
-                    card_style: data.card_style,
-                    logo_url: data.logo_url,
-                    wordmark_url: data.wordmark_url,
-                    welcome_text: data.welcome_text
-                }
-            })
-
-            // Update Program (if reward info provided)
-            if (data.reward_title || data.stamps_required) {
-                // Find active program
-                let program = await fastify.prisma.program.findFirst({
-                    where: { vendor_id: vendorId, is_active: true }
+                // Upsert branding
+                // Provide defaults for required fields (primary_color, secondary_color) and fields with defaults
+                const branding = await fastify.prisma.vendorBranding.upsert({
+                    where: { vendor_id: vendorId },
+                    create: {
+                        vendor_id: vendorId,
+                        primary_color: data.primary_color || '#000000',
+                        secondary_color: data.secondary_color || '#ffffff',
+                        accent_color: data.accent_color || '#3B82F6',
+                        background_color: data.background_color || null,
+                        card_text_color: data.card_text_color || '#ffffff',
+                        card_style: data.card_style || 'SOLID',
+                        logo_url: data.logo_url || null,
+                        wordmark_url: data.wordmark_url || null,
+                        welcome_text: data.welcome_text || null
+                    },
+                    update: {
+                        primary_color: data.primary_color,
+                        secondary_color: data.secondary_color,
+                        accent_color: data.accent_color,
+                        background_color: data.background_color,
+                        card_text_color: data.card_text_color,
+                        card_style: data.card_style,
+                        logo_url: data.logo_url,
+                        wordmark_url: data.wordmark_url,
+                        welcome_text: data.welcome_text
+                    }
                 })
 
-                if (program) {
-                    await fastify.prisma.program.update({
-                        where: { program_id: program.program_id },
-                        data: {
-                            reward_title: data.reward_title || program.reward_title,
-                            stamps_required: data.stamps_required || program.stamps_required
-                        }
+                // Update Program (if reward info provided)
+                if (data.reward_title || data.stamps_required) {
+                    // Find active program
+                    let program = await fastify.prisma.program.findFirst({
+                        where: { vendor_id: vendorId, is_active: true }
                     })
-                }
-            }
 
-            return branding
+                    if (program) {
+                        await fastify.prisma.program.update({
+                            where: { program_id: program.program_id },
+                            data: {
+                                reward_title: data.reward_title || program.reward_title,
+                                stamps_required: data.stamps_required || program.stamps_required
+                            }
+                        })
+                    }
+                }
+
+                return branding
+            } catch (err: any) {
+                request.log.error(err, 'Failed to update branding')
+                const statusCode = err.statusCode || 500
+                const message = err.message || 'Failed to save branding'
+                return reply.code(statusCode).send({
+                    code: err.code || 'INTERNAL_SERVER_ERROR',
+                    message
+                })
+            }
         })
 
     }, { prefix: '/v/:slug/admin' })

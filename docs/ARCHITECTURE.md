@@ -25,7 +25,7 @@ flowchart LR
   P --> WEB[Web Container]
 
   API --> DB[(PostgreSQL)]
-  API --> WA[WhatsApp Provider API]
+  API --> SMS[SMS Provider API]
   API --> RL[(Rate limit store)]
 
   subgraph VPS
@@ -34,7 +34,7 @@ flowchart LR
     PWA
     DB
     RL
-    WA[Twilio API]
+    SMS[Twilio/SMSFlow SMS]
   end
 ```
 
@@ -63,7 +63,7 @@ flowchart LR
 - OTP is implemented by sending a one-time code to the member's phone.
 - Providers:
   - **SMSFlow** — SMS via the Portal Integration API (ClientID/ClientSecret → bearer token → BulkMessages).
-  - **Twilio Programmable Messaging** — WhatsApp or SMS, depending on configuration.
+  - **Twilio Programmable Messaging** — SMS only.
 - Integration requires valid provider-specific credentials (`SMSFLOW_CLIENT_ID` / `SMSFLOW_CLIENT_SECRET` or `TWILIO_*`).
 - The system supports “send OTP” and “verify OTP” using internal code generation + storage.
 
@@ -78,7 +78,7 @@ flowchart LR
 ## 5. Identity and session model
 
 ### 5.1 Member auth
-- Passwordless: phone + OTP delivered via configured provider (SMSFlow SMS or Twilio WhatsApp/SMS).
+- Passwordless: phone + OTP delivered via SMS (SMSFlow or Twilio SMS).
 - Session token: JWT (access token) stored as httpOnly cookie (preferred) OR in memory/local storage (fallback).
 - Session TTL: 30 days; refresh on activity.
 
@@ -86,10 +86,16 @@ flowchart LR
 - Staff portal is vendor-scoped. Staff enters username + PIN.
 - PIN is stored as a hash and must be unique per staff account within a vendor.
 - Session token: JWT, TTL 12 hours, idle timeout 30 minutes.
+- Staff with `role: "ADMIN"` can access vendor admin endpoints.
 
 ### 5.3 Admin auth
-- Vendor Admin: email+password (recommended) OR separate admin PIN (optional).
-- Platform Admin: email+password + MFA (recommended).
+- **Vendor Admin**: Authenticates via staff login with `role: "ADMIN"`. Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
+- **Platform Admin**: email+password authentication. Uses HttpOnly cookies (set via `/api/v1/admin/auth/login`). Cookies are used for all platform admin endpoints (`/api/v1/admin/*`).
+
+**Important**: The frontend API client distinguishes between these authentication methods:
+- Platform admin routes (`/admin/*`): No Bearer token injection (uses cookies)
+- Vendor admin routes (`/v/:slug/admin/*`): Bearer token injection required
+- Member/Staff routes: Bearer token injection required
 
 ## 6. Fraud-resistant rotating token
 - Member card screen displays rotating token refreshed every 30 seconds.
@@ -136,7 +142,7 @@ flowchart LR
   Net --> API[Node API (dev)]
   Net --> DB[(PostgreSQL)]
   Net --> REDIS[(Redis - optional)]
-  API --> WA[WhatsApp Provider API]
+  API --> SMS[SMS Provider API]
   WEB --> API
 ```
 

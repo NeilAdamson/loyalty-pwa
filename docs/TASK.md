@@ -99,3 +99,8 @@
     - [x] Staff scan UI under VendorLayout (header, CSS vars, vendor styling) <!-- id: 144 -->
     - [x] Scan UX: large scanner, Stamp vs Redeem mode, Scan next loop <!-- id: 145 -->
     - [x] Documentation: WALKTHROUGH.md, TASK.md, API.md <!-- id: 146 -->
+- [x] Milestone 10: Vendor Branding API Fix <!-- id: 150 -->
+    - [x] Fix: API client token injection for vendor admin routes <!-- id: 151 -->
+    - [x] Fix: Branding API defaults for required fields <!-- id: 152 -->
+    - [x] Fix: Error handling and user-friendly error messages <!-- id: 153 -->
+    - [x] Documentation: Updated API.md, TECH-SPEC.md, ARCHITECTURE.md, WALKTHROUGH.md <!-- id: 154 -->

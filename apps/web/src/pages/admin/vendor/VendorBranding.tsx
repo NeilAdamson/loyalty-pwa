@@ -62,8 +62,9 @@ const VendorBranding: React.FC = () => {
             await api.put(`/api/v1/v/${slug}/admin/branding`, payload);
             alert('Branding updated successfully');
         } catch (error: any) {
-            console.error(error);
-            alert('Failed to save branding');
+            console.error('Branding save error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to save branding';
+            alert(`Failed to save branding: ${errorMessage}`);
         } finally {
             setSaving(false);
         }
