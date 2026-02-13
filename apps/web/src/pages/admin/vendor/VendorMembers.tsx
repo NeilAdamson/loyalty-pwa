@@ -68,11 +68,11 @@ const VendorMembers: React.FC = () => {
     };
 
     // Check if member form is dirty
-    const isMemberDirty = selectedMember && selectedMember.name !== initialMemberNameRef.current;
+    const isMemberDirty = selectedMember ? selectedMember.name !== initialMemberNameRef.current : false;
 
     // Block navigation if modal is open with unsaved changes
     useUnsavedChanges({ 
-        isDirty: isEditModalOpen && isMemberDirty, 
+        isDirty: Boolean(isEditModalOpen && isMemberDirty), 
         message: 'You have unsaved member changes in the form. Are you sure you want to leave?' 
     });
 

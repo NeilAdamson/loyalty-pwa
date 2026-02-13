@@ -107,7 +107,7 @@ const VendorStaff: React.FC = () => {
 
     // Block navigation if modal is open with unsaved changes
     useUnsavedChanges({ 
-        isDirty: isAddModalOpen && isStaffDirty, 
+        isDirty: Boolean(isAddModalOpen && isStaffDirty), 
         message: 'You have unsaved staff data in the form. Are you sure you want to leave?' 
     });
 
