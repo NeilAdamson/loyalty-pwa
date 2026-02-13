@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { getContrastColor } from '../utils/color';
 
 interface CardPreviewProps {
@@ -18,6 +18,7 @@ interface CardPreviewProps {
 }
 
 const CardPreview: React.FC<CardPreviewProps> = ({ branding, program, stampsCount = 0 }) => {
+    const [logoError, setLogoError] = useState(false);
     const primaryColor = branding.primary_color || '#000000';
     const secondaryColor = branding.secondary_color || '#ffffff';
     const accentColor = branding.accent_color || '#ffffff';
@@ -79,23 +80,50 @@ const CardPreview: React.FC<CardPreviewProps> = ({ branding, program, stampsCoun
                 pointerEvents: 'none'
             }} />
 
-            {branding.logo_url ? (
-                <img
-                    src={branding.logo_url}
-                    alt="Logo"
-                    style={{
+            {/* Logo or Placeholder */}
+            <div style={{
+                alignSelf: 'center',
+                marginBottom: 'auto',
+                zIndex: 2,
+                minHeight: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            }}>
+                {branding.logo_url && !logoError ? (
+                    <img
+                        src={branding.logo_url}
+                        alt="Logo"
+                        onError={() => setLogoError(true)}
+                        style={{
+                            height: '48px',
+                            width: 'auto',
+                            maxWidth: '120px',
+                            objectFit: 'contain',
+                            filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))'
+                        }}
+                    />
+                ) : (
+                    /* Logo Placeholder - shown when no logo_url or image fails to load */
+                    <div style={{
                         height: '48px',
-                        width: 'auto',
-                        objectFit: 'contain',
-                        alignSelf: 'center',
-                        marginBottom: 'auto',
-                        filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))',
-                        zIndex: 2
-                    }}
-                />
-            ) : (
-                <div style={{ marginBottom: 'auto' }} /> // Spacer
-            )}
+                        width: '48px',
+                        borderRadius: '12px',
+                        background: `linear-gradient(135deg, ${textColor}20, ${textColor}10)`,
+                        border: `2px dashed ${textColor}40`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.6
+                    }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={textColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </div>
+                )}
+            </div>
 
             <div style={{ marginTop: '16px', zIndex: 2 }}>
                 <h3 style={{

@@ -5,6 +5,7 @@ import AdminPageHeader from '../../../components/admin/ui/AdminPageHeader';
 import AdminButton from '../../../components/admin/ui/AdminButton';
 import AdminInput from '../../../components/admin/ui/AdminInput';
 import ImageUpload from '../../../components/admin/ui/ImageUpload';
+import CardPreview from '../../../components/CardPreview';
 
 const VendorBranding: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -283,32 +284,37 @@ const VendorBranding: React.FC = () => {
                                 <div className="w-8 h-8 rounded-full bg-white/10"></div>
                             </div>
 
-                            {/* Mock Card */}
-                            <div style={{
-                                background: branding.card_style === 'GRADIENT'
-                                    ? `linear-gradient(135deg, ${branding.primary_color}, ${branding.secondary_color})`
-                                    : branding.primary_color,
-                                borderRadius: '16px',
-                                padding: '24px',
-                                color: branding.card_text_color,
-                                marginBottom: '24px',
-                                boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                                minHeight: '180px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'space-between'
+                            {/* Live Card Preview */}
+                            <div style={{ 
+                                marginBottom: '24px', 
+                                display: 'flex', 
+                                justifyContent: 'center',
+                                width: '100%'
                             }}>
-                                <div className="flex justify-between items-start">
-                                    <div style={{ fontSize: '14px', opacity: 0.8 }}>Loyalty Card</div>
-                                    {branding.logo_url && <img src={branding.logo_url} style={{ width: '32px', height: '32px', borderRadius: '50%' }} />}
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>0 Stamps</div>
-                                    <div style={{ fontSize: '12px', opacity: 0.8 }}>{program.stamps_required} stamps to {program.reward_title}</div>
+                                <div style={{ width: '100%', maxWidth: '260px' }}>
+                                    <CardPreview
+                                        branding={branding}
+                                        program={program.stamps_required ? program : { stamps_required: 10, reward_title: program.reward_title || 'Reward' }}
+                                        stampsCount={Math.min(3, program.stamps_required || 10)}
+                                    />
                                 </div>
                             </div>
 
-                            <div className="text-center text-white/50 text-xs mt-auto">
+                            {/* QR Code Section */}
+                            <div style={{
+                                marginTop: 'auto',
+                                background: '#fff',
+                                padding: '16px',
+                                borderRadius: '16px',
+                                textAlign: 'center',
+                                color: '#000',
+                                marginBottom: '16px'
+                            }}>
+                                <div style={{ width: '100px', height: '100px', background: '#000', margin: '0 auto', borderRadius: '8px' }}></div>
+                                <p style={{ fontSize: '12px', marginTop: '8px', color: '#666' }}>Scan to get stamped</p>
+                            </div>
+
+                            <div className="text-center text-white/50 text-xs">
                                 Preview Only
                             </div>
                         </div>

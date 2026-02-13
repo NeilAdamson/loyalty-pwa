@@ -1,13 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '../../../context/AuthContext';
+import { api } from '../../../utils/api';
 
 const VendorAdminLayout: React.FC = () => {
     const navigate = useNavigate();
     const { slug } = useParams<{ slug: string }>();
     const { logout } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [vendorName, setVendorName] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Fetch vendor name for display
+        const fetchVendorName = async () => {
+            if (!slug) return;
+            try {
+                // Use public endpoint to get trading name
+                const res = await api.get(`/api/v1/v/${slug}/public`);
+                if (res.data?.trading_name) {
+                    setVendorName(res.data.trading_name);
+                } else {
+                    // Fallback to slug if trading name not available
+                    setVendorName(slug);
+                }
+            } catch (error) {
+                // Fallback to slug on error
+                setVendorName(slug || 'Vendor');
+            }
+        };
+        fetchVendorName();
+    }, [slug]);
 
     const handleLogout = () => {
         logout();
@@ -29,6 +52,7 @@ const VendorAdminLayout: React.FC = () => {
                 <div className="logo">
                     <span className="brand-punch">Punch</span>
                     <span className="brand-card">Card</span>
+                    {vendorName && <span className="vendor-name-mobile">{vendorName}</span>}
                 </div>
                 <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="menu-btn">
                     ☰
@@ -40,7 +64,9 @@ const VendorAdminLayout: React.FC = () => {
                 <div className="sidebar-header">
                     <span className="brand-punch">Punch</span>
                     <span className="brand-card">Card</span>
-                    <div className="text-xs text-muted mt-1">Vendor Portal</div>
+                    <div className="text-xs text-muted mt-1">
+                        {vendorName ? `${vendorName} Vendor Portal` : 'Vendor Portal'}
+                    </div>
                 </div>
 
                 <nav className="sidebar-nav">
@@ -66,7 +92,7 @@ const VendorAdminLayout: React.FC = () => {
 
             {/* Main Content */}
             <main className="admin-main">
-                <Outlet />
+                <Outlet context={{ vendorName, vendorSlug: slug }} />
             </main>
 
             {/* Overlay for mobile sidebar */}
@@ -101,6 +127,7 @@ const VendorAdminLayout: React.FC = () => {
 
                 .brand-punch { font-weight: 800; color: var(--text-main); font-size: 1.5rem; letter-spacing: -0.05em; }
                 .brand-card { font-weight: 800; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.5rem; letter-spacing: -0.05em; margin-left: 2px; }
+                .vendor-name-mobile { font-size: 0.75rem; color: var(--text-muted); margin-left: 8px; font-weight: 500; }
 
                 .sidebar-nav {
                     padding: 1rem;
