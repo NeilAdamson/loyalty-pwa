@@ -9,9 +9,19 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function testCreate() {
-    const admin = await prisma.adminUser.findUnique({ where: { email: 'admin@loyalty.com' } });
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@punchcard.co.za';
+    let admin = await prisma.adminUser.findUnique({ where: { email: adminEmail } });
+    
+    // Fallback to old admin email for migration testing
     if (!admin) {
-        console.error('Admin not found in DB');
+        admin = await prisma.adminUser.findUnique({ where: { email: 'admin@loyalty.com' } });
+        if (admin) {
+            console.warn(`Found old admin email (admin@loyalty.com). Consider running db:seed to migrate.`);
+        }
+    }
+    
+    if (!admin) {
+        console.error(`Admin not found in DB (checked: ${adminEmail} and admin@loyalty.com)`);
         return;
     }
 

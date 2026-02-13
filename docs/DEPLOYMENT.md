@@ -89,7 +89,7 @@ When setting up the server for the first time, you need to create the tables and
     ```bash
     docker compose exec api pnpm db:seed
     ```
-    *This creates the admin user. If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set in `.env`, those are used; otherwise defaults to `admin@loyalty.com` / `password123`.*
+    *This creates the admin user. If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set in `.env`, those are used; otherwise defaults to `admin@punchcard.co.za` / `password1234`. The seed script will automatically migrate any existing admin user from `admin@loyalty.com` to the new email if present.*
 
 For full database details (users, credentials, safe schema changes), see [docs/DATABASE-SETUP.md](DATABASE-SETUP.md).
 

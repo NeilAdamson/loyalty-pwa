@@ -61,7 +61,7 @@ Create a secure, functional "Backoffice" for Platform Admins to manage Vendors, 
 - `verify:admin-vendor`: Test Create/Suspend vendor.
 
 ### Manual
-- Login as `admin@loyalty.com`.
+- Login as `admin@punchcard.co.za`.
 - Create a new Vendor "Test Cafe".
 - Verify "Test Cafe" exists in DB.
 - Suspend a Member. Use Member App to try login -> Should Fail (or 403).

@@ -5,14 +5,14 @@
 ## Prerequisites
 - Services running: `.\dev.ps1 up -d --build` (or `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`)
 - Database initialized: `.\dev.ps1 exec api pnpm db:deploy` and `.\dev.ps1 exec api pnpm db:seed`
-- Admin User Seeded: `admin@loyalty.com` / `password123`
+- Admin User Seeded: `admin@punchcard.co.za` / `password1234`
 
 ## 1. Accessing Admin Portal
 
 1. Open http://localhost:5173/admin/login
 2. Login with credentials:
-   - **Email**: `admin@loyalty.com`
-   - **Password**: `password123`
+   - **Email**: `admin@punchcard.co.za`
+   - **Password**: `password1234`
 3. You should be redirected to `/admin` (Dashboard).
 4. Verify "Welcome, Super Admin" or similar text.
 5. **Dashboard Stats**: Verify "Active Vendors" and "Total Members" show numbers > 0 (if data exists).

@@ -25,7 +25,7 @@ After starting, run migrations and seed:
 ## Access
 
   Web:    http://localhost:5173
-  Admin:  http://localhost:5173/admin/login  (admin@loyalty.com / password123)
+  Admin:  http://localhost:5173/admin/login  (admin@punchcard.co.za / password1234)
   API:    http://localhost:8000/health
   pgAdmin: http://localhost:5050 (admin@admin.com / root)
 

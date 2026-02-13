@@ -42,8 +42,8 @@ A multi-tenant digital loyalty stamp card system built with Node.js, Prisma, Pos
 
 ### Platform Admin
 *   **URL**: `/admin/login`
-*   **Email**: `admin@loyalty.com`
-*   **Password**: `password123`
+*   **Email**: `admin@punchcard.co.za`
+*   **Password**: `password1234` (change after first login)
 
 ### Demo Vendor
 *   **Vendor Slug**: `demo-cafe` (Access at `/v/demo-cafe`)

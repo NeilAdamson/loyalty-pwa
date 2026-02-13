@@ -4,25 +4,71 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-    const email = 'admin@loyalty.com'
-    const password = 'password123'
+    const email = process.env.ADMIN_EMAIL || 'admin@punchcard.co.za'
+    const password = process.env.ADMIN_PASSWORD || 'password1234'
     const hash = await bcrypt.hash(password, 10)
 
-    const admin = await prisma.adminUser.upsert({
-        where: { email },
-        update: {
-            password_hash: hash,
-            role: 'SUPER_ADMIN'
-        },
-        create: {
-            email,
-            password_hash: hash,
-            name: 'Super Admin',
-            role: 'SUPER_ADMIN'
-        }
+    // Check if old admin exists (for migration from admin@loyalty.com)
+    const oldAdminEmail = 'admin@loyalty.com'
+    const oldAdmin = await prisma.adminUser.findUnique({
+        where: { email: oldAdminEmail }
     })
-
-    console.log(`Admin user seeded: ${admin.email}`)
+    const newAdmin = await prisma.adminUser.findUnique({
+        where: { email }
+    })
+    
+    // Handle migration: if old admin exists and we're migrating to a new email
+    if (oldAdmin && email !== oldAdminEmail) {
+        if (newAdmin) {
+            // Both exist - delete old one and update new one
+            console.log(`Both admin emails exist. Deleting old admin (${oldAdminEmail}) and updating new admin (${email})`)
+            await prisma.adminUser.delete({
+                where: { email: oldAdminEmail }
+            })
+            const admin = await prisma.adminUser.update({
+                where: { email },
+                data: {
+                    password_hash: hash,
+                    name: 'Super Admin',
+                    role: 'SUPER_ADMIN',
+                    status: 'ACTIVE'
+                }
+            })
+            console.log(`Admin updated: ${admin.email}`)
+        } else {
+            // Only old exists - migrate it to new email
+            console.log(`Migrating admin from ${oldAdminEmail} to ${email}`)
+            await prisma.adminUser.update({
+                where: { email: oldAdminEmail },
+                data: {
+                    email,
+                    password_hash: hash,
+                    name: 'Super Admin',
+                    role: 'SUPER_ADMIN',
+                    status: 'ACTIVE'
+                }
+            })
+            console.log(`Admin migrated to: ${email}`)
+        }
+    } else {
+        const admin = await prisma.adminUser.upsert({
+            where: { email },
+            update: {
+                password_hash: hash,
+                name: 'Super Admin',
+                role: 'SUPER_ADMIN',
+                status: 'ACTIVE'
+            },
+            create: {
+                email,
+                password_hash: hash,
+                name: 'Super Admin',
+                role: 'SUPER_ADMIN',
+                status: 'ACTIVE'
+            }
+        })
+        console.log(`Admin user seeded: ${admin.email}`)
+    }
 }
 
 main()
