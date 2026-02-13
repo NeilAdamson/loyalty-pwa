@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../utils/api';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 
 const VendorSettings: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -11,6 +12,7 @@ const VendorSettings: React.FC = () => {
     const [tradingName, setTradingName] = useState('');
     const [legalName, setLegalName] = useState('');
     const [vendorSlug, setVendorSlug] = useState('');
+    const initialTradingNameRef = useRef<string>('');
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -24,9 +26,11 @@ const VendorSettings: React.FC = () => {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = res.data;
-                setTradingName(data.trading_name || '');
+                const tradingNameValue = data.trading_name || '';
+                setTradingName(tradingNameValue);
                 setLegalName(data.legal_name || '');
                 setVendorSlug(data.slug || '');
+                initialTradingNameRef.current = tradingNameValue;
             } catch (error) {
                 console.error('Error fetching settings:', error);
             } finally {
@@ -35,6 +39,12 @@ const VendorSettings: React.FC = () => {
         };
         fetchSettings();
     }, [slug, token]);
+
+    // Check if form is dirty
+    const isDirty = tradingName !== initialTradingNameRef.current;
+
+    // Block navigation if there are unsaved changes
+    useUnsavedChanges({ isDirty, message: 'You have unsaved settings changes. Are you sure you want to leave?' });
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,6 +56,7 @@ const VendorSettings: React.FC = () => {
                 { trading_name: tradingName },
                 { headers: { 'Authorization': `Bearer ${token}` } }
             );
+            initialTradingNameRef.current = tradingName;
             setMessage({ text: 'Settings saved successfully!', type: 'success' });
 
             // Clear message after 3 seconds
@@ -146,8 +157,8 @@ const VendorSettings: React.FC = () => {
                 <div className="flex items-center gap-4">
                     <button
                         type="submit"
-                        disabled={saving}
-                        className={`btn-premium ${saving ? 'opacity-70 cursor-wait' : ''}`}
+                        disabled={saving || !isDirty}
+                        className={`btn-premium ${saving ? 'opacity-70 cursor-wait' : !isDirty ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         {saving ? 'Saving Changes...' : 'Save Changes'}
                     </button>

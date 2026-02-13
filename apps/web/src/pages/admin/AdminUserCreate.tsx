@@ -4,6 +4,7 @@ import { api } from '../../utils/api';
 import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
 import AdminButton from '../../components/admin/ui/AdminButton';
 import AdminInput from '../../components/admin/ui/AdminInput';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 const MIN_LENGTH = 8;
 
@@ -33,6 +34,12 @@ export default function AdminUserCreate() {
     const [error, setError] = useState('');
     const pwdChecks = passwordChecks(formData.password);
     const pwdOk = passwordAcceptable(formData.password);
+
+    // Check if form is dirty (has any input)
+    const isDirty = formData.name.trim() !== '' || formData.email.trim() !== '' || formData.password.trim() !== '';
+
+    // Block navigation if there are unsaved changes
+    useUnsavedChanges({ isDirty, message: 'You have unsaved user data. Are you sure you want to leave?' });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -220,7 +227,7 @@ export default function AdminUserCreate() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                        <AdminButton type="submit" isLoading={loading}>
+                        <AdminButton type="submit" isLoading={loading} disabled={!isDirty || loading || !pwdOk}>
                             Create User
                         </AdminButton>
                         <AdminButton variant="secondary" type="button" onClick={() => navigate('/admin/users')}>

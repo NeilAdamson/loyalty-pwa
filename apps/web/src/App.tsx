@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import VendorLayout from './pages/VendorLayout';
@@ -38,68 +38,91 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, all
     return children;
 };
 
+const router = createBrowserRouter([
+    {
+        path: "/",
+        element: <LandingPage />,
+    },
+    {
+        path: "/v/:slug",
+        element: <VendorLayout />,
+        children: [
+            { index: true, element: <Navigate to="login" replace /> },
+            { path: "login", element: <MemberAuth /> },
+            { path: "staff", element: <StaffAuth /> },
+            {
+                path: "staff/scan",
+                element: (
+                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                        <StaffDashboard />
+                    </ProtectedRoute>
+                ),
+            },
+        ],
+    },
+    {
+        path: "/v/:slug/admin",
+        element: (
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+                <VendorAdminLayout />
+            </ProtectedRoute>
+        ),
+        children: [
+            { index: true, element: <Navigate to="dashboard" replace /> },
+            { path: "dashboard", element: <VendorDashboard /> },
+            { path: "members", element: <VendorMembers /> },
+            { path: "staff", element: <VendorStaff /> },
+            { path: "branding", element: <VendorBranding /> },
+            { path: "settings", element: <VendorSettings /> },
+        ],
+    },
+    {
+        path: "/me/card",
+        element: (
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+                <MemberCard />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/staff",
+        element: <Navigate to="/" replace />,
+    },
+    {
+        path: "/vendor/login",
+        element: <VendorLookup />,
+    },
+    {
+        path: "/admin/login",
+        element: <AdminLogin />,
+    },
+    {
+        path: "/admin",
+        element: <AdminLayout />,
+        children: [
+            { index: true, element: <AdminDashboard /> },
+            { path: "vendors", element: <AdminVendorList /> },
+            { path: "vendors/new", element: <AdminVendorCreate /> },
+            { path: "vendors/:id", element: <AdminVendorDetail /> },
+            { path: "vendors/:id/qr", element: <AdminVendorQr /> },
+            { path: "members", element: <AdminMemberList /> },
+            { path: "users", element: <AdminUserList /> },
+            { path: "users/new", element: <AdminUserCreate /> },
+            { path: "users/:id/edit", element: <AdminUserEdit /> },
+            { path: "settings", element: <div>Settings</div> },
+        ],
+    },
+    {
+        path: "*",
+        element: <div>404 Not Found</div>,
+    },
+]);
+
 function App() {
     return (
         <AdminAuthProvider>
             <AuthProvider>
-                <BrowserRouter>
-                    <Routes>
-                        <Route path="/" element={<LandingPage />} />
-                        {/* Vendor Scoped Routes */}
-                        <Route path="/v/:slug" element={<VendorLayout />}>
-                            <Route index element={<Navigate to="login" replace />} />
-                            <Route path="login" element={<MemberAuth />} />
-                            <Route path="staff" element={<StaffAuth />} />
-                            <Route path="staff/scan" element={
-                                <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                                    <StaffDashboard />
-                                </ProtectedRoute>
-                            } />
-                        </Route>
-
-                        {/* Vendor Admin Routes */}
-                        <Route path="/v/:slug/admin" element={
-                            <ProtectedRoute allowedRoles={['ADMIN']}>
-                                <VendorAdminLayout />
-                            </ProtectedRoute>
-                        }>
-                            <Route index element={<Navigate to="dashboard" replace />} />
-                            <Route path="dashboard" element={<VendorDashboard />} />
-                            <Route path="members" element={<VendorMembers />} />
-                            <Route path="staff" element={<VendorStaff />} />
-                            <Route path="branding" element={<VendorBranding />} />
-                            <Route path="settings" element={<VendorSettings />} />
-                        </Route>
-
-                        {/* Protected Routes */}
-                        <Route path="/me/card" element={
-                            <ProtectedRoute allowedRoles={['MEMBER']}>
-                                <MemberCard />
-                            </ProtectedRoute>
-                        } />
-                        <Route path="/staff" element={<Navigate to="/" replace />} />
-
-                        {/* Generic Routes */}
-                        <Route path="/vendor/login" element={<VendorLookup />} />
-
-                        {/* Admin Routes */}
-                        <Route path="/admin/login" element={<AdminLogin />} />
-                        <Route path="/admin" element={<AdminLayout />}>
-                            <Route index element={<AdminDashboard />} />
-                            <Route path="vendors" element={<AdminVendorList />} />
-                            <Route path="vendors/new" element={<AdminVendorCreate />} />
-                            <Route path="vendors/:id" element={<AdminVendorDetail />} />
-                            <Route path="vendors/:id/qr" element={<AdminVendorQr />} />
-                            <Route path="members" element={<AdminMemberList />} />
-                            <Route path="users" element={<AdminUserList />} />
-                            <Route path="users/new" element={<AdminUserCreate />} />
-                            <Route path="users/:id/edit" element={<AdminUserEdit />} />
-                            <Route path="settings" element={<div>Settings</div>} />
-                        </Route>
-
-                        <Route path="*" element={<div>404 Not Found</div>} />
-                    </Routes>
-                </BrowserRouter>
+                <RouterProvider router={router} />
             </AuthProvider>
         </AdminAuthProvider>
     );

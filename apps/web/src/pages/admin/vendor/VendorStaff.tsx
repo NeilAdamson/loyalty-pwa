@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../utils/api';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 
 interface Staff {
     staff_id: string;
@@ -25,6 +26,7 @@ const VendorStaff: React.FC = () => {
     const [newName, setNewName] = useState('');
     const [newPin, setNewPin] = useState('');
     const [newRole, setNewRole] = useState<'ADMIN' | 'STAMPER'>('STAMPER');
+    const initialStaffDataRef = React.useRef<{ name: string; pin: string; role: 'ADMIN' | 'STAMPER' } | null>(null);
 
     const fetchStaff = async () => {
         setLoading(true);
@@ -49,6 +51,7 @@ const VendorStaff: React.FC = () => {
         setNewName('');
         setNewPin('');
         setNewRole('STAMPER');
+        initialStaffDataRef.current = null; // New form, no initial data
         setIsAddModalOpen(true);
     };
 
@@ -57,6 +60,7 @@ const VendorStaff: React.FC = () => {
         setNewName(staff.name);
         setNewPin(''); // Keep blank to indicate no change
         setNewRole(staff.role);
+        initialStaffDataRef.current = { name: staff.name, pin: '', role: staff.role };
         setIsAddModalOpen(true);
     };
 
@@ -82,6 +86,7 @@ const VendorStaff: React.FC = () => {
                 );
             }
 
+            initialStaffDataRef.current = editingStaff ? { name: newName, pin: newPin, role: newRole } : null;
             setIsAddModalOpen(false);
             setEditingStaff(null);
             setNewName('');
@@ -92,6 +97,19 @@ const VendorStaff: React.FC = () => {
             alert('Failed to save staff.');
         }
     };
+
+    // Check if staff form is dirty
+    const isStaffDirty = editingStaff 
+        ? (newName !== initialStaffDataRef.current?.name || 
+           newRole !== initialStaffDataRef.current?.role || 
+           (newPin.trim() !== '' && newPin !== initialStaffDataRef.current?.pin))
+        : (newName.trim() !== '' || newPin.trim() !== '');
+
+    // Block navigation if modal is open with unsaved changes
+    useUnsavedChanges({ 
+        isDirty: isAddModalOpen && isStaffDirty, 
+        message: 'You have unsaved staff data in the form. Are you sure you want to leave?' 
+    });
 
     const handleDisable = async (id: string, currentStatus: string) => {
         if (!confirm(`${currentStatus === 'ENABLED' ? 'Disable' : 'Enable'} this staff member?`)) return;
@@ -195,7 +213,14 @@ const VendorStaff: React.FC = () => {
                                 <h2 className="text-xl font-bold text-white">{editingStaff ? 'Edit Staff Member' : 'Add Staff Member'}</h2>
                                 <p className="text-sm text-muted">{editingStaff ? 'Update details for this team member.' : 'Create a login for a new team member.'}</p>
                             </div>
-                            <button onClick={() => setIsAddModalOpen(false)} className="text-muted hover:text-white text-xl">&times;</button>
+                            <button 
+                                onClick={() => {
+                                    if (isStaffDirty && !window.confirm('You have unsaved changes. Are you sure you want to close?')) {
+                                        return;
+                                    }
+                                    setIsAddModalOpen(false);
+                                }} 
+                                className="text-muted hover:text-white text-xl">&times;</button>
                         </div>
 
                         <form onSubmit={handleSaveStaff}>
@@ -256,7 +281,12 @@ const VendorStaff: React.FC = () => {
                             <div className="flex justify-end gap-3">
                                 <button
                                     type="button"
-                                    onClick={() => setIsAddModalOpen(false)}
+                                    onClick={() => {
+                                        if (isStaffDirty && !window.confirm('You have unsaved changes. Are you sure you want to close?')) {
+                                            return;
+                                        }
+                                        setIsAddModalOpen(false);
+                                    }}
                                     className="btn-ghost"
                                 >
                                     Cancel
@@ -264,6 +294,8 @@ const VendorStaff: React.FC = () => {
                                 <button
                                     type="submit"
                                     className="btn-premium"
+                                    disabled={!isStaffDirty}
+                                    style={{ opacity: !isStaffDirty ? 0.5 : 1, cursor: !isStaffDirty ? 'not-allowed' : 'pointer' }}
                                 >
                                     {editingStaff ? 'Save Changes' : 'Create Staff'}
                                 </button>

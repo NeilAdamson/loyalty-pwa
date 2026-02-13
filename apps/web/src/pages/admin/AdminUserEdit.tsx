@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../utils/api';
 import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
 import AdminButton from '../../components/admin/ui/AdminButton';
 import AdminInput from '../../components/admin/ui/AdminInput';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 const MIN_LENGTH = 8;
 
@@ -34,6 +35,7 @@ export default function AdminUserEdit() {
         newPassword: ''
     });
     const [error, setError] = useState('');
+    const initialDataRef = useRef<{ name: string; email: string; role: string; status: string } | null>(null);
 
     const pwdChecks = passwordChecks(formData.newPassword);
 
@@ -45,13 +47,17 @@ export default function AdminUserEdit() {
             .then(res => {
                 if (cancelled) return;
                 const a = res.data.admin;
-                setFormData(prev => ({
-                    ...prev,
+                const formDataValue = {
                     name: a.name || '',
                     email: a.email || '',
                     role: a.role || 'SUPPORT',
                     status: a.status || 'ACTIVE'
+                };
+                setFormData(prev => ({
+                    ...prev,
+                    ...formDataValue
                 }));
+                initialDataRef.current = formDataValue;
             })
             .catch(err => {
                 if (!cancelled) setError(err.response?.data?.message || 'Failed to load admin');
@@ -59,6 +65,18 @@ export default function AdminUserEdit() {
             .finally(() => { if (!cancelled) setFetching(false); });
         return () => { cancelled = true; };
     }, [id]);
+
+    // Check if form is dirty (has unsaved changes)
+    const isDirty = initialDataRef.current ? (
+        formData.name !== initialDataRef.current.name ||
+        formData.email !== initialDataRef.current.email ||
+        formData.role !== initialDataRef.current.role ||
+        formData.status !== initialDataRef.current.status ||
+        formData.newPassword.trim() !== ''
+    ) : false;
+
+    // Block navigation if there are unsaved changes
+    useUnsavedChanges({ isDirty, message: 'You have unsaved user changes. Are you sure you want to leave?' });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -80,6 +98,15 @@ export default function AdminUserEdit() {
         setError('');
         try {
             await api.patch(`/api/v1/admin/users/${id}`, payload);
+            
+            // Update initial data ref after successful save
+            initialDataRef.current = {
+                name: formData.name,
+                email: formData.email,
+                role: formData.role,
+                status: formData.status
+            };
+            
             navigate('/admin/users');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to update admin');
@@ -286,7 +313,7 @@ export default function AdminUserEdit() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                        <AdminButton type="submit" isLoading={loading}>
+                        <AdminButton type="submit" isLoading={loading} disabled={!isDirty || loading}>
                             Save Changes
                         </AdminButton>
                         <AdminButton variant="secondary" type="button" onClick={() => navigate('/admin/users')}>

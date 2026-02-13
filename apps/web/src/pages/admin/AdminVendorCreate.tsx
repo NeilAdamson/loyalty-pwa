@@ -4,6 +4,7 @@ import { api } from '../../utils/api';
 import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
 import AdminButton from '../../components/admin/ui/AdminButton';
 import AdminInput from '../../components/admin/ui/AdminInput';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 /** Format phone as XXX XXXXXXX (3 + 7 digits). Accept only digits, max 10. */
 function formatContactPhone(value: string): string {
@@ -36,6 +37,15 @@ export default function AdminVendorCreate() {
     const [isSlugTouched, setIsSlugTouched] = useState(false);
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+    // Check if form is dirty (has any input)
+    const isDirty = formData.legal_name.trim() !== '' || formData.trading_name.trim() !== '' || 
+                    formData.vendor_slug.trim() !== '' || formData.billing_email.trim() !== '' ||
+                    formData.contact_name.trim() !== '' || formData.contact_surname.trim() !== '' ||
+                    formData.contact_phone.trim() !== '' || formData.monthly_billing_amount.toString().trim() !== '';
+
+    // Block navigation if there are unsaved changes
+    useUnsavedChanges({ isDirty, message: 'You have unsaved vendor data. Are you sure you want to leave?' });
 
     const slugify = (text: string) => {
         return text
@@ -254,7 +264,7 @@ export default function AdminVendorCreate() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                        <AdminButton type="submit" isLoading={loading}>
+                        <AdminButton type="submit" isLoading={loading} disabled={!isDirty || loading}>
                             Create Vendor
                         </AdminButton>
                         <AdminButton variant="secondary" type="button" onClick={() => navigate('/admin/vendors')}>

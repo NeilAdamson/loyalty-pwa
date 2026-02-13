@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../utils/api';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 
 interface Member {
     member_id: string;
@@ -22,6 +23,7 @@ const VendorMembers: React.FC = () => {
     const [search, setSearch] = useState('');
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const initialMemberNameRef = React.useRef<string>('');
 
     const fetchMembers = async () => {
         setLoading(true);
@@ -44,6 +46,7 @@ const VendorMembers: React.FC = () => {
 
     const handleEditClick = (member: Member) => {
         setSelectedMember(member);
+        initialMemberNameRef.current = member.name;
         setIsEditModalOpen(true);
     };
 
@@ -56,12 +59,22 @@ const VendorMembers: React.FC = () => {
                 { name: selectedMember.name },
                 { headers: { 'Authorization': `Bearer ${token}` } }
             );
+            initialMemberNameRef.current = selectedMember.name;
             setIsEditModalOpen(false);
             fetchMembers();
         } catch (error) {
             console.error('Error updating member:', error);
         }
     };
+
+    // Check if member form is dirty
+    const isMemberDirty = selectedMember && selectedMember.name !== initialMemberNameRef.current;
+
+    // Block navigation if modal is open with unsaved changes
+    useUnsavedChanges({ 
+        isDirty: isEditModalOpen && isMemberDirty, 
+        message: 'You have unsaved member changes in the form. Are you sure you want to leave?' 
+    });
 
     const handleSuspend = async () => {
         if (!selectedMember) return;
@@ -171,7 +184,14 @@ const VendorMembers: React.FC = () => {
                     <div className="glass-panel w-full max-w-lg p-8 transform transition-all scale-100">
                         <div className="flex justify-between items-start mb-6">
                             <h2 className="text-2xl font-bold text-white">Edit Member</h2>
-                            <button onClick={() => setIsEditModalOpen(false)} className="text-muted hover:text-white text-xl">&times;</button>
+                            <button 
+                                onClick={() => {
+                                    if (isMemberDirty && !window.confirm('You have unsaved changes. Are you sure you want to close?')) {
+                                        return;
+                                    }
+                                    setIsEditModalOpen(false);
+                                }} 
+                                className="text-muted hover:text-white text-xl">&times;</button>
                         </div>
 
                         <form onSubmit={handleSaveMember}>
@@ -210,7 +230,12 @@ const VendorMembers: React.FC = () => {
                                 <div className="flex gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => setIsEditModalOpen(false)}
+                                        onClick={() => {
+                                            if (isMemberDirty && !window.confirm('You have unsaved changes. Are you sure you want to close?')) {
+                                                return;
+                                            }
+                                            setIsEditModalOpen(false);
+                                        }}
                                         className="btn-ghost"
                                     >
                                         Cancel
@@ -218,6 +243,8 @@ const VendorMembers: React.FC = () => {
                                     <button
                                         type="submit"
                                         className="btn-premium"
+                                        disabled={!isMemberDirty}
+                                        style={{ opacity: !isMemberDirty ? 0.5 : 1, cursor: !isMemberDirty ? 'not-allowed' : 'pointer' }}
                                     >
                                         Save Changes
                                     </button>

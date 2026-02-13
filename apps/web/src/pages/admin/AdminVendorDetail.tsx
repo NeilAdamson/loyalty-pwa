@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
 import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
@@ -6,6 +6,7 @@ import AdminButton from '../../components/admin/ui/AdminButton';
 import AdminInput from '../../components/admin/ui/AdminInput';
 import ImageUpload from '../../components/admin/ui/ImageUpload';
 import CardPreview from '../../components/CardPreview';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 /** Format phone as XXX XXXXXXX (3 + 7 digits). Accept only digits, max 10. */
 function formatContactPhone(value: string): string {
@@ -30,6 +31,7 @@ export default function AdminVendorDetail() {
     const [program, setProgram] = useState<any>({});
     const [details, setDetails] = useState<any>({});
     const [saving, setSaving] = useState(false);
+    const initialDataRef = useRef<{ branding: any; program: any; details: any } | null>(null);
 
     // Staff Management State
     const [staffList, setStaffList] = useState<any[]>([]);
@@ -151,7 +153,7 @@ export default function AdminVendorDetail() {
                 stamps_required: activeProgram.stamps_required || 10
             });
 
-            setDetails({
+            const detailsData = {
                 legal_name: rest.legal_name,
                 trading_name: rest.trading_name,
                 vendor_slug: rest.vendor_slug,
@@ -164,7 +166,18 @@ export default function AdminVendorDetail() {
                 contact_name: rest.contact_name,
                 contact_surname: rest.contact_surname,
                 contact_phone: typeof rest.contact_phone === 'string' ? formatContactPhone(rest.contact_phone) : (rest.contact_phone ? formatContactPhone(String(rest.contact_phone)) : '')
-            });
+            };
+            setDetails(detailsData);
+
+            // Store initial state for dirty checking
+            initialDataRef.current = {
+                branding: JSON.parse(JSON.stringify(b)),
+                program: JSON.parse(JSON.stringify({
+                    reward_title: activeProgram.reward_title || 'Free Reward',
+                    stamps_required: activeProgram.stamps_required || 10
+                })),
+                details: JSON.parse(JSON.stringify(detailsData))
+            };
         } catch (error) {
             console.error("Failed to load vendor", error);
             navigate('/admin/vendors');
@@ -200,6 +213,16 @@ export default function AdminVendorDetail() {
         return Object.keys(err).length === 0;
     };
 
+    // Check if form is dirty (has unsaved changes)
+    const isDirty = initialDataRef.current ? (
+        JSON.stringify(branding) !== JSON.stringify(initialDataRef.current.branding) ||
+        JSON.stringify(program) !== JSON.stringify(initialDataRef.current.program) ||
+        JSON.stringify(details) !== JSON.stringify(initialDataRef.current.details)
+    ) : false;
+
+    // Block navigation if there are unsaved changes
+    useUnsavedChanges({ isDirty, message: 'You have unsaved vendor changes. Are you sure you want to leave?' });
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setFieldErrors({});
@@ -218,6 +241,14 @@ export default function AdminVendorDetail() {
                 }
             };
             await api.patch(`/api/v1/admin/vendors/${id}`, payload);
+            
+            // Update initial data ref after successful save
+            initialDataRef.current = {
+                branding: JSON.parse(JSON.stringify(branding)),
+                program: JSON.parse(JSON.stringify(program)),
+                details: JSON.parse(JSON.stringify(details))
+            };
+            
             alert('Updated successfully');
             fetchVendor();
         } catch (error: any) {
@@ -328,7 +359,7 @@ export default function AdminVendorDetail() {
                         <AdminButton variant="secondary" onClick={() => navigate('/admin/vendors')}>
                             Back
                         </AdminButton>
-                        <AdminButton onClick={handleSave} isLoading={saving}>
+                        <AdminButton onClick={handleSave} isLoading={saving} disabled={!isDirty || saving}>
                             Save Changes
                         </AdminButton>
                     </div>

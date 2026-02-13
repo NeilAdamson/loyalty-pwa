@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../../../utils/api';
 import AdminPageHeader from '../../../components/admin/ui/AdminPageHeader';
@@ -6,6 +6,7 @@ import AdminButton from '../../../components/admin/ui/AdminButton';
 import AdminInput from '../../../components/admin/ui/AdminInput';
 import ImageUpload from '../../../components/admin/ui/ImageUpload';
 import CardPreview from '../../../components/CardPreview';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 
 const VendorBranding: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -14,6 +15,7 @@ const VendorBranding: React.FC = () => {
 
     const [branding, setBranding] = useState<any>({});
     const [program, setProgram] = useState<any>({});
+    const initialDataRef = useRef<{ branding: any; program: any } | null>(null);
 
     useEffect(() => {
         fetchBranding();
@@ -23,13 +25,14 @@ const VendorBranding: React.FC = () => {
         try {
             // Fetch branding
             const res = await api.get(`/api/v1/v/${slug}/admin/branding`);
-            setBranding(res.data || {
+            const brandingData = res.data || {
                 primary_color: '#000000',
                 secondary_color: '#ffffff',
                 accent_color: '#3B82F6',
                 card_text_color: '#ffffff',
                 card_style: 'SOLID'
-            });
+            };
+            setBranding(brandingData);
 
             // Fetch current program for reward title/stamps (optionally)
             // The API we built updates program if fields are sent.
@@ -37,18 +40,32 @@ const VendorBranding: React.FC = () => {
             // Let's assume the GET branding endpoint *could* return program details or we fetch program separately.
             // For now, let's fetch the program to populate those fields.
             const progRes = await api.get(`/api/v1/v/${slug}/program`);
-            if (progRes.data) {
-                setProgram({
-                    reward_title: progRes.data.reward_title,
-                    stamps_required: progRes.data.stamps_required
-                });
-            }
+            const programData = progRes.data ? {
+                reward_title: progRes.data.reward_title,
+                stamps_required: progRes.data.stamps_required
+            } : {};
+            setProgram(programData);
+
+            // Store initial state for dirty checking
+            initialDataRef.current = {
+                branding: JSON.parse(JSON.stringify(brandingData)),
+                program: JSON.parse(JSON.stringify(programData))
+            };
         } catch (error) {
             console.error('Failed to load branding', error);
         } finally {
             setLoading(false);
         }
     };
+
+    // Check if form is dirty (has unsaved changes)
+    const isDirty = initialDataRef.current ? (
+        JSON.stringify(branding) !== JSON.stringify(initialDataRef.current.branding) ||
+        JSON.stringify(program) !== JSON.stringify(initialDataRef.current.program)
+    ) : false;
+
+    // Block navigation if there are unsaved changes
+    useUnsavedChanges({ isDirty, message: 'You have unsaved branding changes. Are you sure you want to leave?' });
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -61,6 +78,13 @@ const VendorBranding: React.FC = () => {
             };
 
             await api.put(`/api/v1/v/${slug}/admin/branding`, payload);
+            
+            // Update initial data ref after successful save
+            initialDataRef.current = {
+                branding: JSON.parse(JSON.stringify(branding)),
+                program: JSON.parse(JSON.stringify(program))
+            };
+            
             alert('Branding updated successfully');
         } catch (error: any) {
             console.error('Branding save error:', error);
@@ -143,7 +167,7 @@ const VendorBranding: React.FC = () => {
                 title="Branding & Design"
                 description="Customize your loyalty card and customer experience."
                 actions={
-                    <AdminButton onClick={handleSave} isLoading={saving}>
+                    <AdminButton onClick={handleSave} isLoading={saving} disabled={!isDirty || saving}>
                         Save Changes
                     </AdminButton>
                 }
