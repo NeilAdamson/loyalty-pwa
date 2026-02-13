@@ -2,20 +2,27 @@
     email admin@punchcard.co.za
 }
 
-# Redirect www -> apex
-www.loyaltyladies.com { redir https://loyaltyladies.com{uri} permanent }
-www.punchcard.co.za    { redir https://punchcard.co.za{uri} permanent }
+# Redirect www.loyaltyladies.com -> punchcard.co.za
+www.loyaltyladies.com {
+    redir https://punchcard.co.za{uri} permanent
+}
 
-# Redirect old brand to new brand (everything)
+# Redirect loyaltyladies.com -> punchcard.co.za
 loyaltyladies.com {
     redir https://punchcard.co.za{uri} permanent
 }
 
-# Serve the app on punchcard
+# Redirect www.punchcard.co.za -> punchcard.co.za
+www.punchcard.co.za {
+    redir https://punchcard.co.za{uri} permanent
+}
+
+# Main Site
 punchcard.co.za {
     handle /api/* {
         reverse_proxy api:8000
     }
+
     handle {
         reverse_proxy web:80
     }
