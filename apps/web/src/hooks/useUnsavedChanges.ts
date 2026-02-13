@@ -4,18 +4,20 @@ import { useBlocker } from 'react-router-dom';
 interface UseUnsavedChangesOptions {
     isDirty: boolean;
     message?: string;
+    saving?: boolean; // If true, don't block navigation (e.g., during save operation)
 }
 
 /**
  * Hook to track unsaved changes and block navigation
  * @param isDirty - Whether the form has unsaved changes
  * @param message - Custom message for the confirmation dialog
+ * @param saving - If true, temporarily disable blocking (e.g., during save)
  */
-export function useUnsavedChanges({ isDirty, message = 'You have unsaved changes. Are you sure you want to leave?' }: UseUnsavedChangesOptions) {
-    // Block React Router navigation
+export function useUnsavedChanges({ isDirty, message = 'You have unsaved changes. Are you sure you want to leave?', saving = false }: UseUnsavedChangesOptions) {
+    // Block React Router navigation (but not if we're currently saving)
     const blocker = useBlocker(
         ({ currentLocation, nextLocation }) =>
-            isDirty && currentLocation.pathname !== nextLocation.pathname
+            !saving && isDirty && currentLocation.pathname !== nextLocation.pathname
     );
 
     useEffect(() => {
@@ -29,9 +31,9 @@ export function useUnsavedChanges({ isDirty, message = 'You have unsaved changes
         }
     }, [blocker, message]);
 
-    // Block browser navigation (back/forward, refresh, close tab)
+    // Block browser navigation (back/forward, refresh, close tab) - but not if saving
     useEffect(() => {
-        if (!isDirty) return;
+        if (!isDirty || saving) return;
 
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             e.preventDefault();

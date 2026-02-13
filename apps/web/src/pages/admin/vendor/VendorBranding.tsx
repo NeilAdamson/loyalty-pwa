@@ -64,8 +64,8 @@ const VendorBranding: React.FC = () => {
         JSON.stringify(program) !== JSON.stringify(initialDataRef.current.program)
     ) : false;
 
-    // Block navigation if there are unsaved changes
-    useUnsavedChanges({ isDirty, message: 'You have unsaved branding changes. Are you sure you want to leave?' });
+    // Block navigation if there are unsaved changes (but not during save)
+    useUnsavedChanges({ isDirty, message: 'You have unsaved branding changes. Are you sure you want to leave?', saving: saving });
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();

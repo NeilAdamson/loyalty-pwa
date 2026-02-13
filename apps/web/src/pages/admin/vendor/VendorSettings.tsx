@@ -43,8 +43,8 @@ const VendorSettings: React.FC = () => {
     // Check if form is dirty
     const isDirty = tradingName !== initialTradingNameRef.current;
 
-    // Block navigation if there are unsaved changes
-    useUnsavedChanges({ isDirty, message: 'You have unsaved settings changes. Are you sure you want to leave?' });
+    // Block navigation if there are unsaved changes (but not during save)
+    useUnsavedChanges({ isDirty, message: 'You have unsaved settings changes. Are you sure you want to leave?', saving: saving });
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();

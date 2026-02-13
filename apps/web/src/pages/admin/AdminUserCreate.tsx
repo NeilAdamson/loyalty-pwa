@@ -38,8 +38,8 @@ export default function AdminUserCreate() {
     // Check if form is dirty (has any input)
     const isDirty = formData.name.trim() !== '' || formData.email.trim() !== '' || formData.password.trim() !== '';
 
-    // Block navigation if there are unsaved changes
-    useUnsavedChanges({ isDirty, message: 'You have unsaved user data. Are you sure you want to leave?' });
+    // Block navigation if there are unsaved changes (but not during save)
+    useUnsavedChanges({ isDirty, message: 'You have unsaved user data. Are you sure you want to leave?', saving: loading });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

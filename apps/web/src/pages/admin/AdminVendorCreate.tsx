@@ -44,8 +44,8 @@ export default function AdminVendorCreate() {
                     formData.contact_name.trim() !== '' || formData.contact_surname.trim() !== '' ||
                     formData.contact_phone.trim() !== '' || formData.monthly_billing_amount.toString().trim() !== '';
 
-    // Block navigation if there are unsaved changes
-    useUnsavedChanges({ isDirty, message: 'You have unsaved vendor data. Are you sure you want to leave?' });
+    // Block navigation if there are unsaved changes (but not during save)
+    useUnsavedChanges({ isDirty, message: 'You have unsaved vendor data. Are you sure you want to leave?', saving: loading });
 
     const slugify = (text: string) => {
         return text

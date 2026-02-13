@@ -220,8 +220,8 @@ export default function AdminVendorDetail() {
         JSON.stringify(details) !== JSON.stringify(initialDataRef.current.details)
     ) : false;
 
-    // Block navigation if there are unsaved changes
-    useUnsavedChanges({ isDirty, message: 'You have unsaved vendor changes. Are you sure you want to leave?' });
+    // Block navigation if there are unsaved changes (but not during save)
+    useUnsavedChanges({ isDirty, message: 'You have unsaved vendor changes. Are you sure you want to leave?', saving: saving });
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();

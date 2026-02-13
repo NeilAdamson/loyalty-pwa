@@ -75,8 +75,8 @@ export default function AdminUserEdit() {
         formData.newPassword.trim() !== ''
     ) : false;
 
-    // Block navigation if there are unsaved changes
-    useUnsavedChanges({ isDirty, message: 'You have unsaved user changes. Are you sure you want to leave?' });
+    // Block navigation if there are unsaved changes (but not during save)
+    useUnsavedChanges({ isDirty, message: 'You have unsaved user changes. Are you sure you want to leave?', saving: loading });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
