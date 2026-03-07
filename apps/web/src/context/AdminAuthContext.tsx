@@ -1,21 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-
-interface AdminUser {
-    admin_id: string;
-    email: string;
-    role: string;
-    name: string;
-}
-
-interface AdminAuthContextType {
-    admin: AdminUser | null;
-    isLoading: boolean;
-    login: (credentials: any) => Promise<void>;
-    logout: () => void;
-}
-
-const AdminAuthContext = createContext<AdminAuthContextType>({} as any);
+import { perfLog, startPerf } from '../utils/perf';
+import { AdminAuthContext, AdminUser } from './adminAuthShared';
 
 /** Paths that do not require an auth check and should show immediately (no loading flash). */
 const PUBLIC_ADMIN_PATHS = ['/admin/login', '/admin/forgot-password', '/admin/reset-password'];
@@ -30,9 +16,12 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [isLoading, setIsLoading] = useState(() => !isPublicAdminPath());
 
     const checkAuth = async () => {
+        const finishCheckAuth = startPerf('admin-auth', 'checkAuth', { pathname: typeof window !== 'undefined' ? window.location.pathname : 'unknown' });
+
         if (isPublicAdminPath()) {
             setAdmin(null);
             setIsLoading(false);
+            finishCheckAuth({ publicPath: true, authenticated: false });
             return;
         }
 
@@ -40,23 +29,30 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const res = await api.get('/api/v1/admin/auth/me');
             if (res.data.authenticated) {
                 setAdmin(res.data.admin);
+                finishCheckAuth({ publicPath: false, authenticated: true });
             } else {
                 setAdmin(null);
+                finishCheckAuth({ publicPath: false, authenticated: false });
             }
         } catch (err) {
             setAdmin(null);
+            perfLog('admin-auth', 'checkAuth failed', err);
+            finishCheckAuth({ publicPath: false, authenticated: false, error: true });
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
+        perfLog('admin-auth', 'provider mounted', { publicPath: isPublicAdminPath() });
         checkAuth();
     }, []);
 
-    const login = async (credentials: any) => {
+    const login = async (credentials: { email: string; password: string }) => {
+        const finishLogin = startPerf('admin-auth', 'login', { email: credentials?.email });
         const res = await api.post('/api/v1/admin/auth/login', credentials);
         setAdmin(res.data.admin);
+        finishLogin({ authenticated: true, adminId: res.data.admin?.admin_id });
     };
 
     const logout = async () => {
@@ -71,5 +67,3 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         </AdminAuthContext.Provider>
     );
 };
-
-export const useAdminAuth = () => useContext(AdminAuthContext);

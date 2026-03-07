@@ -11,7 +11,11 @@ The database is implemented in PostgreSQL using Prisma ORM.
 *   **Branch** (`branches`): Physical locations.
 
 ### Users & Access
-*   **AdminUser** (`admin_users`): Platform administrators (Role: `SUPER_ADMIN`, `ADMIN`).
+*   **AdminUser** (`admin_users`): Platform administrators (Role: `SUPER_ADMIN`, `SUPPORT`).
+    - `username`: Unique identifier (e.g., `admin`, `judy.smith`)
+    - `email`: Auto-generated as `{username}@punchcard.co.za` (immutable)
+    - `first_name`, `last_name`: Admin's full name
+    - `reset_token`, `reset_token_exp`: Password reset functionality
 *   **StaffUser** (`staff_users`): Employees who stamp/redeem (Role: `STAMPER`, `ADMIN`).
 *   **Member** (`members`): End-users identified by phone (`phone_e164`).
 

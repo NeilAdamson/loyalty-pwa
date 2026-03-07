@@ -1,89 +1,64 @@
 import { lazy, Suspense } from 'react';
+import type { ComponentType } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
-import VendorLayout from './pages/VendorLayout';
-
-import MemberAuth from './pages/MemberAuth';
-import StaffAuth from './pages/StaffAuth';
-import MemberCard from './pages/MemberCard';
-import StaffDashboard from './pages/StaffDashboard';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminForgotPassword from './pages/admin/AdminForgotPassword';
 import AdminResetPassword from './pages/admin/AdminResetPassword';
-
 import LandingPage from './pages/LandingPage';
-
-import VendorAdminLayout from './pages/admin/vendor/VendorAdminLayout';
-import VendorDashboard from './pages/admin/vendor/VendorDashboard';
-import VendorMembers from './pages/admin/vendor/VendorMembers';
-import VendorStaff from './pages/admin/vendor/VendorStaff';
-import VendorBranding from './pages/admin/vendor/VendorBranding';
-import VendorSettings from './pages/admin/vendor/VendorSettings';
 import VendorLookup from './pages/VendorLookup';
+import { perfLog, startPerf } from './utils/perf';
+import { loadMemberCard, loadPlatformAdminApp, loadVendorAdminApp, loadVendorPublicApp } from './routes/routeLoaders';
+import { ProtectedRoute } from './shared/ProtectedRoute';
 
-// Lazy-load admin backoffice routes so /admin/login loads quickly (no heavy vendor/user pages)
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const AdminVendorList = lazy(() => import('./pages/admin/AdminVendorList'));
-const AdminVendorCreate = lazy(() => import('./pages/admin/AdminVendorCreate'));
-const AdminVendorDetail = lazy(() => import('./pages/admin/AdminVendorDetail'));
-const AdminVendorQr = lazy(() => import('./pages/admin/AdminVendorQr'));
-const AdminUserList = lazy(() => import('./pages/admin/AdminUserList'));
-const AdminUserCreate = lazy(() => import('./pages/admin/AdminUserCreate'));
-const AdminUserEdit = lazy(() => import('./pages/admin/AdminUserEdit'));
-const AdminMemberList = lazy(() => import('./pages/admin/AdminMemberList'));
+function lazyWithTiming<T extends ComponentType<Record<string, never>>>(
+    label: string,
+    loader: () => Promise<{ default: T }>
+) {
+    return lazy(async () => {
+        const finishImport = startPerf('chunk', `import ${label}`);
+        const mod = await loader();
+        finishImport();
+        return mod;
+    });
+}
 
+const VendorPublicApp = lazyWithTiming('VendorPublicApp', loadVendorPublicApp);
+const VendorAdminApp = lazyWithTiming('VendorAdminApp', loadVendorAdminApp);
+const PlatformAdminApp = lazyWithTiming('PlatformAdminApp', loadPlatformAdminApp);
+const MemberCard = lazyWithTiming('MemberCard', loadMemberCard);
 
-const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles?: string[] }) => {
-    const { token, user, isLoading } = useAuth();
-    if (isLoading) return <div>Loading...</div>;
-    if (!token || !user) return <Navigate to="/" />;
-    if (allowedRoles && !allowedRoles.includes(user.role)) return <div>Unauthorized</div>;
-    return children;
-};
+const routeFallback = (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+        Loading...
+    </div>
+);
+
+function withSuspense(element: JSX.Element) {
+    return <Suspense fallback={routeFallback}>{element}</Suspense>;
+}
 
 const router = createBrowserRouter([
     {
         path: "/",
-        element: <LandingPage />,
+        element: withSuspense(<LandingPage />),
     },
     {
-        path: "/v/:slug",
-        element: <VendorLayout />,
-        children: [
-            { index: true, element: <Navigate to="login" replace /> },
-            { path: "login", element: <MemberAuth /> },
-            { path: "staff", element: <StaffAuth /> },
-            {
-                path: "staff/scan",
-                element: (
-                    <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
-                        <StaffDashboard />
-                    </ProtectedRoute>
-                ),
-            },
-        ],
+        path: "/v/:slug/*",
+        element: withSuspense(<VendorPublicApp />),
     },
     {
-        path: "/v/:slug/admin",
-        element: (
+        path: "/v/:slug/admin/*",
+        element: withSuspense(
             <ProtectedRoute allowedRoles={['ADMIN']}>
-                <VendorAdminLayout />
+                <VendorAdminApp />
             </ProtectedRoute>
         ),
-        children: [
-            { index: true, element: <Navigate to="dashboard" replace /> },
-            { path: "dashboard", element: <VendorDashboard /> },
-            { path: "members", element: <VendorMembers /> },
-            { path: "staff", element: <VendorStaff /> },
-            { path: "branding", element: <VendorBranding /> },
-            { path: "settings", element: <VendorSettings /> },
-        ],
     },
     {
         path: "/me/card",
-        element: (
+        element: withSuspense(
             <ProtectedRoute allowedRoles={['MEMBER']}>
                 <MemberCard />
             </ProtectedRoute>
@@ -103,31 +78,15 @@ const router = createBrowserRouter([
     },
     {
         path: "/admin/forgot-password",
-        element: <AdminForgotPassword />,
+        element: withSuspense(<AdminForgotPassword />),
     },
     {
         path: "/admin/reset-password",
-        element: <AdminResetPassword />,
+        element: withSuspense(<AdminResetPassword />),
     },
     {
-        path: "/admin",
-        element: (
-            <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>Loading...</div>}>
-                <AdminLayout />
-            </Suspense>
-        ),
-        children: [
-            { index: true, element: <AdminDashboard /> },
-            { path: "vendors", element: <AdminVendorList /> },
-            { path: "vendors/new", element: <AdminVendorCreate /> },
-            { path: "vendors/:id", element: <AdminVendorDetail /> },
-            { path: "vendors/:id/qr", element: <AdminVendorQr /> },
-            { path: "members", element: <AdminMemberList /> },
-            { path: "users", element: <AdminUserList /> },
-            { path: "users/new", element: <AdminUserCreate /> },
-            { path: "users/:id/edit", element: <AdminUserEdit /> },
-            { path: "settings", element: <div>Settings</div> },
-        ],
+        path: "/admin/*",
+        element: withSuspense(<PlatformAdminApp />),
     },
     {
         path: "*",
@@ -136,6 +95,7 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+    perfLog('bootstrap', 'App rendered');
     return (
         <AdminAuthProvider>
             <AuthProvider>

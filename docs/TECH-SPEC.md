@@ -100,14 +100,23 @@ API base: `/api/v1`
 
 ### 3.13 admin_users (platform)
 - admin_id UUID PK
-- email TEXT UNIQUE NOT NULL
+- username TEXT UNIQUE NOT NULL (e.g. "admin" → email becomes admin@punchcard.co.za)
+- email TEXT UNIQUE NOT NULL (auto-generated: {username}@punchcard.co.za)
 - password_hash TEXT NOT NULL
-- name TEXT NOT NULL
-- role TEXT CHECK IN ('SUPER_ADMIN','ADMIN','READ_ONLY') NOT NULL
+- first_name TEXT NOT NULL
+- last_name TEXT NOT NULL
+- role TEXT CHECK IN ('SUPER_ADMIN','SUPPORT') NOT NULL
 - status TEXT CHECK IN ('ACTIVE','DISABLED') NOT NULL DEFAULT 'ACTIVE'
+- reset_token TEXT NULL (hashed password reset token)
+- reset_token_exp TIMESTAMPTZ NULL (token expiry)
 - last_login_at TIMESTAMPTZ NULL
 - created_at TIMESTAMPTZ NOT NULL
 - updated_at TIMESTAMPTZ NOT NULL
+
+**Notes:**
+- Email addresses are restricted to the `@punchcard.co.za` domain
+- Email is computed from username (immutable after creation)
+- Password reset tokens are stored hashed and expire after 1 hour
 
 ### 3.2 vendor_branding
 - vendor_id UUID PK/FK
@@ -551,12 +560,19 @@ A scheduled job runs daily:
 - `TWILIO_FROM_NUMBER`
 - `STAMP_COOLDOWN_SECONDS=5`
 - `REDIS_URL` (recommended)
-- `REDIS_URL` (recommended)
 - `CORS_ALLOWED_ORIGIN`
 - `DB_HOST` (e.g. 'db', 'localhost')
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
 - `POSTGRES_DB`
+
+### SMTP Configuration (Password Reset Emails)
+- `SMTP_HOST` (e.g. 'odo.aserv.co.za')
+- `SMTP_PORT` (e.g. 465)
+- `SMTP_USER` (e.g. 'no-reply@punchcard.co.za')
+- `SMTP_PASSWORD`
+- `SMTP_SECURE` (true for SSL/TLS)
+- `SMTP_FROM` (sender email address)
 
 ---
 

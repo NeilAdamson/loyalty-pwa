@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
@@ -5,7 +6,7 @@ import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
 import AdminButton from '../../components/admin/ui/AdminButton';
 import AdminTable from '../../components/admin/ui/AdminTable';
 import AdminBadge from '../../components/admin/ui/AdminBadge';
-import { useAdminAuth } from '../../context/AdminAuthContext';
+import { useAdminAuth } from '../../context/useAdminAuth';
 
 interface AdminUser {
     admin_id: string;
@@ -47,8 +48,13 @@ export default function AdminUserList() {
             const newStatus = admin.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
             await api.patch(`/api/v1/admin/users/${admin.admin_id}`, { status: newStatus });
             fetchAdmins();
-        } catch (error: any) {
-            alert(error.response?.data?.message || 'Failed to update status');
+        } catch (error: unknown) {
+            if (axios.isAxiosError<{ message?: string }>(error)) {
+                alert(error.response?.data?.message || 'Failed to update status');
+                return;
+            }
+
+            alert('Failed to update status');
         }
     };
 

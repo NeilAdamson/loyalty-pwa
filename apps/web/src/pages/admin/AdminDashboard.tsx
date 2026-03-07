@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
 import { api } from '../../utils/api';
 import { useNavigate } from 'react-router-dom';
+import { perfLog, startPerf } from '../../utils/perf';
 
 const StatCard = ({ title, value, subtext, onClick }: { title: string, value: string, subtext?: string, onClick?: () => void }) => (
     <div
@@ -38,6 +39,8 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        perfLog('admin-dashboard', 'screen visible');
+
         // Mock data fetch or real if available. 
         // Since we don't have a dedicated "dashboard stats" endpoint yet, 
         // we could parallel fetch counts or just show placeholders.
@@ -46,6 +49,7 @@ export default function AdminDashboard() {
         // Actually, let's just fetch vendors count for real since we have that.
 
         async function loadStats() {
+            const finishLoadStats = startPerf('admin-dashboard', 'loadStats');
             try {
                 // Parallel fetch
                 const [vendorsRes, membersRes] = await Promise.allSettled([
@@ -73,8 +77,10 @@ export default function AdminDashboard() {
                     members: memberCount,
                     users: 0 // We don't have a count endpoint for admin users handy without listing them all
                 });
+                finishLoadStats({ vendorCount, memberCount });
             } catch (err) {
                 console.error("Failed to load dashboard stats", err);
+                finishLoadStats({ error: true });
             } finally {
                 setLoading(false);
             }

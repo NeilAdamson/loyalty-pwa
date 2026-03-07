@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { useAdminAuth } from '../../context/AdminAuthContext';
-import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { useAdminAuth } from '../../context/useAdminAuth';
+import { Link, useNavigate } from 'react-router-dom';
+import { beginRouteTransition, perfLog, startPerf } from '../../utils/perf';
+import { loadPlatformAdminApp } from '../../routes/routeLoaders';
 
 const AdminLogin: React.FC = () => {
     const { login } = useAdminAuth();
@@ -10,14 +13,29 @@ const AdminLogin: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
 
+    useEffect(() => {
+        perfLog('admin-login', 'screen visible');
+        void loadPlatformAdminApp();
+    }, []);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const finishSubmit = startPerf('admin-login', 'submit');
         try {
             await login({ email, password });
+            beginRouteTransition('/admin', '/admin/login');
+            finishSubmit({ success: true });
             navigate('/admin');
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Login Error:', err);
-            setError(err.response?.data?.message || err.message || 'Login Failed');
+            if (axios.isAxiosError<{ message?: string }>(err)) {
+                setError(err.response?.data?.message || err.message || 'Login Failed');
+                finishSubmit({ success: false, axios: true, status: err.response?.status });
+                return;
+            }
+
+            setError(err instanceof Error ? err.message : 'Login Failed');
+            finishSubmit({ success: false, axios: false });
         }
     };
 
@@ -80,8 +98,8 @@ const AdminLogin: React.FC = () => {
                     Login
                 </button>
                 <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                    <a 
-                        href="/admin/forgot-password" 
+                    <Link
+                        to="/admin/forgot-password"
                         style={{ 
                             color: '#007bff', 
                             textDecoration: 'none', 
@@ -91,7 +109,7 @@ const AdminLogin: React.FC = () => {
                         onMouseOut={(e) => (e.target as HTMLElement).style.textDecoration = 'none'}
                     >
                         Forgot password?
-                    </a>
+                    </Link>
                 </div>
             </form>
         </div>

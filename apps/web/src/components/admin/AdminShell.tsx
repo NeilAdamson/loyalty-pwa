@@ -1,6 +1,7 @@
 import React from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAdminAuth } from '../../context/AdminAuthContext';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useAdminAuth } from '../../context/useAdminAuth';
+import { beginRouteTransition, completeRouteTransition, perfLog } from '../../utils/perf';
 
 // Simple Icons
 const Icons = {
@@ -16,12 +17,30 @@ const Icons = {
 const AdminShell: React.FC = () => {
     const { admin, logout, isLoading } = useAdminAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     React.useEffect(() => {
         if (!isLoading && !admin) {
+            perfLog('admin-shell', 'redirecting to login because no admin session');
             navigate('/admin/login');
         }
     }, [isLoading, admin, navigate]);
+
+    React.useEffect(() => {
+        if (!isLoading) {
+            completeRouteTransition(location.pathname, {
+                authenticated: Boolean(admin)
+            });
+        }
+    }, [location.pathname, isLoading, admin]);
+
+    React.useEffect(() => {
+        perfLog('admin-shell', 'auth gate state changed', {
+            pathname: location.pathname,
+            isLoading,
+            authenticated: Boolean(admin)
+        });
+    }, [location.pathname, isLoading, admin]);
 
     if (isLoading) return <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>Loading...</div>;
 
@@ -69,6 +88,7 @@ const AdminShell: React.FC = () => {
                             key={item.path}
                             to={item.path}
                             end={item.end}
+                            onClick={() => beginRouteTransition(item.path, location.pathname)}
                             style={({ isActive }) => ({
                                 display: 'flex',
                                 alignItems: 'center',

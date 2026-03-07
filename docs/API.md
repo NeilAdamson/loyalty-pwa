@@ -190,10 +190,25 @@ Validation (400): Returns `{ code: "VALIDATION_ERROR", message, details: { field
 `DELETE /api/v1/admin/vendors/:id`
 
 ### Admin Users (Platform)
-- **List admins**: `GET /api/v1/admin/users` — Returns `{ admins: [{ admin_id, email, name, role, status, created_at, last_login_at }] }`
-- **Create admin**: `POST /api/v1/admin/users` — Body: `{ name, email, password, role? }`. Role: `SUPPORT` \| `SUPER_ADMIN`.
+Admin users have username-based email addresses restricted to the `@punchcard.co.za` domain.
+
+- **List admins**: `GET /api/v1/admin/users` — Returns `{ admins: [{ admin_id, username, email, first_name, last_name, name, role, status, created_at, last_login_at }] }`
+  - `name` is computed as `{first_name} {last_name}` for backward compatibility
+- **Create admin**: `POST /api/v1/admin/users` — Body: `{ username, first_name, last_name, password, role? }`. Role: `SUPPORT` | `SUPER_ADMIN`.
+  - Email is auto-generated as `{username}@punchcard.co.za`
+  - Username must be alphanumeric with optional dots/hyphens (e.g., `judy`, `john.smith`)
 - **Get admin (for edit)**: `GET /api/v1/admin/users/:id` — Returns `{ admin }` (no password). 404 if not found.
-- **Update admin**: `PATCH /api/v1/admin/users/:id` — Body: `{ name?, email?, role?, status?, password? }`. Leave `password` blank to keep current. Cannot disable own account (400).
+- **Update admin**: `PATCH /api/v1/admin/users/:id` — Body: `{ first_name?, last_name?, role?, status?, password? }`. 
+  - `username` and `email` are immutable after creation
+  - Leave `password` blank to keep current. Cannot disable own account (400).
+
+### Admin Password Reset
+- **Request reset**: `POST /api/v1/admin/auth/forgot-password` — Body: `{ email }`.
+  - Sends password reset email to the admin's `@punchcard.co.za` address
+  - Always returns success (to prevent email enumeration)
+- **Reset password**: `POST /api/v1/admin/auth/reset-password` — Body: `{ token, password }`.
+  - Token expires after 1 hour
+  - Returns 400 if token is invalid or expired
 
 ### Vendor Staff (Platform Admin)
 - **List staff**: `GET /api/v1/admin/vendors/:id/staff`

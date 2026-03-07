@@ -72,6 +72,9 @@ If you see errors related to missing tables or invalid credentials immediately a
 Do not try to run `pnpm install` or `pnpm dev` on your host machine.
 Always use `.\dev.ps1 exec api ...` (or `docker compose ... exec api ...`) for backend commands.
 
+### Slow first page load in local dev
+If the first visit to `http://localhost:5173` or `http://localhost:5173/admin/login` feels slow, the bottleneck is usually Vite transforming bind-mounted source files inside Docker on Windows. The web app now prebundles common dependencies and warms the main/admin entry modules at dev-server startup so the delay happens up front instead of on the first browser navigation.
+
 ### Database Setup
 For migrations, seeding, safe schema changes, and credentials, see [docs/DATABASE-SETUP.md](docs/DATABASE-SETUP.md).
 

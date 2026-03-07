@@ -44,7 +44,7 @@ flowchart LR
 - Served by **Caddy** (internal web container).
 - Tenant routing via URL path `/v/{vendor_slug}`.
 - UI themed via vendor branding fetched from API.
-- Admin backoffice routes (dashboard, vendors, users, etc.) are lazy-loaded so `/admin/login`, `/admin/forgot-password`, and `/admin/reset-password` load with a minimal bundle and render immediately.
+- Route-level code splitting is required only for genuinely heavy screens. Common admin shell routes should stay eager in development so login, dashboard, and sidebar navigation remain immediate, while heavy workflows such as the staff scanner, member card, and vendor detail views can remain lazy-loaded and instrumented for timing.
 
 ### 3.2 Node API
 - Provides all REST endpoints (public vendor info, member auth, staff flows, admin portals).
@@ -92,6 +92,8 @@ flowchart LR
 ### 5.3 Admin auth
 - **Vendor Admin**: Authenticates via staff login with `role: "ADMIN"`. Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
 - **Platform Admin**: email+password authentication. Uses HttpOnly cookies (set via `/api/v1/admin/auth/login`). Cookies are used for all platform admin endpoints (`/api/v1/admin/*`).
+  - Email addresses are restricted to `@punchcard.co.za` domain (auto-generated from username)
+  - Password reset: `/admin/forgot-password` sends reset email, `/admin/reset-password` completes the flow
 
 **Important**: The frontend API client distinguishes between these authentication methods:
 - Platform admin routes (`/admin/*`): No Bearer token injection (uses cookies)
