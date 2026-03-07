@@ -51,16 +51,21 @@ model Vendor {
 }
 
 // 4.1 Admin Users (Platform)
+// Email is auto-generated from username: {username}@punchcard.co.za
 model AdminUser {
-  admin_id      String   @id @default(uuid()) @db.Uuid
-  email         String   @unique
-  password_hash String
-  role          String   // 'SUPER_ADMIN', 'ADMIN', 'READ_ONLY'
-  name          String
-  status        String   @default("ACTIVE") // 'ACTIVE', 'DISABLED'
-  last_login_at DateTime? @db.Timestamptz
-  created_at    DateTime @default(now()) @db.Timestamptz
-  updated_at    DateTime @updatedAt @db.Timestamptz
+  admin_id        String    @id @default(uuid()) @db.Uuid
+  username        String    @unique // e.g. "judy" -> judy@punchcard.co.za
+  email           String    @unique // computed: {username}@punchcard.co.za
+  password_hash   String
+  first_name      String
+  last_name       String
+  role            String    // 'SUPER_ADMIN', 'SUPPORT'
+  status          String    @default("ACTIVE") // 'ACTIVE', 'DISABLED'
+  reset_token     String?   // password reset token (hashed)
+  reset_token_exp DateTime? @db.Timestamptz // token expiry
+  last_login_at   DateTime? @db.Timestamptz
+  created_at      DateTime  @default(now()) @db.Timestamptz
+  updated_at      DateTime  @updatedAt @db.Timestamptz
 
   @@map("admin_users")
 }

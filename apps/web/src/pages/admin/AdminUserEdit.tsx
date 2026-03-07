@@ -28,14 +28,16 @@ export default function AdminUserEdit() {
     const [fetching, setFetching] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
-        name: '',
+        username: '',
         email: '',
+        first_name: '',
+        last_name: '',
         role: 'SUPPORT' as string,
         status: 'ACTIVE' as string,
         newPassword: ''
     });
     const [error, setError] = useState('');
-    const initialDataRef = useRef<{ name: string; email: string; role: string; status: string } | null>(null);
+    const initialDataRef = useRef<{ first_name: string; last_name: string; role: string; status: string } | null>(null);
 
     const pwdChecks = passwordChecks(formData.newPassword);
 
@@ -48,8 +50,10 @@ export default function AdminUserEdit() {
                 if (cancelled) return;
                 const a = res.data.admin;
                 const formDataValue = {
-                    name: a.name || '',
+                    username: a.username || '',
                     email: a.email || '',
+                    first_name: a.first_name || '',
+                    last_name: a.last_name || '',
                     role: a.role || 'SUPPORT',
                     status: a.status || 'ACTIVE'
                 };
@@ -57,7 +61,12 @@ export default function AdminUserEdit() {
                     ...prev,
                     ...formDataValue
                 }));
-                initialDataRef.current = formDataValue;
+                initialDataRef.current = {
+                    first_name: formDataValue.first_name,
+                    last_name: formDataValue.last_name,
+                    role: formDataValue.role,
+                    status: formDataValue.status
+                };
             })
             .catch(err => {
                 if (!cancelled) setError(err.response?.data?.message || 'Failed to load admin');
@@ -68,8 +77,8 @@ export default function AdminUserEdit() {
 
     // Check if form is dirty (has unsaved changes)
     const isDirty = initialDataRef.current ? (
-        formData.name !== initialDataRef.current.name ||
-        formData.email !== initialDataRef.current.email ||
+        formData.first_name !== initialDataRef.current.first_name ||
+        formData.last_name !== initialDataRef.current.last_name ||
         formData.role !== initialDataRef.current.role ||
         formData.status !== initialDataRef.current.status ||
         formData.newPassword.trim() !== ''
@@ -82,8 +91,8 @@ export default function AdminUserEdit() {
         e.preventDefault();
         if (!id) return;
         const payload: Record<string, string> = {
-            name: formData.name.trim(),
-            email: formData.email.trim(),
+            first_name: formData.first_name.trim(),
+            last_name: formData.last_name.trim(),
             role: formData.role,
             status: formData.status
         };
@@ -101,8 +110,8 @@ export default function AdminUserEdit() {
             
             // Update initial data ref after successful save
             initialDataRef.current = {
-                name: formData.name,
-                email: formData.email,
+                first_name: formData.first_name,
+                last_name: formData.last_name,
                 role: formData.role,
                 status: formData.status
             };
@@ -118,8 +127,8 @@ export default function AdminUserEdit() {
     if (fetching) {
         return (
             <div style={{ maxWidth: '600px' }}>
-                <AdminPageHeader title="Edit Admin User" description="Loading…" />
-                <div style={{ padding: '24px', color: 'var(--text-secondary)' }}>Loading…</div>
+                <AdminPageHeader title="Edit Admin User" description="Loading..." />
+                <div style={{ padding: '24px', color: 'var(--text-secondary)' }}>Loading...</div>
             </div>
         );
     }
@@ -128,7 +137,7 @@ export default function AdminUserEdit() {
         <div style={{ maxWidth: '600px' }}>
             <AdminPageHeader
                 title="Edit Admin User"
-                description="Update name, email, role, status, or set a new password."
+                description="Update name, role, status, or set a new password. Username and email cannot be changed."
             />
 
             <div style={{
@@ -152,22 +161,48 @@ export default function AdminUserEdit() {
                 )}
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <AdminInput
-                        label="Full Name"
-                        placeholder="e.g. John Doe"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        required
-                    />
+                    {/* Username and Email - Read Only */}
+                    <div style={{ 
+                        padding: '16px', 
+                        background: 'var(--bg)', 
+                        borderRadius: 'var(--radius)',
+                        border: '1px solid var(--border)'
+                    }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Account Identity (cannot be changed)
+                        </div>
+                        <div style={{ display: 'flex', gap: '24px' }}>
+                            <div>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Username:</span>
+                                <span style={{ marginLeft: '8px', fontWeight: 500 }}>{formData.username}</span>
+                            </div>
+                            <div>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Email:</span>
+                                <span style={{ marginLeft: '8px', fontWeight: 500 }}>{formData.email}</span>
+                            </div>
+                        </div>
+                    </div>
 
-                    <AdminInput
-                        label="Email Address"
-                        type="email"
-                        placeholder="john@loyalty.com"
-                        value={formData.email}
-                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        required
-                    />
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                            <AdminInput
+                                label="First Name"
+                                placeholder="e.g. John"
+                                value={formData.first_name}
+                                onChange={e => setFormData({ ...formData, first_name: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <AdminInput
+                                label="Last Name"
+                                placeholder="e.g. Doe"
+                                value={formData.last_name}
+                                onChange={e => setFormData({ ...formData, last_name: e.target.value })}
+                                required
+                            />
+                        </div>
+                    </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>Role</label>

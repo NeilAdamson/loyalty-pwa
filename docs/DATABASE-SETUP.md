@@ -35,7 +35,7 @@ The official PostgreSQL Docker image creates the user and database automatically
 | DB user | `docker-compose.yml` / `.env` | `POSTGRES_USER` (default: `loyalty_app`) |
 | DB password | `docker-compose.yml` / `.env` | `POSTGRES_PASSWORD` (default: `e74a89c3120d4f5b9e8c2a3b`) |
 | `DATABASE_URL` | `.env` or compose default | Must match user/password above |
-| Admin login | Seeded via `db:seed` | `admin@punchcard.co.za` / `password1234` (default); override with `ADMIN_EMAIL` / `ADMIN_PASSWORD` |
+| Admin login | Seeded via `db:seed` | Username: `admin`, Email: `admin@punchcard.co.za`, Password: `password1234` (default) |
 
 If you do **not** create a `.env`, the compose defaults apply:
 - `loyalty_app` / `e74a89c3120d4f5b9e8c2a3b` / `loyalty`
@@ -47,7 +47,7 @@ If you do **not** create a `.env`, the compose defaults apply:
 | DB user | `.env` on VPS | `POSTGRES_USER` (e.g. `loyalty_app`) |
 | DB password | `.env` on VPS | Strong random value |
 | `DATABASE_URL` | `.env` on VPS | `postgresql://loyalty_app:PASSWORD@db:5432/loyalty?schema=public` |
-| Admin login | Seeded via `db:seed` | From `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env` (defaults to `admin@punchcard.co.za` / `password1234` if unset) |
+| Admin login | Seeded via `db:seed` | Username: `admin`, Email: `admin@punchcard.co.za`; Password from `ADMIN_PASSWORD` env (default: `password1234`) |
 
 **Important:** `POSTGRES_*` and `DATABASE_URL` must be consistent. The API connects using `DATABASE_URL`; the DB container creates the user from `POSTGRES_*`.
 
@@ -192,7 +192,9 @@ ALTER TABLE "vendors" ALTER COLUMN "contact_name" SET NOT NULL;
    .\dev.ps1 exec api pnpm db:seed
    ```
 
-5. **Verify:** http://localhost:5173/admin/login — `admin@punchcard.co.za` / `password1234`.
+5. **Verify:** http://localhost:5173/admin/login — Email: `admin@punchcard.co.za`, Password: `password1234`.
+   - Admin users now use username-based emails: `{username}@punchcard.co.za`
+   - Default admin username is `admin`
 
 ---
 

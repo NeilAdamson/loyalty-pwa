@@ -1,6 +1,26 @@
 import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { verifyAdmin } from './middleware';
+import { buildAdminEmail } from '../../services/email.service';
+
+const USERNAME_REGEX = /^[a-z][a-z0-9._-]{1,29}$/;
+
+function validateUsername(username: string): { valid: boolean; message?: string } {
+    if (!username || typeof username !== 'string') {
+        return { valid: false, message: 'Username is required' };
+    }
+    const clean = username.toLowerCase().trim();
+    if (clean.length < 2) {
+        return { valid: false, message: 'Username must be at least 2 characters' };
+    }
+    if (clean.length > 30) {
+        return { valid: false, message: 'Username must be 30 characters or less' };
+    }
+    if (!USERNAME_REGEX.test(clean)) {
+        return { valid: false, message: 'Username must start with a letter and contain only lowercase letters, numbers, dots, hyphens, or underscores' };
+    }
+    return { valid: true };
+}
 
 export async function adminUserRoutes(server: FastifyInstance) {
     // List Admins
@@ -9,8 +29,10 @@ export async function adminUserRoutes(server: FastifyInstance) {
             const admins = await server.prisma.adminUser.findMany({
                 select: {
                     admin_id: true,
+                    username: true,
                     email: true,
-                    name: true,
+                    first_name: true,
+                    last_name: true,
                     role: true,
                     status: true,
                     created_at: true,
@@ -28,31 +50,59 @@ export async function adminUserRoutes(server: FastifyInstance) {
     // Create Admin
     server.post('/', { preHandler: [verifyAdmin] }, async (request, reply) => {
         try {
-            const { email, password, name, role } = request.body as any;
+            const { username, password, first_name, last_name, role } = request.body as any;
 
-            if (!email || !password || !name) {
-                return reply.status(400).send({ message: 'Email, password, and name are required' });
+            // Validate username
+            const usernameCheck = validateUsername(username);
+            if (!usernameCheck.valid) {
+                return reply.status(400).send({ message: usernameCheck.message });
+            }
+            const cleanUsername = username.toLowerCase().trim();
+
+            // Validate names
+            if (!first_name || typeof first_name !== 'string' || !first_name.trim()) {
+                return reply.status(400).send({ message: 'First name is required' });
+            }
+            if (!last_name || typeof last_name !== 'string' || !last_name.trim()) {
+                return reply.status(400).send({ message: 'Last name is required' });
             }
 
-            const existing = await server.prisma.adminUser.findUnique({ where: { email } });
-            if (existing) {
-                return reply.status(409).send({ message: 'Admin with this email already exists' });
+            // Validate password
+            if (!password || typeof password !== 'string' || password.length < 8) {
+                return reply.status(400).send({ message: 'Password must be at least 8 characters' });
+            }
+
+            // Build email from username
+            const email = buildAdminEmail(cleanUsername);
+
+            // Check for existing username or email
+            const existingByUsername = await server.prisma.adminUser.findUnique({ where: { username: cleanUsername } });
+            if (existingByUsername) {
+                return reply.status(409).send({ message: 'This username is already taken' });
+            }
+            const existingByEmail = await server.prisma.adminUser.findUnique({ where: { email } });
+            if (existingByEmail) {
+                return reply.status(409).send({ message: 'An admin with this email already exists' });
             }
 
             const password_hash = await bcrypt.hash(password, 10);
 
             const admin = await server.prisma.adminUser.create({
                 data: {
+                    username: cleanUsername,
                     email,
                     password_hash,
-                    name,
+                    first_name: first_name.trim(),
+                    last_name: last_name.trim(),
                     role: role || 'SUPPORT',
                     status: 'ACTIVE'
                 },
                 select: {
                     admin_id: true,
+                    username: true,
                     email: true,
-                    name: true,
+                    first_name: true,
+                    last_name: true,
                     role: true,
                     status: true
                 }
@@ -64,7 +114,7 @@ export async function adminUserRoutes(server: FastifyInstance) {
                     actor_type: 'PLATFORM_ADMIN',
                     actor_id: (request as any).admin.admin_id,
                     action: 'CREATE_ADMIN',
-                    payload: { created_admin_id: admin.admin_id, email: admin.email }
+                    payload: { created_admin_id: admin.admin_id, username: admin.username, email: admin.email }
                 }
             });
 
@@ -82,8 +132,10 @@ export async function adminUserRoutes(server: FastifyInstance) {
             where: { admin_id: id },
             select: {
                 admin_id: true,
+                username: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
                 role: true,
                 status: true,
                 created_at: true,
@@ -96,7 +148,8 @@ export async function adminUserRoutes(server: FastifyInstance) {
         return { admin };
     });
 
-    // Update admin (name, email, role, status, optional password)
+    // Update admin (first_name, last_name, role, status, optional password)
+    // Note: username and email are immutable after creation
     server.patch('/:id', { preHandler: [verifyAdmin] }, async (request, reply) => {
         const { id } = request.params as any;
         const body = request.body as any;
@@ -109,22 +162,17 @@ export async function adminUserRoutes(server: FastifyInstance) {
 
         const data: Record<string, unknown> = {};
 
-        if (body.name !== undefined) {
-            if (typeof body.name !== 'string' || !body.name.trim()) {
-                return reply.status(400).send({ message: 'Name is required' });
+        if (body.first_name !== undefined) {
+            if (typeof body.first_name !== 'string' || !body.first_name.trim()) {
+                return reply.status(400).send({ message: 'First name is required' });
             }
-            data.name = body.name.trim();
+            data.first_name = body.first_name.trim();
         }
-        if (body.email !== undefined) {
-            const email = typeof body.email === 'string' ? body.email.trim() : '';
-            if (!email) return reply.status(400).send({ message: 'Email is required' });
-            const other = await server.prisma.adminUser.findFirst({
-                where: { email, admin_id: { not: id } }
-            });
-            if (other) {
-                return reply.status(409).send({ message: 'Another admin already has this email' });
+        if (body.last_name !== undefined) {
+            if (typeof body.last_name !== 'string' || !body.last_name.trim()) {
+                return reply.status(400).send({ message: 'Last name is required' });
             }
-            data.email = email;
+            data.last_name = body.last_name.trim();
         }
         if (body.role !== undefined) {
             if (!['SUPER_ADMIN', 'SUPPORT'].includes(body.role)) {
@@ -156,7 +204,15 @@ export async function adminUserRoutes(server: FastifyInstance) {
         const admin = await server.prisma.adminUser.update({
             where: { admin_id: id },
             data,
-            select: { admin_id: true, email: true, name: true, role: true, status: true }
+            select: {
+                admin_id: true,
+                username: true,
+                email: true,
+                first_name: true,
+                last_name: true,
+                role: true,
+                status: true
+            }
         });
 
         await server.prisma.adminAuditLog.create({

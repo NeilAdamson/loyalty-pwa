@@ -26,20 +26,41 @@ export class AdminService {
             throw { statusCode: 401, code: ERROR_CODES.UNAUTHORIZED, message: 'Invalid credentials' }
         }
 
+        // Update last login timestamp
+        await this.prisma.adminUser.update({
+            where: { admin_id: admin.admin_id },
+            data: { last_login_at: new Date() }
+        })
+
         console.log(`[AdminService] Login successful for ${email}`)
         // Return admin info to be encoded in JWT
         return {
             admin_id: admin.admin_id,
+            username: admin.username,
             email: admin.email,
             role: admin.role,
-            name: admin.name
+            first_name: admin.first_name,
+            last_name: admin.last_name,
+            name: `${admin.first_name} ${admin.last_name}` // Computed for backward compat
         }
     }
 
     async getById(adminId: string) {
-        return this.prisma.adminUser.findUnique({
+        const admin = await this.prisma.adminUser.findUnique({
             where: { admin_id: adminId },
-            select: { admin_id: true, email: true, role: true, name: true }
+            select: {
+                admin_id: true,
+                username: true,
+                email: true,
+                role: true,
+                first_name: true,
+                last_name: true
+            }
         })
+        if (!admin) return null
+        return {
+            ...admin,
+            name: `${admin.first_name} ${admin.last_name}` // Computed for backward compat
+        }
     }
 }

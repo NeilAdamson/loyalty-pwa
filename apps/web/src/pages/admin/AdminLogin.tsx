@@ -79,6 +79,20 @@ const AdminLogin: React.FC = () => {
                 <button type="submit" style={{ width: '100%', padding: '12px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' }}>
                     Login
                 </button>
+                <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                    <a 
+                        href="/admin/forgot-password" 
+                        style={{ 
+                            color: '#007bff', 
+                            textDecoration: 'none', 
+                            fontSize: '14px' 
+                        }}
+                        onMouseOver={(e) => (e.target as HTMLElement).style.textDecoration = 'underline'}
+                        onMouseOut={(e) => (e.target as HTMLElement).style.textDecoration = 'none'}
+                    >
+                        Forgot password?
+                    </a>
+                </div>
             </form>
         </div>
     );

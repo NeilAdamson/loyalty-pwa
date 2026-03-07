@@ -9,6 +9,8 @@ import MemberCard from './pages/MemberCard';
 import StaffDashboard from './pages/StaffDashboard';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminLogin from './pages/admin/AdminLogin';
+import AdminForgotPassword from './pages/admin/AdminForgotPassword';
+import AdminResetPassword from './pages/admin/AdminResetPassword';
 import AdminVendorList from './pages/admin/AdminVendorList';
 import AdminVendorCreate from './pages/admin/AdminVendorCreate';
 import AdminUserList from './pages/admin/AdminUserList';
@@ -95,6 +97,14 @@ const router = createBrowserRouter([
     {
         path: "/admin/login",
         element: <AdminLogin />,
+    },
+    {
+        path: "/admin/forgot-password",
+        element: <AdminForgotPassword />,
+    },
+    {
+        path: "/admin/reset-password",
+        element: <AdminResetPassword />,
     },
     {
         path: "/admin",

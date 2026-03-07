@@ -132,7 +132,10 @@ async function main() {
 
 
     // 6a. Admin User (Upsert) - Use ADMIN_EMAIL/ADMIN_PASSWORD from env in production, defaults for dev
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@punchcard.co.za'
+    // New schema uses username + auto-generated email (username@punchcard.co.za)
+    const ADMIN_EMAIL_DOMAIN = 'punchcard.co.za'
+    const adminUsername = 'admin' // Default admin username
+    const adminEmail = `${adminUsername}@${ADMIN_EMAIL_DOMAIN}`
     const adminPasswordPlain = process.env.ADMIN_PASSWORD || 'password1234'
     const adminPassword = await bcrypt.hash(adminPasswordPlain, 10)
     
@@ -142,14 +145,19 @@ async function main() {
         'admin@loyaltyladies.com'
     ]
     
-    // Check if new admin already exists
-    const newAdmin = await prisma.adminUser.findUnique({
-        where: { email: adminEmail }
+    // Check if new admin already exists (by email or username)
+    const newAdmin = await prisma.adminUser.findFirst({
+        where: {
+            OR: [
+                { email: adminEmail },
+                { username: adminUsername }
+            ]
+        }
     })
     
     // Check for old admin emails that need migration
     let oldAdminToMigrate = null
-    let oldAdminEmail = null
+    let oldAdminEmailValue = null
     
     for (const oldEmail of oldAdminEmails) {
         if (oldEmail !== adminEmail) {
@@ -158,64 +166,77 @@ async function main() {
             })
             if (found) {
                 oldAdminToMigrate = found
-                oldAdminEmail = oldEmail
+                oldAdminEmailValue = oldEmail
                 break // Use first found old admin
             }
         }
     }
     
     // Handle migration: if old admin exists and we're migrating to a new email
-    if (oldAdminToMigrate && adminEmail !== oldAdminEmail) {
+    if (oldAdminToMigrate && adminEmail !== oldAdminEmailValue) {
         if (newAdmin) {
             // Both exist - delete old one and update new one
-            console.log(`Both admin emails exist. Deleting old admin (${oldAdminEmail}) and updating new admin (${adminEmail})`)
+            console.log(`Both admin emails exist. Deleting old admin (${oldAdminEmailValue}) and updating new admin (${adminEmail})`)
             await prisma.adminUser.delete({
-                where: { email: oldAdminEmail }
+                where: { email: oldAdminEmailValue! }
             })
             const admin = await prisma.adminUser.update({
-                where: { email: adminEmail },
+                where: { admin_id: newAdmin.admin_id },
                 data: {
+                    username: adminUsername,
+                    email: adminEmail,
                     password_hash: adminPassword,
-                    name: 'Super Admin',
+                    first_name: 'Super',
+                    last_name: 'Admin',
                     role: 'SUPER_ADMIN',
                     status: 'ACTIVE'
                 }
             })
             console.log(`Admin updated: ${admin.email}`)
         } else {
-            // Only old exists - migrate it to new email
-            console.log(`Migrating admin from ${oldAdminEmail} to ${adminEmail}`)
+            // Only old exists - migrate it to new schema
+            console.log(`Migrating admin from ${oldAdminEmailValue} to ${adminEmail}`)
             await prisma.adminUser.update({
-                where: { email: oldAdminEmail },
+                where: { email: oldAdminEmailValue! },
                 data: {
+                    username: adminUsername,
                     email: adminEmail,
                     password_hash: adminPassword,
-                    name: 'Super Admin',
+                    first_name: 'Super',
+                    last_name: 'Admin',
                     role: 'SUPER_ADMIN',
                     status: 'ACTIVE'
                 }
             })
             console.log(`Admin migrated to: ${adminEmail}`)
         }
-    } else {
-        // Standard upsert for new admin or same email
-        const admin = await prisma.adminUser.upsert({
-            where: { email: adminEmail },
-            update: {
+    } else if (newAdmin) {
+        // Update existing admin
+        const admin = await prisma.adminUser.update({
+            where: { admin_id: newAdmin.admin_id },
+            data: {
                 password_hash: adminPassword,
-                name: 'Super Admin',
-                role: 'SUPER_ADMIN',
-                status: 'ACTIVE'
-            },
-            create: {
-                email: adminEmail,
-                password_hash: adminPassword,
-                name: 'Super Admin',
+                first_name: 'Super',
+                last_name: 'Admin',
                 role: 'SUPER_ADMIN',
                 status: 'ACTIVE'
             }
         })
-        console.log('Created/Updated admin:', admin.email)
+        console.log('Updated admin:', admin.email)
+    } else {
+        // Create new admin
+        const admin = await prisma.adminUser.create({
+            data: {
+                username: adminUsername,
+                email: adminEmail,
+                password_hash: adminPassword,
+                first_name: 'Super',
+                last_name: 'Admin',
+                role: 'SUPER_ADMIN',
+                status: 'ACTIVE'
+            }
+        })
+        console.log('Created admin:', admin.email)
     }
 
     // 6. Program (Upsert)

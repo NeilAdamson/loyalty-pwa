@@ -9,8 +9,10 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 
 interface AdminUser {
     admin_id: string;
+    username: string;
     email: string;
-    name: string;
+    first_name: string;
+    last_name: string;
     role: string;
     status: string;
     created_at: string;
@@ -39,7 +41,7 @@ export default function AdminUserList() {
     };
 
     const toggleStatus = async (admin: AdminUser) => {
-        if (!window.confirm(`Are you sure you want to ${admin.status === 'ACTIVE' ? 'disable' : 'enable'} ${admin.name}?`)) return;
+        if (!window.confirm(`Are you sure you want to ${admin.status === 'ACTIVE' ? 'disable' : 'enable'} ${admin.first_name} ${admin.last_name}?`)) return;
 
         try {
             const newStatus = admin.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
@@ -51,7 +53,16 @@ export default function AdminUserList() {
     };
 
     const columns = [
-        { header: 'Name', accessor: 'name' as keyof AdminUser },
+        { 
+            header: 'Name', 
+            render: (u: AdminUser) => `${u.first_name} ${u.last_name}`
+        },
+        { 
+            header: 'Username', 
+            render: (u: AdminUser) => (
+                <span style={{ fontFamily: 'monospace', fontSize: '13px' }}>{u.username}</span>
+            )
+        },
         { header: 'Email', accessor: 'email' as keyof AdminUser },
         {
             header: 'Role',

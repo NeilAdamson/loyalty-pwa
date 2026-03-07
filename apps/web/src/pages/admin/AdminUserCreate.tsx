@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
 import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
@@ -7,6 +7,8 @@ import AdminInput from '../../components/admin/ui/AdminInput';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 const MIN_LENGTH = 8;
+const ADMIN_EMAIL_DOMAIN = 'punchcard.co.za';
+const USERNAME_REGEX = /^[a-z][a-z0-9._-]{1,29}$/;
 
 function passwordChecks(pwd: string) {
     const lengthOk = pwd.length >= MIN_LENGTH;
@@ -21,13 +23,23 @@ function passwordAcceptable(pwd: string): boolean {
     return lengthOk && hasUpper && hasLower && hasNumber;
 }
 
+function validateUsername(username: string): { valid: boolean; message?: string } {
+    if (!username) return { valid: false };
+    const clean = username.toLowerCase().trim();
+    if (clean.length < 2) return { valid: false, message: 'At least 2 characters' };
+    if (clean.length > 30) return { valid: false, message: 'Max 30 characters' };
+    if (!USERNAME_REGEX.test(clean)) return { valid: false, message: 'Letters, numbers, dots, hyphens only. Must start with letter.' };
+    return { valid: true };
+}
+
 export default function AdminUserCreate() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
+        username: '',
+        first_name: '',
+        last_name: '',
         password: '',
         role: 'SUPPORT'
     });
@@ -35,8 +47,12 @@ export default function AdminUserCreate() {
     const pwdChecks = passwordChecks(formData.password);
     const pwdOk = passwordAcceptable(formData.password);
 
+    const usernameCheck = useMemo(() => validateUsername(formData.username), [formData.username]);
+    const generatedEmail = formData.username.trim() ? `${formData.username.toLowerCase().trim()}@${ADMIN_EMAIL_DOMAIN}` : '';
+
     // Check if form is dirty (has any input)
-    const isDirty = formData.name.trim() !== '' || formData.email.trim() !== '' || formData.password.trim() !== '';
+    const isDirty = formData.first_name.trim() !== '' || formData.last_name.trim() !== '' || formData.username.trim() !== '' || formData.password.trim() !== '';
+    const formValid = usernameCheck.valid && formData.first_name.trim() && formData.last_name.trim() && pwdOk;
 
     // Block navigation if there are unsaved changes (but not during save)
     useUnsavedChanges({ isDirty, message: 'You have unsaved user data. Are you sure you want to leave?', saving: loading });
@@ -85,22 +101,72 @@ export default function AdminUserCreate() {
                 )}
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <AdminInput
-                        label="Full Name"
-                        placeholder="e.g. John Doe"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        required
-                    />
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                            <AdminInput
+                                label="First Name"
+                                placeholder="e.g. John"
+                                value={formData.first_name}
+                                onChange={e => setFormData({ ...formData, first_name: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <AdminInput
+                                label="Last Name"
+                                placeholder="e.g. Doe"
+                                value={formData.last_name}
+                                onChange={e => setFormData({ ...formData, last_name: e.target.value })}
+                                required
+                            />
+                        </div>
+                    </div>
 
-                    <AdminInput
-                        label="Email Address"
-                        type="email"
-                        placeholder="john@loyalty.com"
-                        value={formData.email}
-                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                        required
-                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                            Username <span style={{ color: 'var(--danger)', marginLeft: '2px' }}>*</span>
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
+                            <input
+                                type="text"
+                                placeholder="e.g. john.doe"
+                                value={formData.username}
+                                onChange={e => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '') })}
+                                required
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 12px',
+                                    borderRadius: 'var(--radius) 0 0 var(--radius)',
+                                    background: 'var(--bg)',
+                                    border: '1px solid var(--border)',
+                                    borderRight: 'none',
+                                    color: 'var(--text)',
+                                    fontSize: '14px',
+                                    outline: 'none',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                            <div style={{
+                                padding: '10px 12px',
+                                background: 'var(--surface)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '0 var(--radius) var(--radius) 0',
+                                color: 'var(--text-secondary)',
+                                fontSize: '14px',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                @{ADMIN_EMAIL_DOMAIN}
+                            </div>
+                        </div>
+                        {formData.username && !usernameCheck.valid && usernameCheck.message && (
+                            <span style={{ fontSize: '12px', color: 'var(--danger)' }}>{usernameCheck.message}</span>
+                        )}
+                        {formData.username && usernameCheck.valid && (
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                Email: <strong>{generatedEmail}</strong>
+                            </span>
+                        )}
+                    </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                         <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
@@ -227,7 +293,7 @@ export default function AdminUserCreate() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                        <AdminButton type="submit" isLoading={loading} disabled={!isDirty || loading || !pwdOk}>
+                        <AdminButton type="submit" isLoading={loading} disabled={!formValid || loading}>
                             Create User
                         </AdminButton>
                         <AdminButton variant="secondary" type="button" onClick={() => navigate('/admin/users')}>
