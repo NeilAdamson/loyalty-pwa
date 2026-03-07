@@ -32,10 +32,19 @@ function validateUsername(username: string): { valid: boolean; message?: string 
     return { valid: true };
 }
 
+function generateUsername(firstName: string, lastName: string): string {
+    const first = firstName.toLowerCase().trim().replace(/[^a-z]/g, '');
+    const last = lastName.toLowerCase().trim().replace(/[^a-z]/g, '');
+    if (!first) return '';
+    if (!last) return first;
+    return `${first}.${last}`;
+}
+
 export default function AdminUserCreate() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [usernameManuallyEdited, setUsernameManuallyEdited] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
         first_name: '',
@@ -49,6 +58,27 @@ export default function AdminUserCreate() {
 
     const usernameCheck = useMemo(() => validateUsername(formData.username), [formData.username]);
     const generatedEmail = formData.username.trim() ? `${formData.username.toLowerCase().trim()}@${ADMIN_EMAIL_DOMAIN}` : '';
+
+    const handleFirstNameChange = (value: string) => {
+        const newFormData = { ...formData, first_name: value };
+        if (!usernameManuallyEdited) {
+            newFormData.username = generateUsername(value, formData.last_name);
+        }
+        setFormData(newFormData);
+    };
+
+    const handleLastNameChange = (value: string) => {
+        const newFormData = { ...formData, last_name: value };
+        if (!usernameManuallyEdited) {
+            newFormData.username = generateUsername(formData.first_name, value);
+        }
+        setFormData(newFormData);
+    };
+
+    const handleUsernameChange = (value: string) => {
+        setUsernameManuallyEdited(true);
+        setFormData({ ...formData, username: value.toLowerCase().replace(/[^a-z0-9._-]/g, '') });
+    };
 
     // Check if form is dirty (has any input)
     const isDirty = formData.first_name.trim() !== '' || formData.last_name.trim() !== '' || formData.username.trim() !== '' || formData.password.trim() !== '';
@@ -107,7 +137,7 @@ export default function AdminUserCreate() {
                                 label="First Name"
                                 placeholder="e.g. John"
                                 value={formData.first_name}
-                                onChange={e => setFormData({ ...formData, first_name: e.target.value })}
+                                onChange={e => handleFirstNameChange(e.target.value)}
                                 required
                             />
                         </div>
@@ -116,7 +146,7 @@ export default function AdminUserCreate() {
                                 label="Last Name"
                                 placeholder="e.g. Doe"
                                 value={formData.last_name}
-                                onChange={e => setFormData({ ...formData, last_name: e.target.value })}
+                                onChange={e => handleLastNameChange(e.target.value)}
                                 required
                             />
                         </div>
@@ -131,8 +161,10 @@ export default function AdminUserCreate() {
                                 type="text"
                                 placeholder="e.g. john.doe"
                                 value={formData.username}
-                                onChange={e => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '') })}
+                                onChange={e => handleUsernameChange(e.target.value)}
                                 required
+                                autoComplete="off"
+                                name="new-username"
                                 style={{
                                     flex: 1,
                                     padding: '10px 12px',
@@ -164,6 +196,7 @@ export default function AdminUserCreate() {
                         {formData.username && usernameCheck.valid && (
                             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                                 Email: <strong>{generatedEmail}</strong>
+                                {!usernameManuallyEdited && <span style={{ marginLeft: '8px', opacity: 0.7 }}>(auto-generated from name)</span>}
                             </span>
                         )}
                     </div>
