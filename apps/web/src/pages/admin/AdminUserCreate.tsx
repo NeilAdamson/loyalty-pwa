@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../utils/api';
 import AdminPageHeader from '../../components/admin/ui/AdminPageHeader';
@@ -32,12 +32,9 @@ function validateUsername(username: string): { valid: boolean; message?: string 
     return { valid: true };
 }
 
-function generateUsername(firstName: string, lastName: string): string {
-    const first = firstName.toLowerCase().trim().replace(/[^a-z]/g, '');
-    const last = lastName.toLowerCase().trim().replace(/[^a-z]/g, '');
-    if (!first) return '';
-    if (!last) return first;
-    return `${first}.${last}`;
+/** Generates username from first name only (e.g. "John" -> "john") for email local part. */
+function generateUsernameFromFirstName(firstName: string): string {
+    return firstName.toLowerCase().trim().replace(/[^a-z]/g, '') || '';
 }
 
 export default function AdminUserCreate() {
@@ -59,20 +56,21 @@ export default function AdminUserCreate() {
     const usernameCheck = useMemo(() => validateUsername(formData.username), [formData.username]);
     const generatedEmail = formData.username.trim() ? `${formData.username.toLowerCase().trim()}@${ADMIN_EMAIL_DOMAIN}` : '';
 
+    // Clear any browser autofill of username on mount so the field stays blank until user types first name
+    useEffect(() => {
+        setFormData((prev: typeof formData) => ({ ...prev, username: '' }));
+    }, []);
+
     const handleFirstNameChange = (value: string) => {
         const newFormData = { ...formData, first_name: value };
         if (!usernameManuallyEdited) {
-            newFormData.username = generateUsername(value, formData.last_name);
+            newFormData.username = generateUsernameFromFirstName(value);
         }
         setFormData(newFormData);
     };
 
     const handleLastNameChange = (value: string) => {
-        const newFormData = { ...formData, last_name: value };
-        if (!usernameManuallyEdited) {
-            newFormData.username = generateUsername(formData.first_name, value);
-        }
-        setFormData(newFormData);
+        setFormData({ ...formData, last_name: value });
     };
 
     const handleUsernameChange = (value: string) => {
@@ -159,12 +157,14 @@ export default function AdminUserCreate() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
                             <input
                                 type="text"
-                                placeholder="e.g. john.doe"
+                                placeholder="e.g. john"
                                 value={formData.username}
                                 onChange={e => handleUsernameChange(e.target.value)}
                                 required
                                 autoComplete="off"
-                                name="new-username"
+                                name="admin-create-username"
+                                data-lpignore="true"
+                                data-form-type="other"
                                 style={{
                                     flex: 1,
                                     padding: '10px 12px',
@@ -196,7 +196,7 @@ export default function AdminUserCreate() {
                         {formData.username && usernameCheck.valid && (
                             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                                 Email: <strong>{generatedEmail}</strong>
-                                {!usernameManuallyEdited && <span style={{ marginLeft: '8px', opacity: 0.7 }}>(auto-generated from name)</span>}
+                                {!usernameManuallyEdited && <span style={{ marginLeft: '8px', opacity: 0.7 }}>(auto-generated from first name)</span>}
                             </span>
                         )}
                     </div>

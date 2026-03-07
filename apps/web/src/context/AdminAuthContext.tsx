@@ -17,13 +17,20 @@ interface AdminAuthContextType {
 
 const AdminAuthContext = createContext<AdminAuthContextType>({} as any);
 
+/** Paths that do not require an auth check and should show immediately (no loading flash). */
+const PUBLIC_ADMIN_PATHS = ['/admin/login', '/admin/forgot-password', '/admin/reset-password'];
+
+function isPublicAdminPath(): boolean {
+    if (typeof window === 'undefined') return false;
+    return PUBLIC_ADMIN_PATHS.includes(window.location.pathname);
+}
+
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [admin, setAdmin] = useState<AdminUser | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(() => !isPublicAdminPath());
 
     const checkAuth = async () => {
-        // Skip check on login page to avoid 401 console errors
-        if (window.location.pathname === '/admin/login') {
+        if (isPublicAdminPath()) {
             setAdmin(null);
             setIsLoading(false);
             return;

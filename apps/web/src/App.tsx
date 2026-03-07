@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
@@ -7,20 +8,10 @@ import MemberAuth from './pages/MemberAuth';
 import StaffAuth from './pages/StaffAuth';
 import MemberCard from './pages/MemberCard';
 import StaffDashboard from './pages/StaffDashboard';
-import AdminLayout from './pages/admin/AdminLayout';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminForgotPassword from './pages/admin/AdminForgotPassword';
 import AdminResetPassword from './pages/admin/AdminResetPassword';
-import AdminVendorList from './pages/admin/AdminVendorList';
-import AdminVendorCreate from './pages/admin/AdminVendorCreate';
-import AdminUserList from './pages/admin/AdminUserList';
-import AdminUserCreate from './pages/admin/AdminUserCreate';
-import AdminUserEdit from './pages/admin/AdminUserEdit';
-import AdminMemberList from './pages/admin/AdminMemberList';
-import AdminVendorQr from './pages/admin/AdminVendorQr';
-import AdminVendorDetail from './pages/admin/AdminVendorDetail';
 
-import AdminDashboard from './pages/admin/AdminDashboard';
 import LandingPage from './pages/LandingPage';
 
 import VendorAdminLayout from './pages/admin/vendor/VendorAdminLayout';
@@ -30,6 +21,18 @@ import VendorStaff from './pages/admin/vendor/VendorStaff';
 import VendorBranding from './pages/admin/vendor/VendorBranding';
 import VendorSettings from './pages/admin/vendor/VendorSettings';
 import VendorLookup from './pages/VendorLookup';
+
+// Lazy-load admin backoffice routes so /admin/login loads quickly (no heavy vendor/user pages)
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminVendorList = lazy(() => import('./pages/admin/AdminVendorList'));
+const AdminVendorCreate = lazy(() => import('./pages/admin/AdminVendorCreate'));
+const AdminVendorDetail = lazy(() => import('./pages/admin/AdminVendorDetail'));
+const AdminVendorQr = lazy(() => import('./pages/admin/AdminVendorQr'));
+const AdminUserList = lazy(() => import('./pages/admin/AdminUserList'));
+const AdminUserCreate = lazy(() => import('./pages/admin/AdminUserCreate'));
+const AdminUserEdit = lazy(() => import('./pages/admin/AdminUserEdit'));
+const AdminMemberList = lazy(() => import('./pages/admin/AdminMemberList'));
 
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles?: string[] }) => {
@@ -108,7 +111,11 @@ const router = createBrowserRouter([
     },
     {
         path: "/admin",
-        element: <AdminLayout />,
+        element: (
+            <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>Loading...</div>}>
+                <AdminLayout />
+            </Suspense>
+        ),
         children: [
             { index: true, element: <AdminDashboard /> },
             { path: "vendors", element: <AdminVendorList /> },

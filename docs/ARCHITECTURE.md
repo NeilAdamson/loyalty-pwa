@@ -44,6 +44,7 @@ flowchart LR
 - Served by **Caddy** (internal web container).
 - Tenant routing via URL path `/v/{vendor_slug}`.
 - UI themed via vendor branding fetched from API.
+- Admin backoffice routes (dashboard, vendors, users, etc.) are lazy-loaded so `/admin/login`, `/admin/forgot-password`, and `/admin/reset-password` load with a minimal bundle and render immediately.
 
 ### 3.2 Node API
 - Provides all REST endpoints (public vendor info, member auth, staff flows, admin portals).
