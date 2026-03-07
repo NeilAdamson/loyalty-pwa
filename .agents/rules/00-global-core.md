@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Global Core Guard Rails
 
 You are working in a production-minded repository.
@@ -11,6 +15,7 @@ Mandatory standards:
 - Avoid unnecessary dependencies.
 - Follow existing naming and folder conventions unless there is a strong reason not to.
 - If requirements are unclear, infer from the repo structure, docs, and nearby code before inventing a new pattern.
+- You must put all documentation you create in the current project repository folder and not in your default folder
 
 Completion standard:
 - Changes should be implementation-ready, not speculative.

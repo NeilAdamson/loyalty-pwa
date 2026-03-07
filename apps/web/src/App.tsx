@@ -3,11 +3,6 @@ import type { ComponentType } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminForgotPassword from './pages/admin/AdminForgotPassword';
-import AdminResetPassword from './pages/admin/AdminResetPassword';
-import LandingPage from './pages/LandingPage';
-import VendorLookup from './pages/VendorLookup';
 import { perfLog, startPerf } from './utils/perf';
 import { loadMemberCard, loadPlatformAdminApp, loadVendorAdminApp, loadVendorPublicApp } from './routes/routeLoaders';
 import { ProtectedRoute } from './shared/ProtectedRoute';
@@ -28,6 +23,12 @@ const VendorPublicApp = lazyWithTiming('VendorPublicApp', loadVendorPublicApp);
 const VendorAdminApp = lazyWithTiming('VendorAdminApp', loadVendorAdminApp);
 const PlatformAdminApp = lazyWithTiming('PlatformAdminApp', loadPlatformAdminApp);
 const MemberCard = lazyWithTiming('MemberCard', loadMemberCard);
+
+const AdminLogin = lazyWithTiming('AdminLogin', () => import('./pages/admin/AdminLogin'));
+const AdminForgotPassword = lazyWithTiming('AdminForgotPassword', () => import('./pages/admin/AdminForgotPassword'));
+const AdminResetPassword = lazyWithTiming('AdminResetPassword', () => import('./pages/admin/AdminResetPassword'));
+const LandingPage = lazyWithTiming('LandingPage', () => import('./pages/LandingPage'));
+const VendorLookup = lazyWithTiming('VendorLookup', () => import('./pages/VendorLookup'));
 
 const routeFallback = (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
@@ -70,11 +71,11 @@ const router = createBrowserRouter([
     },
     {
         path: "/vendor/login",
-        element: <VendorLookup />,
+        element: withSuspense(<VendorLookup />),
     },
     {
         path: "/admin/login",
-        element: <AdminLogin />,
+        element: withSuspense(<AdminLogin />),
     },
     {
         path: "/admin/forgot-password",

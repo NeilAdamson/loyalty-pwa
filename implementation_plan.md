@@ -1,46 +1,33 @@
-# Vendor Branding Implementation Plan
+# Implement Lazy Loading for Top-Level Routes
 
-## Goal
-Implement first-class vendor branding where specific colors, logos, and styles are loaded dynamically per vendor slug and applied to the PWA (Login, Card, etc.).
+The 17.8-second load time before `main.tsx` is evaluated is caused by Vite having to resolve, transform, and serve the entire dependency tree of all statically imported routes before the browser can even start rendering the app.
 
-## 1. Data Model (Schema)
-Update `VendorBranding` model in `schema.prisma`.
+In `App.tsx`, the following routes are currently statically imported:
+- `LandingPage`
+- `VendorLookup`
+- `AdminLogin`
+- `AdminForgotPassword`
+- `AdminResetPassword`
 
-### New Fields
-- `accent_color` (String, default: #hex)
-- `background_color` (String?, optional)
-- `card_style` (String, default: 'SOLID') // 'SOLID', 'GRADIENT', 'GLASS'
-- `card_bg_image_url` (String?, optional)
-- `wordmark_url` (String?, optional)
+This means that when a user visits `/admin/login`, their browser must still download the code for `LandingPage`, `VendorLookup`, and the password reset flows before `main.tsx` finishes evaluating.
 
-## 2. API Updates
-### `GET /api/v1/v/:slug/public`
-- Ensure it returns the full `branding` object including the new fields.
-- Currently it returns `active_program` and basic vendor info. We need to explicitly include `branding`.
+## Proposed Changes
 
-## 3. Frontend (PWA) Implementation
-### `VendorLayout.tsx`
-- Expand the CSS variable injection to include:
-    - `--vendor-accent`
-    - `--vendor-background`
-    - `--vendor-card-style`
-- Ensure no-flicker loading (skeleton or blocking load).
+### apps/web/src/App.tsx
+- [MODIFY] [App.tsx](file:///d:/loyalty-pwa/apps/web/src/App.tsx)
+  - Remove synchronous imports for `AdminLogin`, `AdminForgotPassword`, `AdminResetPassword`, `LandingPage`, and `VendorLookup`.
+  - Replace them with `lazyWithTiming` dynamically imported components.
+  - This ensures only the requested route is loaded over the network when the app first boots.
 
-### `MemberAuth.tsx` & `StaffAuth.tsx`
-- Ensure buttons and inputs use the new CSS variables (`var(--primary)`, `var(--accent)`).
+## Verification Plan
 
-### `MemberCard.tsx`
-- Update the card design to:
-    - Show `logo_url` and `trading_name`.
-    - Adapt style based on `card_style` (Solid vs Gradient).
-    - Use `accent_color` for highlights.
+### Automated Tests
+- Since this is a React Frontend routing optimization, no existing backend tests will break.
+- We will verify that TypeScript compilation still passes (`npm run typecheck` or similar inside `apps/web` if available).
 
-## 4. Admin Portal (Future / Stub)
-- For now, we only implement the Schema and Consumption.
-- Admin UI for editing will be Phase 2 (or minimal update if time permits).
-
-## Plan
-1.  [ ] **DB**: Update `schema.prisma` and run migration.
-2.  [ ] **API**: Update `vendor.routes.ts` to include branding in public endpoint.
-3.  [ ] **FE**: Update `VendorLayout.tsx` to apply new themes.
-4.  [ ] **FE**: Refactor `MemberCard` to use branding data.
+### Manual Verification
+- Start the Vite dev server.
+- Open the Network and Performance tabs in the browser.
+- Navigate to `http://localhost:5173/admin/login`.
+- Verify that `main.tsx evaluated` logs much faster (typically < 1-2 seconds) instead of 17.8s.
+- Navigate to the landing page (`/`) to ensure it still works correctly and is lazy-loaded.
