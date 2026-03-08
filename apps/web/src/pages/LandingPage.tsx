@@ -460,7 +460,10 @@ const LandingPage: React.FC = () => {
             {/* PICTURE STRIP – See PunchCard in action */}
             <section style={{ padding: '4rem 2rem' }} className="landing-cream landing-circle-pale-yellow">
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ ...styles.sectionTitle, textAlign: 'center', marginBottom: '2rem' }} className="landing-headline-amber">See PunchCard In Action</h2>
+                    <h2 style={{ ...styles.sectionTitle, textAlign: 'center', marginBottom: '1rem' }} className="landing-headline-amber">See PunchCard In Action</h2>
+                    <p style={{ ...styles.sectionSubtitle, textAlign: 'center', maxWidth: '640px', margin: '0 auto 2rem', color: '#374151' }}>
+                        PunchCard fits into the moments you already have—at the counter, in the café, at the till. The images below show typical touchpoints: everyday settings where customers have their card ready and loyalty gets rewarded. No extra hardware; it slots into your existing flow.
+                    </p>
                     <div className="landing-pic-strip">
                         {[1, 2, 3, 4, 5].map((n) => (
                             <div key={n} className="landing-pic-frame" style={{ minHeight: '180px' }}>
@@ -468,6 +471,9 @@ const LandingPage: React.FC = () => {
                             </div>
                         ))}
                     </div>
+                    <p style={{ ...styles.sectionSubtitle, textAlign: 'center', marginTop: '1.5rem', fontSize: '0.95rem', color: '#6b7280' }}>
+                        Your brand, your space—PunchCard fits where you work.
+                    </p>
                 </div>
             </section>
 

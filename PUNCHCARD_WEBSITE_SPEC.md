@@ -545,7 +545,7 @@ Assets in use:
 - Hero: Punch-card-logo-01.avif (full logo), Punchcard-pic-05.jpg (phone/loyalty).
 - Nav/Footer: Punch-card-logo-sm-01.avif.
 - Backgrounds: Cream (#fffef5, off-white with a hint of yellow). One very subtle pale circle per section (light red, light yellow, or light blue) as the only background accent; no gradients, no solid blocks.
-- “See PunchCard in action”: Punchcard-pic-01.jpg through Punchcard-pic-05.jpg in a strip.
+- “See PunchCard in action”: Section has a short lead-in (PunchCard fits at the counter, café, till; images show typical touchpoints; no extra hardware) and a closing line ("Your brand, your space—PunchCard fits where you work."). Punchcard-pic-01.jpg through Punchcard-pic-05.jpg in a strip below the text.
 - Favicon: favicon-icon.avif (in index.html).
 
 Backgrounds: Cream (#fffef5) everywhere. One very subtle pale circle per section only. No gradients anywhere: headlines and CTAs use solid colours. One bold colour per section for headers (red #b91c1c, amber #b45309, blue #1d4ed8). Body text (paragraphs, lists): dark grey #374151 only, for strong contrast on cream. Section label bubbles (e.g. "The Problem", "The Solution"): light tinted pill background with bold accent-colour text (same red/amber/blue) so labels read clearly. Primary CTA: solid red (#dc2626). Nav and footer: cream with dark text.
