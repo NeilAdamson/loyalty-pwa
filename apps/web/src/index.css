@@ -3,21 +3,21 @@
   --line-height: 1.6;
   --font-weight: 400;
 
-  /* Premium Color Palette */
+  /* Premium Color Palette - Updated to match logo */
   --bg-dark: #0a0a0f;
   --bg-card: rgba(30, 30, 40, 0.7);
-  /* Slightly more opaque */
   --bg-glass: rgba(255, 255, 255, 0.03);
-  --primary: #ec4899;
-  /* Pink */
-  --secondary: #8b5cf6;
-  /* Violet */
+
+  --primary: #ef4444;
+  /* Vibrant Red */
+  --secondary: #eab308;
+  /* Vibrant Yellow */
   --accent: #3b82f6;
-  /* Blue */
+  /* Vibrant Blue */
 
   --text-main: #ffffff;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-muted: #e2e8f0;
+  --text-dim: #94a3b8;
 
   --glass-border: 1px solid rgba(255, 255, 255, 0.08);
   /* More subtle */
@@ -43,9 +43,15 @@ body {
   font-family: var(--font-family);
   background: var(--bg-dark);
   background-image:
-    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.05), transparent 40%),
-    radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.05), transparent 40%);
+    radial-gradient(circle at 15% 50%, rgba(239, 68, 68, 0.15), transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(234, 179, 8, 0.15), transparent 50%);
   overflow-x: hidden;
+}
+
+/* Landing page: cream body */
+body:has(.landing-hero-bg) {
+  background: #fffef5;
+  background-image: none;
 }
 
 #root {
@@ -106,6 +112,7 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
   background: linear-gradient(to right, #fff, #cbd5e1);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -172,7 +179,7 @@ body {
   outline: none;
   border-color: var(--primary);
   background: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.1);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
 }
 
 .glass-input:disabled {
@@ -198,7 +205,7 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -206,7 +213,7 @@ body {
 
 .btn-premium:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(236, 72, 153, 0.3);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
 .btn-premium:active {
@@ -261,15 +268,15 @@ body {
 }
 
 .badge-primary {
-  background: rgba(236, 72, 153, 0.15);
-  color: #f472b6;
-  border: 1px solid rgba(236, 72, 153, 0.2);
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .badge-purple {
-  background: rgba(139, 92, 246, 0.15);
-  color: #c084fc;
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(234, 179, 8, 0.15);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.2);
 }
 
 .badge-blue {
@@ -294,4 +301,286 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Landing Page Specific Additions */
+.bg-image-1 {
+  background-image: linear-gradient(to bottom, rgba(10, 10, 15, 0.85), rgba(10, 10, 15, 0.75)), url('/assets/Raw/Punchcard-background-01.avif');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.bg-image-2 {
+  background-image: linear-gradient(to bottom, rgba(10, 10, 15, 0.9), rgba(10, 10, 15, 0.8)), url('/assets/Raw/Punchcard-background-02.avif');
+  background-size: cover;
+  background-position: center;
+}
+
+.hero-image-wrapper {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-image-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -15px;
+  background: radial-gradient(circle at center, rgba(239, 68, 68, 0.15) 0%, transparent 60%);
+  z-index: -1;
+  filter: blur(20px);
+}
+
+.text-gradient {
+  background: linear-gradient(to right, var(--primary), var(--secondary), var(--accent));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ========== Landing Page – cream background + one subtle circle per section ========== */
+/* Cream: off-white with a hint of yellow */
+.landing-cream {
+  background-color: #fffef5;
+}
+
+/* One very subtle circle per section – light red, light yellow, or light blue; positions vary slightly */
+.landing-circle-pale-red {
+  background-image: radial-gradient(
+    circle at 55% 45%,
+    rgba(254, 202, 202, 0.26) 0%,
+    rgba(254, 202, 202, 0.06) 48%,
+    transparent 68%
+  );
+  background-color: #fffef5;
+  background-repeat: no-repeat;
+}
+
+.landing-circle-pale-yellow {
+  background-image: radial-gradient(
+    circle at 45% 55%,
+    rgba(254, 249, 195, 0.32) 0%,
+    rgba(254, 249, 195, 0.08) 48%,
+    transparent 68%
+  );
+  background-color: #fffef5;
+  background-repeat: no-repeat;
+}
+
+.landing-circle-pale-blue {
+  background-image: radial-gradient(
+    circle at 60% 50%,
+    rgba(219, 234, 254, 0.3) 0%,
+    rgba(219, 234, 254, 0.06) 48%,
+    transparent 68%
+  );
+  background-color: #fffef5;
+  background-repeat: no-repeat;
+}
+
+/* Hero: cream + one subtle circle (pale red) */
+.landing-hero-bg {
+  background-color: #fffef5;
+  background-image: radial-gradient(
+    circle at 40% 45%,
+    rgba(254, 202, 202, 0.3) 0%,
+    rgba(254, 202, 202, 0.06) 50%,
+    transparent 70%
+  );
+  background-repeat: no-repeat;
+}
+
+/* Body text only: dark grey, high contrast on cream (not headers) */
+.landing-hero-bg p,
+.landing-hero-bg .landing-hero-subtitle,
+.landing-cream p,
+.landing-cream li {
+  color: #374151 !important;
+  text-shadow: none;
+}
+
+.landing-hero-bg strong { color: #374151 !important; font-weight: 700; }
+
+/* Headers: one bold colour per section (no gradients) */
+.landing-headline-red {
+  color: #b91c1c !important;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: none;
+}
+
+.landing-headline-amber {
+  color: #b45309 !important;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: none;
+}
+
+.landing-headline-blue {
+  color: #1d4ed8 !important;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: none;
+}
+
+.landing-cream .landing-pic-frame {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.landing-cream .landing-card-glow {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.landing-cream .landing-card-glow h3,
+.landing-cream .landing-card-glow p {
+  color: #374151 !important;
+}
+
+/* Nav at top over cream: light bg + dark text */
+.landing-nav-at-top.landing-nav-at-top {
+  background: rgba(255, 254, 245, 0.94);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.landing-nav-at-top .landing-nav-link { color: #1f2937 !important; }
+.landing-nav-at-top .landing-nav-link:nth-child(1) { color: #b91c1c !important; }
+.landing-nav-at-top .landing-nav-link:nth-child(2) { color: #b45309 !important; }
+.landing-nav-at-top .landing-nav-link:nth-child(3) { color: #1d4ed8 !important; }
+.landing-nav-at-top button:first-of-type {
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.08);
+}
+.landing-nav-at-top button:last-of-type {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* Brighter accent colors + text shadow so type doesn’t disappear on bright bg */
+.landing-title-red {
+  color: #b91c1c !important;
+  font-weight: 800;
+  text-shadow: none;
+}
+
+.landing-title-amber {
+  color: #b45309 !important;
+  font-weight: 800;
+  text-shadow: none;
+}
+
+.landing-title-blue {
+  color: #1d4ed8 !important;
+  font-weight: 800;
+  text-shadow: none;
+}
+
+.landing-cta-primary {
+  background: #dc2626;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.35);
+}
+
+.landing-cta-primary:hover {
+  background: #b91c1c;
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.4);
+  filter: none;
+}
+
+.landing-cta-secondary {
+  border: 2px solid #1d4ed8;
+  color: #1d4ed8;
+  background: transparent;
+}
+
+.landing-cta-secondary:hover {
+  background: rgba(29, 78, 216, 0.08);
+  color: #1d4ed8;
+}
+
+.landing-card-glow {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(234, 179, 8, 0.1);
+}
+
+.landing-pic-frame {
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.landing-pic-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.landing-nav-scrolled {
+  background: #e2ddcf !important; /* darker cream: visible vs page #fffef5, not black */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+.landing-nav-scrolled .landing-nav-link { color: #1f2937 !important; }
+.landing-nav-scrolled .landing-nav-link:nth-child(1) { color: #b91c1c !important; }
+.landing-nav-scrolled .landing-nav-link:nth-child(2) { color: #b45309 !important; }
+.landing-nav-scrolled .landing-nav-link:nth-child(3) { color: #1d4ed8 !important; }
+
+/* Logo sizes: bigger on desktop, still good on mobile */
+.landing-nav-logo {
+  height: 84px;
+  width: auto;
+  display: block;
+}
+
+.landing-hero-logo {
+  max-width: 420px;
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-bottom: 1.5rem;
+}
+
+.landing-footer-logo {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+
+.landing-hero-subtitle {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Section body text: subtle shadow so it stays readable on brighter section backgrounds */
+.landing-section-bg-alt h2,
+.landing-section-bg-alt p,
+.landing-section-bg-alt li {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.landing-pic-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .landing-pic-strip { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .landing-pic-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .landing-nav-links { display: none !important; }
+  .landing-hero-image-desk { display: none !important; }
+  .landing-hero-bg { background-attachment: scroll; }
+  .landing-nav-logo { height: 44px; }
+  .landing-hero-logo { max-width: 260px; }
+  .landing-footer-logo { height: 44px; }
 }
