@@ -585,6 +585,17 @@ body:has(.landing-hero-bg) {
   .landing-hero-logo { max-width: 260px; }
   .landing-footer-logo { height: 44px; }
 
+  /* Nav: Vendor Login + Contact Us in a row, smaller */
+  .landing-nav-buttons {
+    flex-wrap: nowrap !important;
+    gap: 0.5rem !important;
+  }
+  .landing-nav-buttons button {
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap;
+  }
+
   /* Single column – no two-row layout on mobile */
   .landing-hero-grid {
     grid-template-columns: 1fr !important;

@@ -552,7 +552,7 @@ Backgrounds: Cream (#fffef5) everywhere. One very subtle pale circle per section
 
 Logo sizing (responsive): Nav logo 84px (desktop) / 44px (mobile). Hero main logo max-width 420px (desktop) / 260px (mobile). Footer logo 56px (desktop) / 44px (mobile). All via CSS classes so they stay crisp and bold on large screens.
 
-Mobile rendering (≤768px): Layout switches to a single vertical column only; no two-column or multi-column rows. Typography is reduced (hero headline ~1.6rem, section titles ~1.35rem, body ~0.9rem). Section padding is tighter; hero CTAs stack full-width. Picture strip and benefit/step grids are one column. Desktop layout and styling are unchanged above the breakpoint.
+Mobile rendering (≤768px): Layout switches to a single vertical column only; no two-column or multi-column rows. Typography is reduced (hero headline ~1.6rem, section titles ~1.35rem, body ~0.9rem). Section padding is tighter; hero CTAs stack full-width. Picture strip and benefit/step grids are one column. Nav “Vendor Login” and “Contact Us” stay in one row (smaller padding and font) on mobile. Getting Started step blocks each include a small thumbnail image (Punchcard-pic-01, 02, 03). Desktop layout and styling are unchanged above the breakpoint. Optional refinements: use a 640px breakpoint for earlier single-column, or allow two columns on small tablets (e.g. 640px–768px) for specific sections; adjust type scale per breakpoint if needed.
 
 Design inspiration:
 

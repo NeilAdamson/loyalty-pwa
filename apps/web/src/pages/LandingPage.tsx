@@ -307,7 +307,7 @@ const LandingPage: React.FC = () => {
                     <span className="landing-nav-link" style={styles.navLink} onClick={() => scrollToSection('businesses')}>Businesses</span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div className="landing-nav-buttons" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <button
                         style={{ ...styles.secondaryButton, padding: '0.5rem 1.25rem', fontSize: '0.9rem' }}
                         onClick={() => navigate('/vendor/login')}
@@ -615,15 +615,24 @@ const LandingPage: React.FC = () => {
                     </div>
 
                     <div className="landing-getting-started-steps" style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', marginBottom: '4rem' }}>
-                        <div style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(185, 28, 28, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
+                        <div className="landing-step-card" style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(185, 28, 28, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
+                            <div className="landing-step-img-wrap" style={{ marginBottom: '1rem' }}>
+                                <img src="/assets/Pics/Punchcard-pic-01.jpg" alt="Contact PunchCard" style={{ width: '100%', maxWidth: '140px', height: '100px', objectFit: 'cover', borderRadius: '12px', margin: '0 auto', display: 'block' }} />
+                            </div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#b91c1c', marginBottom: '1rem' }}>Step 1</div>
                             <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>Contact PunchCard.</p>
                         </div>
-                        <div style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(180, 83, 9, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
+                        <div className="landing-step-card" style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(180, 83, 9, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
+                            <div className="landing-step-img-wrap" style={{ marginBottom: '1rem' }}>
+                                <img src="/assets/Pics/Punchcard-pic-02.jpg" alt="Branded card and QR posters" style={{ width: '100%', maxWidth: '140px', height: '100px', objectFit: 'cover', borderRadius: '12px', margin: '0 auto', display: 'block' }} />
+                            </div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#b45309', marginBottom: '1rem' }}>Step 2</div>
                             <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>We set up your branded loyalty card and provide QR posters.</p>
                         </div>
-                        <div style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(29, 78, 216, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
+                        <div className="landing-step-card" style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(29, 78, 216, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
+                            <div className="landing-step-img-wrap" style={{ marginBottom: '1rem' }}>
+                                <img src="/assets/Pics/Punchcard-pic-03.jpg" alt="Display QR and start stamping" style={{ width: '100%', maxWidth: '140px', height: '100px', objectFit: 'cover', borderRadius: '12px', margin: '0 auto', display: 'block' }} />
+                            </div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1d4ed8', marginBottom: '1rem' }}>Step 3</div>
                             <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>Display the QR code in your store and start stamping.</p>
                         </div>
