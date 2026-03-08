@@ -448,6 +448,7 @@ body:has(.landing-hero-bg) {
 .landing-nav-at-top .landing-nav-link:nth-child(1) { color: #b91c1c !important; }
 .landing-nav-at-top .landing-nav-link:nth-child(2) { color: #b45309 !important; }
 .landing-nav-at-top .landing-nav-link:nth-child(3) { color: #1d4ed8 !important; }
+.landing-nav-at-top .landing-nav-link:nth-child(4) { color: #b45309 !important; }
 .landing-nav-at-top button:first-of-type {
   border-color: #1d4ed8;
   color: #1d4ed8;
@@ -528,6 +529,7 @@ body:has(.landing-hero-bg) {
 .landing-nav-scrolled .landing-nav-link:nth-child(1) { color: #b91c1c !important; }
 .landing-nav-scrolled .landing-nav-link:nth-child(2) { color: #b45309 !important; }
 .landing-nav-scrolled .landing-nav-link:nth-child(3) { color: #1d4ed8 !important; }
+.landing-nav-scrolled .landing-nav-link:nth-child(4) { color: #b45309 !important; }
 
 /* Logo sizes: bigger on desktop, still good on mobile */
 .landing-nav-logo {

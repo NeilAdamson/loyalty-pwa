@@ -73,7 +73,8 @@ The site should be implemented as a **single scrolling page** with the following
 10. Getting Started
 11. About PunchCard
 12. Contact
-13. Footer
+13. About Us
+14. Footer
 
 ---
 
@@ -445,7 +446,7 @@ We set up your branded loyalty card and provide QR posters.
 
 Display the QR code in your store and start stamping.
 
-Most businesses can be live within a few days.
+Get up and running in a matter of hours.
 
 CTA
 
@@ -500,6 +501,20 @@ Optional future additions:
 Contact form
 WhatsApp contact
 Book a demo link
+
+---
+
+# ABOUT US
+
+Small section above the footer.
+
+### Copy
+
+## About Us
+
+We are based in Johannesburg, South Africa—proudly helping local retailers grow their business through effective, cost-effective loyalty programs. You don't need to blow the budget to reward your customers.
+
+While we're in Johannesburg, the PunchCard program is available countrywide across South Africa. No matter where you are, you can offer compelling loyalty programs to your customers wherever they are.
 
 ---
 

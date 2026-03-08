@@ -305,6 +305,7 @@ const LandingPage: React.FC = () => {
                     <span className="landing-nav-link" style={styles.navLink} onClick={() => scrollToSection('how-it-works')}>How It Works</span>
                     <span className="landing-nav-link" style={styles.navLink} onClick={() => scrollToSection('benefits')}>Benefits</span>
                     <span className="landing-nav-link" style={styles.navLink} onClick={() => scrollToSection('businesses')}>Businesses</span>
+                    <span className="landing-nav-link" style={styles.navLink} onClick={() => scrollToSection('about')}>About Us</span>
                 </div>
 
                 <div className="landing-nav-buttons" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -617,7 +618,7 @@ const LandingPage: React.FC = () => {
                 <div style={styles.containerInner}>
                     <div style={styles.sectionHeaderCentered} className="landing-section-header">
                         <h2 style={styles.sectionTitle} className="landing-headline-red">Getting Started Is Easy</h2>
-                        <p style={styles.sectionSubtitle}>Most businesses can be live within a few days.</p>
+                        <p style={styles.sectionSubtitle}>Get up and running in a matter of hours.</p>
                     </div>
 
                     <div className="landing-getting-started-steps" style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', marginBottom: '4rem' }}>
@@ -674,6 +675,19 @@ const LandingPage: React.FC = () => {
                 </div>
             </section>
 
+            {/* ABOUT US */}
+            <section id="about" style={{ padding: '3rem 2rem', textAlign: 'center' }} className="landing-cream landing-circle-pale-yellow">
+                <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+                    <h2 style={{ ...styles.sectionTitle, fontSize: '1.5rem', marginBottom: '1rem' }} className="landing-title-amber">About Us</h2>
+                    <p style={{ ...styles.sectionSubtitle, color: '#374151', marginBottom: '0.75rem' }}>
+                        We are based in Johannesburg, South Africa—proudly helping local retailers grow their business through effective, cost-effective loyalty programs. You don't need to blow the budget to reward your customers.
+                    </p>
+                    <p style={{ ...styles.sectionSubtitle, color: '#374151', margin: 0 }}>
+                        While we're in Johannesburg, the PunchCard program is available countrywide across South Africa. No matter where you are, you can offer compelling loyalty programs to your customers wherever they are.
+                    </p>
+                </div>
+            </section>
+
             {/* 13. FOOTER */}
             <footer style={{ ...styles.footer, borderTop: '1px solid rgba(0,0,0,0.06)', background: '#fffef5', padding: '4rem 2rem' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '2rem' }}>
@@ -691,6 +705,7 @@ const LandingPage: React.FC = () => {
                             <a style={{ color: '#374151', textDecoration: 'none', cursor: 'pointer' }} onClick={() => scrollToSection('hero')}>Home</a>
                             <a style={{ color: '#374151', textDecoration: 'none', cursor: 'pointer' }} onClick={() => scrollToSection('how-it-works')}>How It Works</a>
                             <a style={{ color: '#374151', textDecoration: 'none', cursor: 'pointer' }} onClick={() => scrollToSection('businesses')}>Businesses</a>
+                            <a style={{ color: '#374151', textDecoration: 'none', cursor: 'pointer' }} onClick={() => scrollToSection('about')}>About Us</a>
                             <a href="mailto:info@punchcard.co.za" style={{ color: '#1d4ed8', textDecoration: 'none', fontWeight: 500 }}>Contact</a>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
