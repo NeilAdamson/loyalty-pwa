@@ -325,7 +325,7 @@ const LandingPage: React.FC = () => {
 
             {/* 1. HERO SECTION */}
             <section id="hero" style={styles.hero} className="landing-hero-bg">
-                <div style={styles.heroGrid}>
+                <div style={styles.heroGrid} className="landing-hero-grid">
                     <div style={styles.heroContent}>
                         <img src="/assets/Punch-card-logo-01.avif" alt="PunchCard" className="landing-hero-logo" />
                         <h1 style={styles.heroTitle}>
@@ -336,7 +336,7 @@ const LandingPage: React.FC = () => {
                             <br /><br />
                             <strong>No apps to download.</strong> No cards to lose. Just scan, stamp and reward loyal customers.
                         </p>
-                        <div style={styles.buttonGroup}>
+                        <div style={styles.buttonGroup} className="landing-hero-buttons">
                             <button
                                 style={styles.primaryButton}
                                 className="landing-cta-primary"
@@ -364,7 +364,7 @@ const LandingPage: React.FC = () => {
             {/* 2. PROBLEM SECTION */}
             <section id="problem" style={styles.section} className="landing-cream landing-circle-pale-yellow">
                 <div style={styles.containerInner}>
-                    <div style={styles.twoColumn}>
+                    <div style={styles.twoColumn} className="landing-two-column">
                         <div className="landing-pic-frame">
                             <img src="/assets/Pics/Punchcard-pic-03.jpg" alt="Paper cards don't work" />
                         </div>
@@ -391,7 +391,7 @@ const LandingPage: React.FC = () => {
             {/* 3. PRODUCT EXPLANATION */}
             <section style={styles.section} className="landing-cream landing-circle-pale-red">
                 <div style={styles.containerInner}>
-                    <div style={styles.sectionHeaderCentered}>
+                    <div style={styles.sectionHeaderCentered} className="landing-section-header">
                         <span style={styles.badgeYellow}>The Solution</span>
                         <h2 style={styles.sectionTitle} className="landing-title-amber">A Digital Loyalty Card That Works From Your Phone</h2>
                         <p style={styles.sectionSubtitle}>
@@ -399,7 +399,7 @@ const LandingPage: React.FC = () => {
                         </p>
                     </div>
 
-                    <div style={{ ...styles.twoColumn, alignItems: 'center' }}>
+                    <div style={{ ...styles.twoColumn, alignItems: 'center' }} className="landing-two-column">
                         <div>
                             <p style={{ ...styles.sectionSubtitle, marginBottom: '1.5rem' }}>
                                 Customers simply scan a QR code in your store and their loyalty card opens instantly in their browser.
@@ -423,12 +423,12 @@ const LandingPage: React.FC = () => {
             {/* 4. HOW IT WORKS */}
             <section id="how-it-works" style={styles.section} className="landing-cream landing-circle-pale-blue">
                 <div style={styles.containerInner}>
-                    <div style={styles.sectionHeaderCentered}>
+                    <div style={styles.sectionHeaderCentered} className="landing-section-header">
                         <h2 style={styles.sectionTitle} className="landing-headline-blue">Three Simple Steps</h2>
                         <p style={styles.sectionSubtitle}>How PunchCard works for you and your customers.</p>
                     </div>
 
-                    <div style={styles.grid3}>
+                    <div style={styles.grid3} className="landing-grid-three">
                         <div style={styles.stepBox}>
                             <span style={{ ...styles.stepNumber, color: '#b91c1c' }}>Step 1</span>
                             <div style={styles.stepIcon}>📱</div>
@@ -474,11 +474,11 @@ const LandingPage: React.FC = () => {
             {/* 5. BUSINESS BENEFITS */}
             <section id="benefits" style={styles.section} className="landing-cream landing-circle-pale-red">
                 <div style={styles.containerInner}>
-                    <div style={styles.sectionHeaderCentered}>
+                    <div style={styles.sectionHeaderCentered} className="landing-section-header">
                         <h2 style={styles.sectionTitle} className="landing-title-blue">Why Businesses Choose PunchCard</h2>
                     </div>
 
-                    <div style={styles.grid3}>
+                    <div style={styles.grid3} className="landing-grid-three">
                         <div style={styles.landingCard}>
                             <div style={{ ...styles.iconBox, background: 'rgba(185, 28, 28, 0.12)', color: '#b91c1c' }}>📈</div>
                             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.75rem', color: '#b91c1c' }}>Increase Repeat Visits</h3>
@@ -516,7 +516,7 @@ const LandingPage: React.FC = () => {
             {/* 6. IDEAL BUSINESSES & 7. CUSTOMER EXPERIENCE */}
             <section id="businesses" style={styles.section} className="landing-cream landing-circle-pale-blue">
                 <div style={styles.containerInner}>
-                    <div style={styles.twoColumn}>
+                    <div style={styles.twoColumn} className="landing-two-column">
                         <div>
                             <h2 style={{ ...styles.sectionTitle, marginBottom: '2rem' }} className="landing-title-amber">Perfect For Businesses With Repeat Customers</h2>
                             <p style={styles.sectionSubtitle}>PunchCard works especially well for:</p>
@@ -553,7 +553,7 @@ const LandingPage: React.FC = () => {
             {/* 8. SECURITY & 9. FEATURES */}
             <section style={styles.section} className="landing-cream landing-circle-pale-yellow">
                 <div style={styles.containerInner}>
-                    <div style={styles.twoColumn}>
+                    <div style={styles.twoColumn} className="landing-two-column">
                         <div>
                             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
                             <h2 style={styles.sectionTitle} className="landing-title-blue">Built With Security In Mind</h2>
@@ -572,7 +572,7 @@ const LandingPage: React.FC = () => {
                         <div style={styles.landingCard}>
                             <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '1.5rem', color: '#b45309' }}>Everything You Need To Run A Loyalty Program</h2>
                             <p style={{ color: '#374151', marginBottom: '1.5rem' }}>PunchCard includes:</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="landing-features-inner" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div style={{ color: '#374151', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#b91c1c', flexShrink: 0 }}></div>
                                     Branded digital cards
@@ -609,12 +609,12 @@ const LandingPage: React.FC = () => {
             {/* 10. GETTING STARTED */}
             <section style={styles.section} className="landing-cream landing-circle-pale-red">
                 <div style={styles.containerInner}>
-                    <div style={styles.sectionHeaderCentered}>
+                    <div style={styles.sectionHeaderCentered} className="landing-section-header">
                         <h2 style={styles.sectionTitle} className="landing-headline-red">Getting Started Is Easy</h2>
                         <p style={styles.sectionSubtitle}>Most businesses can be live within a few days.</p>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', marginBottom: '4rem' }}>
+                    <div className="landing-getting-started-steps" style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', marginBottom: '4rem' }}>
                         <div style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(185, 28, 28, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
                             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#b91c1c', marginBottom: '1rem' }}>Step 1</div>
                             <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>Contact PunchCard.</p>

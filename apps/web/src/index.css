@@ -576,6 +576,7 @@ body:has(.landing-hero-bg) {
   .landing-pic-strip { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* Mobile: single-column, smaller text, vertical flow – desktop unchanged */
 @media (max-width: 768px) {
   .landing-nav-links { display: none !important; }
   .landing-hero-image-desk { display: none !important; }
@@ -583,4 +584,86 @@ body:has(.landing-hero-bg) {
   .landing-nav-logo { height: 44px; }
   .landing-hero-logo { max-width: 260px; }
   .landing-footer-logo { height: 44px; }
+
+  /* Single column – no two-row layout on mobile */
+  .landing-hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+    text-align: center;
+  }
+  .landing-hero-grid .landing-hero-content { text-align: left; }
+  .landing-two-column {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+  .landing-grid-three {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+  .landing-features-inner {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-getting-started-steps {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .landing-pic-strip {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Smaller text on mobile */
+  .landing-hero-bg h1,
+  .landing-hero-bg .landing-headline-red {
+    font-size: 1.6rem !important;
+    line-height: 1.25 !important;
+  }
+  .landing-hero-subtitle,
+  .landing-hero-bg p {
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+  }
+  .landing-section-header { margin-bottom: 2.5rem !important; }
+  .landing-cream h2,
+  .landing-cream .landing-title-red,
+  .landing-cream .landing-title-amber,
+  .landing-cream .landing-title-blue,
+  .landing-cream .landing-headline-red,
+  .landing-cream .landing-headline-amber,
+  .landing-cream .landing-headline-blue {
+    font-size: 1.35rem !important;
+    line-height: 1.3 !important;
+  }
+  .landing-cream .landing-section-header h2 { font-size: 1.35rem !important; }
+  .landing-cream p,
+  .landing-cream li,
+  .landing-cream .landing-card-glow p {
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
+  }
+  .landing-cream h3 { font-size: 1.05rem !important; }
+  .landing-cream .landing-card-glow h3 { font-size: 1.05rem !important; }
+
+  /* Tighter section padding on mobile */
+  section.landing-cream {
+    padding: 3rem 1rem !important;
+  }
+  section.landing-hero-bg {
+    padding: 2.5rem 1rem !important;
+  }
+
+  /* Buttons: vertical stack, full width */
+  .landing-hero-buttons {
+    flex-direction: column !important;
+    width: 100%;
+  }
+  .landing-hero-buttons button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Section headers left-aligned on mobile for consistency */
+  .landing-cream .landing-section-header,
+  .landing-section-header {
+    text-align: left;
+  }
 }

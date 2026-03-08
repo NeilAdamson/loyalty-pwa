@@ -552,6 +552,8 @@ Backgrounds: Cream (#fffef5) everywhere. One very subtle pale circle per section
 
 Logo sizing (responsive): Nav logo 84px (desktop) / 44px (mobile). Hero main logo max-width 420px (desktop) / 260px (mobile). Footer logo 56px (desktop) / 44px (mobile). All via CSS classes so they stay crisp and bold on large screens.
 
+Mobile rendering (≤768px): Layout switches to a single vertical column only; no two-column or multi-column rows. Typography is reduced (hero headline ~1.6rem, section titles ~1.35rem, body ~0.9rem). Section padding is tighter; hero CTAs stack full-width. Picture strip and benefit/step grids are one column. Desktop layout and styling are unchanged above the breakpoint.
+
 Design inspiration:
 
 Stripe style landing pages
