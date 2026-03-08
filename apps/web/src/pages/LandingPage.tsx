@@ -461,8 +461,8 @@ const LandingPage: React.FC = () => {
             <section style={{ padding: '4rem 2rem' }} className="landing-cream landing-circle-pale-yellow">
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ ...styles.sectionTitle, textAlign: 'center', marginBottom: '1rem' }} className="landing-headline-amber">See PunchCard In Action</h2>
-                    <p style={{ ...styles.sectionSubtitle, textAlign: 'center', maxWidth: '640px', margin: '0 auto 2rem', color: '#374151' }}>
-                        PunchCard fits into the moments you already have—at the counter, in the café, at the till. The images below show typical touchpoints: everyday settings where customers have their card ready and loyalty gets rewarded. No extra hardware; it slots into your existing flow.
+                    <p className="landing-pic-strip-intro" style={{ textAlign: 'center', maxWidth: '640px', margin: '0 auto 2rem', padding: '0 1rem', fontSize: '1.1rem', lineHeight: 1.6, color: '#374151' }}>
+                        PunchCard fits into the moments you already have—at the counter, in the café, at the till. Convenience at your fingertips no matter where you are. Customers have their card ready on their phone and loyalty gets rewarded. No extra hardware; no extra hassle; no extra overheads.
                     </p>
                     <div className="landing-pic-strip">
                         {[1, 2, 3, 4, 5].map((n) => (
@@ -471,7 +471,7 @@ const LandingPage: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                    <p style={{ ...styles.sectionSubtitle, textAlign: 'center', marginTop: '1.5rem', fontSize: '0.95rem', color: '#6b7280' }}>
+                    <p className="landing-pic-strip-outro" style={{ textAlign: 'center', marginTop: '1.5rem', padding: '0 1rem', fontSize: '0.95rem', lineHeight: 1.5, color: '#6b7280' }}>
                         Your brand, your space—PunchCard fits where you work.
                     </p>
                 </div>

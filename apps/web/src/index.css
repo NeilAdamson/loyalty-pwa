@@ -568,6 +568,14 @@ body:has(.landing-hero-bg) {
   align-items: stretch;
 }
 
+/* See PunchCard In Action – intro/outro text always visible */
+.landing-pic-strip-intro,
+.landing-pic-strip-outro {
+  display: block !important;
+  color: #374151 !important;
+}
+.landing-pic-strip-outro { color: #6b7280 !important; }
+
 @media (max-width: 900px) {
   .landing-pic-strip { grid-template-columns: repeat(3, 1fr); }
 }
