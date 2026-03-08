@@ -434,7 +434,7 @@ const LandingPage: React.FC = () => {
                             <div style={styles.stepIcon}>📱</div>
                             <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: '#b91c1c' }}>Customers Join Instantly</h3>
                             <p style={styles.sectionSubtitle}>
-                                Customers scan your QR code and verify their phone number via WhatsApp. Their digital loyalty card opens immediately.
+                                Customers scan your QR code and verify their phone number via SMS. Their digital loyalty card opens immediately.
                             </p>
                         </div>
                         <div style={styles.stepBox}>
@@ -543,7 +543,7 @@ const LandingPage: React.FC = () => {
                             <ul style={{ ...styles.checkList, marginBottom: '2rem' }}>
                                 <li style={{ ...styles.checkItem, color: '#1f2937' }}><span style={{ ...styles.checkIcon, color: '#2563eb' }}>1.</span> Scan the QR code in your store</li>
                                 <li style={{ ...styles.checkItem, color: '#1f2937' }}><span style={{ ...styles.checkIcon, color: '#2563eb' }}>2.</span> Enter their phone number</li>
-                                <li style={{ ...styles.checkItem, color: '#1f2937' }}><span style={{ ...styles.checkIcon, color: '#2563eb' }}>3.</span> Verify via WhatsApp</li>
+                                <li style={{ ...styles.checkItem, color: '#1f2937' }}><span style={{ ...styles.checkIcon, color: '#2563eb' }}>3.</span> Verify via SMS</li>
                                 <li style={{ ...styles.checkItem, color: '#1f2937' }}><span style={{ ...styles.checkIcon, color: '#2563eb' }}>4.</span> Show their card to collect stamps</li>
                             </ul>
                             <div style={{ paddingLeft: '1.5rem', borderLeft: '3px solid #3b82f6' }}>

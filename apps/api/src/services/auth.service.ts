@@ -3,7 +3,7 @@ import { ERROR_CODES } from '../plugins/errors'
 import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 
-/** OTP delivery: Twilio (WhatsApp/SMS) or SMSFlow (SMS). */
+/** OTP delivery: Twilio (SMS or WhatsApp) or SMSFlow (SMS). Default is SMS. */
 export interface IOtpSender {
     sendOtp(to: string, code: string): Promise<void>
     isConfigured(): boolean

@@ -254,7 +254,7 @@ Icon + text blocks
 
 Customers Join Instantly
 
-Customers scan your QR code and verify their phone number via WhatsApp.
+Customers scan your QR code and verify their phone number via SMS.
 
 Their digital loyalty card opens immediately.
 
@@ -361,7 +361,7 @@ Customers simply:
 
 1. Scan the QR code in your store
 2. Enter their phone number
-3. Verify via WhatsApp
+3. Verify via SMS
 4. Show their card to collect stamps
 
 No apps to download.

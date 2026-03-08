@@ -8,7 +8,7 @@ const API_KEY = process.env.TWILIO_API_KEY;
 const API_SECRET = process.env.TWILIO_API_SECRET;
 const FROM_NUMBER = process.env.TWILIO_FROM_NUMBER;
 // 'sms' = use plain E.164 (works with trial "My Twilio phone number"); 'whatsapp' = use WhatsApp sender (sandbox or approved)
-const OTP_CHANNEL = (process.env.TWILIO_OTP_CHANNEL || 'whatsapp').toLowerCase();
+const OTP_CHANNEL = (process.env.TWILIO_OTP_CHANNEL || 'sms').toLowerCase();
 
 export class WhatsAppService {
     private client: any;

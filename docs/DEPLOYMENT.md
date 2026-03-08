@@ -67,7 +67,7 @@ ADMIN_PASSWORD=secure_admin_password
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_FROM_NUMBER=14155238886
-# TWILIO_OTP_CHANNEL=sms   use "sms" with trial "My Twilio phone number" (verified numbers only)
+# TWILIO_OTP_CHANNEL=sms   (default) use "sms" with trial "My Twilio phone number" (verified numbers only). Set to "whatsapp" to use WhatsApp instead.
 # TWILIO_API_KEY=
 # TWILIO_API_SECRET=
 
