@@ -14,12 +14,14 @@ const StaffAuth: React.FC = () => {
     const [username, setUsername] = useState('');
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
+    const [diagnostic, setDiagnostic] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
+        setDiagnostic('');
         try {
             const res = await api.post(`/api/v1/v/${slug}/auth/staff/login`, { username, pin });
             login(res.data.token);
@@ -30,7 +32,26 @@ const StaffAuth: React.FC = () => {
                 navigate(`/v/${slug}/staff/scan`);
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Login Failed');
+            const status = err?.response?.status;
+            const code = err?.response?.data?.code;
+            const message = err?.response?.data?.message || err?.message || 'Login Failed';
+
+            setError(message);
+            setDiagnostic(
+                [status ? `HTTP ${status}` : 'HTTP ?',
+                code || 'NO_CODE',
+                message]
+                    .join(' | ')
+            );
+
+            // Compact structured log for fast support triage.
+            console.warn('[StaffAuth] Login failed', {
+                status,
+                code,
+                message,
+                url: `/api/v1/v/${slug}/auth/staff/login`,
+                username: username?.trim().toLowerCase()
+            });
         } finally {
             setIsLoading(false);
         }
@@ -52,6 +73,21 @@ const StaffAuth: React.FC = () => {
                     fontSize: '14px'
                 }}>
                     {error}
+                </div>
+            )}
+            {diagnostic && (
+                <div
+                    style={{
+                        marginTop: '-12px',
+                        marginBottom: '16px',
+                        fontSize: '12px',
+                        color: 'var(--text-tertiary)',
+                        fontFamily: 'monospace',
+                        opacity: 0.9
+                    }}
+                    aria-live="polite"
+                >
+                    {diagnostic}
                 </div>
             )}
 

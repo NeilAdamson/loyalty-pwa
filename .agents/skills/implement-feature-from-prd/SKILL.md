@@ -1,3 +1,7 @@
+---
+name: implement-feature-from-prd
+description: Use this skill when the task is to build or extend functionality based on a product requirement or feature description.
+---
 # Implement Feature From PRD
 
 Use this skill when the task is to build or extend functionality based on a product requirement or feature description.

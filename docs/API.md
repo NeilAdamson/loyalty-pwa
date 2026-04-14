@@ -62,6 +62,7 @@ Returns: `{ "token": "JWT", "member": { ... } }`
 `POST /v/:vendorSlug/auth/staff/login`
 Body: `{ "username": "alice", "pin": "1234" }`
 Returns: `{ "token": "JWT", "staff": { ... } }`
+- `staff.role` is `STAMPER` for scanner-only access, or `ADMIN` for vendor-admin access.
 
 ### Vendor Admin Auth
 Vendor admins authenticate via staff login with `role: "ADMIN"`. After login, use the returned token as a Bearer token for vendor admin endpoints.

@@ -1,3 +1,7 @@
+---
+name: architecture-aware-refactor
+description: Use this skill when the task involves refactoring code, reshaping modules, or improving structure while preserving behavior.
+---
 # Architecture-Aware Refactor
 
 Use this skill when the task involves refactoring code, reshaping modules, or improving structure while preserving behavior.

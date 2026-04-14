@@ -1,3 +1,7 @@
+---
+name: dockerized-validation
+description: Use this skill when the task requires validating builds, linting, tests, or runtime behavior in a Docker-first repository.
+---
 # Dockerized Validation
 
 Use this skill when the task requires validating builds, linting, tests, or runtime behavior in a Docker-first repository.

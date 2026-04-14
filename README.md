@@ -55,6 +55,10 @@ A multi-tenant digital loyalty stamp card system built with Node.js, Prisma, Pos
 ### "Table does not exist" or "Admin User not found"
 If you see errors related to missing tables or invalid credentials immediately after `docker compose up`, it means you skipped **Step 3**. The database volume is empty by default. Run the migration and seed commands above to fix it.
 
+### Staff login diagnostics
+If a staff/stamper login fails on `/v/{vendorSlug}/staff`, the UI now shows a compact diagnostic line with the backend HTTP status, error code, and message (for example `HTTP 401 | STAFF_PIN_INVALID | Invalid credentials`).  
+Use this together with API logs to quickly distinguish credential issues from route/vendor mismatches.
+
 ### OTP / SMS not sending
 
 - Check `http://localhost:8000/health` and confirm:

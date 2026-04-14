@@ -39,7 +39,7 @@ export default function VendorPublicApp() {
                     path="staff/scan"
                     element={
                         <Suspense fallback={routeFallback}>
-                            <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                            <ProtectedRoute allowedRoles={['STAFF', 'STAMPER', 'ADMIN']}>
                                 <StaffDashboard />
                             </ProtectedRoute>
                         </Suspense>

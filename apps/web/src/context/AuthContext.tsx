@@ -3,7 +3,7 @@ import { jwtDecode } from 'jwt-decode';
 
 interface User {
     id: string;
-    role: 'MEMBER' | 'STAFF' | 'ADMIN';
+    role: 'MEMBER' | 'STAFF' | 'STAMPER' | 'ADMIN';
     vendorId: string;
 }
 
@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
                 const decoded: any = jwtDecode(token);
                 // Determine role based on payload structure
-                let role: 'MEMBER' | 'STAFF' | 'ADMIN' = decoded.role || 'MEMBER';
+                let role: 'MEMBER' | 'STAFF' | 'STAMPER' | 'ADMIN' = decoded.role || 'MEMBER';
                 let id = decoded.sub; // Standard subject
 
                 if (decoded.staff_id) {

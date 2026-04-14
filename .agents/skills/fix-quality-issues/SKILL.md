@@ -1,3 +1,7 @@
+---
+name: fix-quality-issues
+description: Use this skill when the task is to resolve lint errors, type errors, failing tests, or code quality drift.
+---
 # Fix Quality Issues
 
 Use this skill when the task is to resolve lint errors, type errors, failing tests, or code quality drift.
