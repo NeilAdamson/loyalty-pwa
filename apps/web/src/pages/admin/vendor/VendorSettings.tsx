@@ -119,14 +119,14 @@ const VendorSettings: React.FC = () => {
                         <span>🏢</span> General Information
                     </h2>
 
-                    <div className="grid gap-6">
+                    <div className="grid gap-6 max-w-xl">
                         <div>
                             <label className="input-label">Trading Name</label>
                             <input
                                 type="text"
                                 value={tradingName}
                                 onChange={(e) => setTradingName(e.target.value)}
-                                className="glass-input"
+                                className="glass-input max-w-xl"
                                 placeholder="e.g. The Coffee House"
                                 required
                             />
@@ -135,14 +135,14 @@ const VendorSettings: React.FC = () => {
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
                             <div>
                                 <label className="input-label">Vendor Slug (Store ID)</label>
                                 <input
                                     type="text"
                                     value={vendorSlug}
                                     disabled
-                                    className="glass-input opacity-70 cursor-not-allowed font-mono text-accent bg-accent/5 border-accent/20"
+                                    className="glass-input max-w-md opacity-70 cursor-not-allowed font-mono text-accent bg-accent/5 border-accent/20"
                                 />
                                 <p className="text-xs text-dim mt-2">
                                     Your unique identifier for the web portal. Cannot be changed.
@@ -154,43 +154,70 @@ const VendorSettings: React.FC = () => {
                                     type="text"
                                     value={legalName}
                                     disabled
-                                    className="glass-input opacity-60 cursor-not-allowed"
+                                    className="glass-input max-w-md opacity-60 cursor-not-allowed"
                                 />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="input-label">Average Visit Value</label>
-                                <input
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    value={averageVisitValue}
-                                    onChange={(e) => setAverageVisitValue(e.target.value)}
-                                    className="glass-input"
-                                    placeholder="e.g. 85.00"
-                                    required
-                                />
-                                <p className="text-xs text-dim mt-2">
-                                    Used to calculate estimated revenue from stamp activity.
-                                </p>
-                            </div>
-                            <div>
-                                <label className="input-label">Reward Cost</label>
-                                <input
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    value={rewardCost}
-                                    onChange={(e) => setRewardCost(e.target.value)}
-                                    className="glass-input"
-                                    placeholder="e.g. 25.00"
-                                    required
-                                />
-                                <p className="text-xs text-dim mt-2">
-                                    Used to calculate estimated loyalty cost and ROI.
-                                </p>
+                        <div className="pt-2 border-t border-white/10 max-w-3xl">
+                            <h3 className="text-sm font-semibold text-white/90 mb-1 flex flex-wrap items-center gap-2">
+                                Estimated analytics
+                                <span className="text-xs font-normal text-dim px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                                    South African Rand (ZAR)
+                                </span>
+                            </h3>
+                            <p className="text-xs text-dim mb-4">
+                                Amounts below are in <strong className="text-white/70 font-medium">R (ZAR)</strong>. They are used only for
+                                directional estimates on your dashboard — not card balances or billing.
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                                <div>
+                                    <label className="input-label">Average spend per stamp visit</label>
+                                    <div className="currency-input-group" title="Amount in South African Rand (ZAR)">
+                                        <span className="currency-prefix" aria-hidden="true">
+                                            R
+                                        </span>
+                                        <input
+                                            type="number"
+                                            min="0.01"
+                                            step="0.01"
+                                            value={averageVisitValue}
+                                            onChange={(e) => setAverageVisitValue(e.target.value)}
+                                            className="glass-input"
+                                            placeholder="85.00"
+                                            required
+                                            inputMode="decimal"
+                                            aria-describedby="vendor-settings-avg-help"
+                                        />
+                                    </div>
+                                    <p id="vendor-settings-avg-help" className="text-xs text-dim mt-2">
+                                        Estimated revenue uses <strong className="text-white/70 font-medium">stamps × this amount</strong> (ZAR).
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="input-label">Cost per reward to your business</label>
+                                    <div className="currency-input-group" title="Amount in South African Rand (ZAR)">
+                                        <span className="currency-prefix" aria-hidden="true">
+                                            R
+                                        </span>
+                                        <input
+                                            type="number"
+                                            min="0.01"
+                                            step="0.01"
+                                            value={rewardCost}
+                                            onChange={(e) => setRewardCost(e.target.value)}
+                                            className="glass-input"
+                                            placeholder="25.00"
+                                            required
+                                            inputMode="decimal"
+                                            aria-describedby="vendor-settings-reward-help"
+                                        />
+                                    </div>
+                                    <p id="vendor-settings-reward-help" className="text-xs text-dim mt-2">
+                                        Estimated cost uses <strong className="text-white/70 font-medium">redemptions × this amount</strong>{' '}
+                                        (ZAR).
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

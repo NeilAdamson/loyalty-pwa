@@ -195,6 +195,50 @@ body:has(.landing-hero-bg) {
   font-weight: 500;
 }
 
+/* Compact currency inputs (vendor analytics assumptions — ZAR) */
+.currency-input-group {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  max-width: 13rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.currency-input-group:focus-within {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.currency-input-group .currency-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.currency-input-group .glass-input {
+  border: none;
+  border-radius: 0;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.currency-input-group .glass-input:focus {
+  box-shadow: none;
+}
+
 /* Buttons */
 .btn-premium {
   background: linear-gradient(135deg, var(--primary), var(--secondary));
