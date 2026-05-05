@@ -2,8 +2,8 @@
 
 ## 0. Document control
 - Product: Digital Loyalty Stamp Cards (PWA)
-- Version: 1.1
-- Date: 2026-01-20
+- Version: 1.2
+- Date: 2026-05-05
 - Audience: Antigravity AI (engineering + QA), Ops
 
 ## 1. Problem statement
@@ -52,8 +52,8 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ## 7. Personas and roles
 - Platform Admin: Creates vendors, configures billing status, supports vendors, reviews fraud, suspends vendors.
-- Vendor Admin: Configures branding, program rules, branches, staff PINs.
-- Staff (Stamper): Stamps and redeems at the point of service.
+- Vendor Admin / vendor manager: Configures branding, program rules, branches, staff PINs. **Implemented as the staff role `ADMIN`** (username + PIN); after login, uses `/v/{slug}/admin/*`. Product copy may say “manager”; the database value remains `ADMIN`.
+- Staff (Stamper): Stamps and redeems at the point of service. **Implemented as the staff role `STAMPER`** (`/v/{slug}/staff/scan`).
 - Member: Joins, views card, presents rotating token for stamping/redeeming.
 
 ## 8. Success metrics (pilot)
@@ -123,7 +123,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 **FR-B4 Staff management**
 - Vendor Admin can create staff:
-  - name, branch_id (required), role (ADMIN|STAMPER), status
+  - name, branch_id (required), role (`ADMIN` = vendor manager / full portal | `STAMPER` = scanner only), status
   - 6-digit PIN (required)
 - PIN uniqueness constraint: within a vendor, PIN MUST be unique across enabled staff accounts.
 - Disabling staff takes effect immediately.

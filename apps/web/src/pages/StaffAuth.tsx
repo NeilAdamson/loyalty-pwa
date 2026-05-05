@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import AuthShell from '../components/AuthShell';
 import AdminInput from '../components/admin/ui/AdminInput';
 import AdminButton from '../components/admin/ui/AdminButton';
+import { persistRecentVendorSlug } from '../utils/vendorPortalStorage';
 
 const StaffAuth: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -25,6 +26,7 @@ const StaffAuth: React.FC = () => {
         try {
             const res = await api.post(`/api/v1/v/${slug}/auth/staff/login`, { username, pin });
             login(res.data.token);
+            if (slug) persistRecentVendorSlug(slug);
 
             if (res.data.staff.role === 'ADMIN') {
                 navigate(`/v/${slug}/admin/dashboard`);
@@ -60,7 +62,7 @@ const StaffAuth: React.FC = () => {
     return (
         <AuthShell
             title="Staff Login"
-            subtitle="Access the scanner and branch tools"
+            subtitle="Stampers scan stamps/redemptions here. Managers with an Admin login land on the vendor dashboard after sign-in."
         >
             {error && (
                 <div style={{

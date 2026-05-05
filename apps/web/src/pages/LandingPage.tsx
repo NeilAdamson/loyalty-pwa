@@ -310,6 +310,8 @@ const LandingPage: React.FC = () => {
 
                 <div className="landing-nav-buttons" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <button
+                        type="button"
+                        title="Staff and vendor managers: enter your store slug, then username and PIN"
                         style={{ ...styles.secondaryButton, padding: '0.5rem 1.25rem', fontSize: '0.9rem' }}
                         onClick={() => navigate('/vendor/login')}
                     >

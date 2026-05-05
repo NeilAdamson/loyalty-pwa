@@ -28,8 +28,8 @@ interface DashboardMetrics {
     };
     customer_insights: {
         top_customers_30d: Array<{ member_id: string; member_name: string; member_phone: string; stamps: number }>;
-        at_risk_customers_30d: Array<{ member_id: string; name: string; phone_e164: string }>;
-        near_reward_customers: Array<{ member_id: string; member_name: string; member_phone: string; stamps_remaining: number }>;
+        at_risk_customers_30d: Array<{ member_id: string; name: string; phone_e164: string; last_active_at?: string | null }>;
+        near_reward_customers: Array<{ member_id: string; member_name: string; member_phone: string; stamps_remaining: number; stamps_count?: number; stamps_required?: number }>;
     };
     staff_activity: Array<{ staff_id: string; staff_name: string; stamps_issued: number; redemptions_processed: number }>;
 }
@@ -79,7 +79,10 @@ const VendorDashboard: React.FC = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Dashboard</h1>
-                    <p className="page-subtitle">Real-time overview of your loyalty program.</p>
+                    <p className="page-subtitle">
+                        Vendor manager view (Admin staff role). Counter staff use Stamper logins — share bookmarks from
+                        Settings.
+                    </p>
                 </div>
             </div>
 
@@ -148,64 +151,46 @@ const VendorDashboard: React.FC = () => {
                 />
             </div>
 
-            <div className="glass-panel p-6 mb-8">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <span>🕒</span> Peak Activity
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h3 className="text-sm font-semibold text-dim mb-3">By Day</h3>
-                        <ul className="space-y-2">
-                            {metrics?.behavior_insights.stamps_by_day.map((day) => (
-                                <li key={day.day} className="flex justify-between text-sm text-white">
-                                    <span>{day.day}</span>
-                                    <span className="font-semibold">{day.stamps}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-semibold text-dim mb-3">By Time Window</h3>
-                        <ul className="space-y-2">
-                            {metrics?.behavior_insights.stamps_by_time_bucket.map((bucket) => (
-                                <li key={bucket.bucket} className="flex justify-between text-sm text-white">
-                                    <span>{bucket.bucket}</span>
-                                    <span className="font-semibold">{bucket.stamps}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+            <PeakActivityPanel behavior={metrics?.behavior_insights} totalStamps30d={metrics?.total_stamps_30d ?? 0} />
+
+            <div className="vendor-dash-insight-grid">
+                <CustomerInsightColumn
+                    variant="top"
+                    title="Top customers"
+                    subtitle="Most stamps in the last 30 days"
+                    emoji="🏆"
+                    emptyText="No stamp activity in the last 30 days yet — share your QR and keep stamping!"
+                    customers={metrics?.customer_insights.top_customers_30d ?? []}
+                />
+                <CustomerInsightColumn
+                    variant="risk"
+                    title="Needs attention"
+                    subtitle="No stamps for 30+ days"
+                    emoji="🌵"
+                    emptyText="Nobody has gone quiet long enough to flag — you're all caught up."
+                    atRisk={metrics?.customer_insights.at_risk_customers_30d ?? []}
+                />
+                <CustomerInsightColumn
+                    variant="near"
+                    title="Almost there"
+                    subtitle="1–2 stamps from a reward"
+                    emoji="✨"
+                    emptyText="No one is one stamp away — full cards will show up here."
+                    nearReward={metrics?.customer_insights.near_reward_customers ?? []}
+                />
+            </div>
+
+            <section className="glass-panel vendor-dash-section">
+                <div className="vendor-dash-section-head">
+                    <h2 className="vendor-dash-section-title">
+                        <span aria-hidden>🧑‍💼</span> Staff activity
+                    </h2>
+                    <span className="vendor-dash-section-chip">
+                        {metrics?.staff_activity.length ?? 0} staff
+                    </span>
                 </div>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-                <InsightList
-                    title="Top Customers (30d)"
-                    emptyText="No active customers in the last 30 days."
-                    items={metrics?.customer_insights.top_customers_30d.map((customer) =>
-                        `${customer.member_name} - ${customer.stamps} stamps`
-                    ) || []}
-                />
-                <InsightList
-                    title="At-Risk Customers"
-                    emptyText="No at-risk customers right now."
-                    items={metrics?.customer_insights.at_risk_customers_30d.map((customer) => customer.name) || []}
-                />
-                <InsightList
-                    title="Near Reward Customers"
-                    emptyText="No members are within 1-2 stamps of a reward."
-                    items={metrics?.customer_insights.near_reward_customers.map((customer) =>
-                        `${customer.member_name} - ${customer.stamps_remaining} to go`
-                    ) || []}
-                />
-            </div>
-
-            <div className="glass-panel p-6 mb-8">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <span>🧑‍💼</span> Staff Activity
-                </h2>
-                <div className="premium-table-container">
-                    <table className="premium-table">
+                <div className="vendor-dash-table-wrap">
+                    <table className="vendor-dash-table">
                         <thead>
                             <tr>
                                 <th>Staff Member</th>
@@ -223,24 +208,30 @@ const VendorDashboard: React.FC = () => {
                             ))}
                             {(!metrics?.staff_activity || metrics.staff_activity.length === 0) && (
                                 <tr>
-                                    <td colSpan={3} className="p-8 text-center text-muted">No staff activity yet.</td>
+                                    <td colSpan={3}>
+                                        <div className="vendor-dash-empty-row">
+                                            <span className="vendor-dash-empty-icon" aria-hidden>🪪</span>
+                                            <p>No staff activity yet.</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
 
             {/* Recent Activity */}
-            <div className="glass-panel p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <span>⚡</span> Recent Activity
+            <section className="glass-panel vendor-dash-section">
+                <div className="vendor-dash-section-head">
+                    <h2 className="vendor-dash-section-title">
+                        <span aria-hidden>⚡</span> Recent activity
                     </h2>
+                    <span className="vendor-dash-section-chip">{activity.length} events</span>
                 </div>
 
-                <div className="premium-table-container">
-                    <table className="premium-table">
+                <div className="vendor-dash-table-wrap">
+                    <table className="vendor-dash-table">
                         <thead>
                             <tr>
                                 <th style={{ width: '15%' }}>Type</th>
@@ -253,42 +244,675 @@ const VendorDashboard: React.FC = () => {
                             {activity.map((item) => (
                                 <tr key={item.id}>
                                     <td>
-                                        <span className={`badge ${item.type === 'REDEEM' ? 'badge-purple' : 'badge-primary'} flex items-center gap-1 w-fit`}>
+                                        <span
+                                            className={`vendor-dash-type-pill ${
+                                                item.type === 'REDEEM'
+                                                    ? 'vendor-dash-type-pill--redeem'
+                                                    : 'vendor-dash-type-pill--stamp'
+                                            }`}
+                                        >
                                             {item.type === 'REDEEM' ? '🎁' : '🎫'} {item.type}
                                         </span>
                                     </td>
                                     <td>
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold text-white">{item.member_name}</span>
-                                            <span className="text-xs text-muted font-mono">{item.member_phone}</span>
+                                        <div className="vendor-dash-member-block">
+                                            <span className="vendor-dash-member-name">{item.member_name}</span>
+                                            <span className="vendor-dash-member-phone">{item.member_phone}</span>
                                         </div>
                                     </td>
                                     <td>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-white">
+                                        <div className="vendor-dash-staff-cell">
+                                            <div className="vendor-dash-staff-avatar" aria-hidden>
                                                 {item.staff_name.charAt(0)}
                                             </div>
-                                            <span className="text-sm text-dim">{item.staff_name}</span>
+                                            <span className="vendor-dash-staff-name">{item.staff_name}</span>
                                         </div>
                                     </td>
-                                    <td className="text-sm text-muted">
+                                    <td className="vendor-dash-time-cell">
                                         {new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                        <span className="text-dim ml-2">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        <span className="vendor-dash-time-sub">
+                                            {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
                                     </td>
                                 </tr>
                             ))}
                             {activity.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="p-12 text-center text-muted flex flex-col items-center justify-center">
-                                        <span className="text-4xl mb-2 opacity-20">💤</span>
-                                        <p>No activity recorded yet.</p>
+                                    <td colSpan={4}>
+                                        <div className="vendor-dash-empty-row vendor-dash-empty-row--large">
+                                            <span className="vendor-dash-empty-icon" aria-hidden>💤</span>
+                                            <p>No activity recorded yet.</p>
+                                        </div>
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
+            </section>
+
+            <style>{VENDOR_DASHBOARD_CSS}</style>
+        </div>
+    );
+};
+
+const VENDOR_DASHBOARD_CSS = `
+.vendor-dash-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+.vendor-dash-peak-wrap {
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+.vendor-dash-peak-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.vendor-dash-peak-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.vendor-dash-peak-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.vendor-dash-peak-chip {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.vendor-dash-peak-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 900px) {
+  .vendor-dash-peak-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.vendor-dash-peak-col-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-dim);
+  margin: 0 0 1rem 0;
+}
+.vendor-dash-bar-row {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr 1.75rem;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.55rem;
+}
+.vendor-dash-bar-track {
+  height: 11px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.vendor-dash-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ef4444 0%, #f97316 45%, #eab308 100%);
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+}
+.vendor-dash-bar-fill--cool {
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 55%, #a855f7 100%);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
+}
+.vendor-dash-bar-count {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-align: right;
+}
+.vendor-dash-bar-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.88);
+  font-variant-numeric: tabular-nums;
+}
+.vendor-dash-peak-empty {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed rgba(255,255,255,0.12);
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  text-align: center;
+}
+.vendor-dash-insight-card {
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(155deg, rgba(42, 42, 54, 0.92), rgba(14, 14, 22, 0.98));
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: var(--glass-shadow);
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+}
+.vendor-dash-insight-card--top { border-top: 4px solid #eab308; }
+.vendor-dash-insight-card--risk { border-top: 4px solid #f97316; }
+.vendor-dash-insight-card--near { border-top: 4px solid #a855f7; }
+.vendor-dash-insight-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.vendor-dash-insight-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.vendor-dash-insight-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+}
+.vendor-dash-insight-sub {
+  margin: 0.15rem 0 0 0;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.vendor-dash-insight-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.vendor-dash-person-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.vendor-dash-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(239,68,68,0.35), rgba(234,179,8,0.25));
+  color: #fff;
+}
+.vendor-dash-person-main {
+  flex: 1;
+  min-width: 0;
+}
+.vendor-dash-person-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vendor-dash-person-meta {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 0.12rem;
+}
+.vendor-dash-pill {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.28rem 0.45rem;
+  border-radius: 8px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.vendor-dash-pill--gold {
+  background: rgba(234, 179, 8, 0.18);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+}
+.vendor-dash-pill--risk {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fdba74;
+  border: 1px solid rgba(249, 115, 22, 0.35);
+}
+.vendor-dash-pill--purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #e9d5ff;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+.vendor-dash-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.25rem 0.75rem;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.vendor-dash-empty-emoji {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.85;
+}
+.vendor-dash-section {
+  padding: 1.35rem;
+  margin-bottom: 2rem;
+}
+.vendor-dash-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.vendor-dash-section-title {
+  margin: 0;
+  color: #fff;
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+.vendor-dash-section-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+}
+.vendor-dash-table-wrap {
+  overflow: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+.vendor-dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+.vendor-dash-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  padding: 0.8rem 0.95rem;
+  border-bottom: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.03);
+}
+.vendor-dash-table td {
+  padding: 0.85rem 0.95rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  font-size: 0.88rem;
+}
+.vendor-dash-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.vendor-dash-table tbody tr:hover td {
+  background: rgba(255,255,255,0.03);
+}
+.vendor-dash-empty-row {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 1.4rem 0.75rem;
+}
+.vendor-dash-empty-row p {
+  margin: 0;
+}
+.vendor-dash-empty-row--large {
+  padding: 2rem 1rem;
+}
+.vendor-dash-empty-icon {
+  display: block;
+  font-size: 1.6rem;
+  margin-bottom: 0.45rem;
+  opacity: 0.8;
+}
+.vendor-dash-type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.28rem 0.5rem;
+  border-radius: 9px;
+  letter-spacing: 0.04em;
+}
+.vendor-dash-type-pill--stamp {
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.14);
+}
+.vendor-dash-type-pill--redeem {
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  background: rgba(168, 85, 247, 0.14);
+}
+.vendor-dash-member-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+.vendor-dash-member-name {
+  font-weight: 700;
+  color: #fff;
+}
+.vendor-dash-member-phone {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+.vendor-dash-staff-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.vendor-dash-staff-avatar {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.vendor-dash-staff-name {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+.vendor-dash-time-cell {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.vendor-dash-time-sub {
+  margin-left: 0.45rem;
+  color: var(--text-dim);
+}
+`;
+
+type InsightColumnProps =
+    | {
+          variant: 'top';
+          title: string;
+          subtitle: string;
+          emoji: string;
+          emptyText: string;
+          customers: DashboardMetrics['customer_insights']['top_customers_30d'];
+      }
+    | {
+          variant: 'risk';
+          title: string;
+          subtitle: string;
+          emoji: string;
+          emptyText: string;
+          atRisk: DashboardMetrics['customer_insights']['at_risk_customers_30d'];
+      }
+    | {
+          variant: 'near';
+          title: string;
+          subtitle: string;
+          emoji: string;
+          emptyText: string;
+          nearReward: DashboardMetrics['customer_insights']['near_reward_customers'];
+      };
+
+const PeakActivityPanel: React.FC<{
+    behavior?: DashboardMetrics['behavior_insights'];
+    totalStamps30d: number;
+}> = ({ behavior, totalStamps30d }) => {
+    const days = behavior?.stamps_by_day ?? [];
+    const buckets = behavior?.stamps_by_time_bucket ?? [];
+    const maxDay = Math.max(1, ...days.map((d) => d.stamps));
+    const maxBucket = Math.max(1, ...buckets.map((b) => b.stamps));
+    const hasAny = totalStamps30d > 0 || days.some((d) => d.stamps > 0) || buckets.some((b) => b.stamps > 0);
+
+    const shortDay = (label: string) =>
+        label.length <= 3 ? label.toUpperCase() : label.slice(0, 3).toUpperCase();
+
+    return (
+        <div className="glass-panel vendor-dash-peak-wrap">
+            <div className="vendor-dash-peak-head">
+                <div className="vendor-dash-peak-title-row">
+                    <span style={{ fontSize: '1.5rem', lineHeight: 1 }} aria-hidden>📊</span>
+                    <div>
+                        <h2 className="vendor-dash-peak-title">Peak activity</h2>
+                        <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
+                            Where your stamps cluster — rolling 30 days
+                        </p>
+                    </div>
+                </div>
+                <span className="vendor-dash-peak-chip">{totalStamps30d} stamps · 30d</span>
             </div>
+
+            {!hasAny ? (
+                <div className="vendor-dash-peak-empty">
+                    No stamp rhythm yet. Once members start visiting, you&apos;ll see day-of-week and time-of-day
+                    patterns here.
+                </div>
+            ) : (
+                <div className="vendor-dash-peak-grid">
+                    <div>
+                        <h3 className="vendor-dash-peak-col-title">By weekday</h3>
+                        {days.map((day) => (
+                            <div key={day.day} className="vendor-dash-bar-row">
+                                <span className="vendor-dash-bar-label">{shortDay(day.day)}</span>
+                                <div className="vendor-dash-bar-track" title={`${day.day}: ${day.stamps} stamps`}>
+                                    <div
+                                        className="vendor-dash-bar-fill"
+                                        style={{ width: `${Math.round((day.stamps / maxDay) * 100)}%` }}
+                                    />
+                                </div>
+                                <span className="vendor-dash-bar-count">{day.stamps}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div>
+                        <h3 className="vendor-dash-peak-col-title">By time of day</h3>
+                        {buckets.map((bucket) => (
+                            <div key={bucket.bucket} className="vendor-dash-bar-row">
+                                <span className="vendor-dash-bar-label">{bucket.bucket}</span>
+                                <div className="vendor-dash-bar-track" title={`${bucket.bucket}: ${bucket.stamps} stamps`}>
+                                    <div
+                                        className="vendor-dash-bar-fill vendor-dash-bar-fill--cool"
+                                        style={{ width: `${Math.round((bucket.stamps / maxBucket) * 100)}%` }}
+                                    />
+                                </div>
+                                <span className="vendor-dash-bar-count">{bucket.stamps}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+function initials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function maskPhoneTail(e164: string): string {
+    const digits = e164.replace(/\D/g, '');
+    if (digits.length < 4) return '···';
+    return `···${digits.slice(-4)}`;
+}
+
+function formatQuietSince(iso: string | null | undefined): string {
+    if (!iso) return 'No recent visits recorded';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return 'No recent visits recorded';
+    const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (days >= 45) return `Quiet ~${Math.max(1, Math.round(days / 30))} mo`;
+    if (days >= 7) return `Quiet ${days} days`;
+    return `Last ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+}
+
+const CustomerInsightColumn: React.FC<InsightColumnProps> = (props) => {
+    const cardClass =
+        props.variant === 'top'
+            ? 'vendor-dash-insight-card vendor-dash-insight-card--top'
+            : props.variant === 'risk'
+              ? 'vendor-dash-insight-card vendor-dash-insight-card--risk'
+              : 'vendor-dash-insight-card vendor-dash-insight-card--near';
+
+    let body: React.ReactNode = null;
+
+    if (props.variant === 'top') {
+        const rows = props.customers.filter((c) => c.stamps > 0);
+        body =
+            rows.length === 0 ? (
+                <div className="vendor-dash-empty">
+                    <span className="vendor-dash-empty-emoji">☕</span>
+                    {props.emptyText}
+                </div>
+            ) : (
+                <ul className="vendor-dash-insight-list">
+                    {rows.map((c, idx) => (
+                        <li key={c.member_id}>
+                            <div className="vendor-dash-person-row">
+                                <div className="vendor-dash-avatar" aria-hidden>
+                                    {initials(c.member_name || '?')}
+                                </div>
+                                <div className="vendor-dash-person-main">
+                                    <div className="vendor-dash-person-name">{c.member_name}</div>
+                                    <div className="vendor-dash-person-meta">{maskPhoneTail(c.member_phone)}</div>
+                                </div>
+                                <span className="vendor-dash-pill vendor-dash-pill--gold">
+                                    #{idx + 1} · {c.stamps} st
+                                </span>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            );
+    } else if (props.variant === 'risk') {
+        body =
+            props.atRisk.length === 0 ? (
+                <div className="vendor-dash-empty">
+                    <span className="vendor-dash-empty-emoji">✅</span>
+                    {props.emptyText}
+                </div>
+            ) : (
+                <ul className="vendor-dash-insight-list">
+                    {props.atRisk.map((c) => (
+                        <li key={c.member_id}>
+                            <div className="vendor-dash-person-row">
+                                <div className="vendor-dash-avatar" aria-hidden>
+                                    {initials(c.name || '?')}
+                                </div>
+                                <div className="vendor-dash-person-main">
+                                    <div className="vendor-dash-person-name">{c.name}</div>
+                                    <div className="vendor-dash-person-meta">
+                                        {formatQuietSince(c.last_active_at)} · {maskPhoneTail(c.phone_e164)}
+                                    </div>
+                                </div>
+                                <span className="vendor-dash-pill vendor-dash-pill--risk">Nudge</span>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            );
+    } else {
+        body =
+            props.nearReward.length === 0 ? (
+                <div className="vendor-dash-empty">
+                    <span className="vendor-dash-empty-emoji">🎯</span>
+                    {props.emptyText}
+                </div>
+            ) : (
+                <ul className="vendor-dash-insight-list">
+                    {props.nearReward.map((c) => (
+                        <li key={c.member_id}>
+                            <div className="vendor-dash-person-row">
+                                <div className="vendor-dash-avatar" aria-hidden>
+                                    {initials(c.member_name || '?')}
+                                </div>
+                                <div className="vendor-dash-person-main">
+                                    <div className="vendor-dash-person-name">{c.member_name}</div>
+                                    <div className="vendor-dash-person-meta">
+                                        {typeof c.stamps_count === 'number' &&
+                                        typeof c.stamps_required === 'number'
+                                            ? `${c.stamps_count}/${c.stamps_required} stamps`
+                                            : `${c.stamps_remaining} stamp${c.stamps_remaining === 1 ? '' : 's'} to reward`}
+                                    </div>
+                                </div>
+                                <span className="vendor-dash-pill vendor-dash-pill--purple">
+                                    {c.stamps_remaining} left
+                                </span>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            );
+    }
+
+    return (
+        <div className={cardClass}>
+            <div className="vendor-dash-insight-head">
+                <div className="vendor-dash-insight-icon" aria-hidden>
+                    {props.emoji}
+                </div>
+                <div>
+                    <h3 className="vendor-dash-insight-title">{props.title}</h3>
+                    <p className="vendor-dash-insight-sub">{props.subtitle}</p>
+                </div>
+            </div>
+            {body}
         </div>
     );
 };
@@ -301,21 +925,6 @@ const formatCurrency = (value: number): string => {
         maximumFractionDigits: 2
     }).format(value || 0);
 };
-
-const InsightList: React.FC<{ title: string; items: string[]; emptyText: string }> = ({ title, items, emptyText }) => (
-    <div className="glass-panel p-6">
-        <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
-        {items.length === 0 ? (
-            <p className="text-sm text-muted">{emptyText}</p>
-        ) : (
-            <ul className="space-y-2">
-                {items.map((item) => (
-                    <li key={item} className="text-sm text-white/90">{item}</li>
-                ))}
-            </ul>
-        )}
-    </div>
-);
 
 const MetricCard: React.FC<{ 
     title: string, 

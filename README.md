@@ -50,6 +50,16 @@ A multi-tenant digital loyalty stamp card system built with Node.js, Prisma, Pos
 *   **Staff Username**: `alice`
 *   **Staff PIN**: `1234`
 
+### Vendor & staff portal (tenant)
+
+- **Vendor portal entry**: [`/vendor/login`](http://localhost:5173/vendor/login) — enter the **store slug** (Store ID), then sign in with staff **username + PIN** at `/v/{slug}/staff`.
+- **Direct staff login (bookmark-friendly)**: `/v/{slug}/staff` — skips the slug picker; ideal for fixed tablets at the counter.
+- **Roles** (staff accounts):
+  - **`ADMIN`** — vendor manager: after login, opens `/v/{slug}/admin/*` (dashboard, members, staff, branding, settings).
+  - **`STAMPER`** — counter role only: after login, opens `/v/{slug}/staff/scan` (stamp / redeem scanner).
+- **Slug validation**: `/vendor/login` checks `GET /api/v1/v/{slug}/portal/status` before redirect (vendor must exist and not be suspended; matches staff-login eligibility including trial vendors).
+- **Recent slug**: The browser remembers the last successful slug on this device for quicker return visits.
+
 ## Troubleshooting
 
 ### "Table does not exist" or "Admin User not found"

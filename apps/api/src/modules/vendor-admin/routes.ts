@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify'
+import { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import bcrypt from 'bcryptjs'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
@@ -41,10 +41,33 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
         }
     }
 
+    /** URL slug must match the vendor tied to the JWT (tenant isolation). */
+    const ensureSlugMatchesTokenVendor = async (request: FastifyRequest<{ Params: { slug: string } }>) => {
+        const slugParam = request.params.slug?.trim()
+        const vendorId = request.user?.vendor_id
+        if (!slugParam) {
+            throw { code: 'BAD_REQUEST', message: 'Missing vendor slug' }
+        }
+        if (!vendorId) {
+            throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
+        }
+        const vendor = await fastify.prisma.vendor.findUnique({
+            where: { vendor_id: vendorId },
+            select: { vendor_slug: true }
+        })
+        if (!vendor?.vendor_slug) {
+            throw { code: 'UNAUTHORIZED', message: 'Vendor not found' }
+        }
+        if (vendor.vendor_slug.toLowerCase() !== slugParam.toLowerCase()) {
+            throw { code: 'FORBIDDEN', message: 'Vendor slug does not match authenticated vendor' }
+        }
+    }
+
     // Prefix: /v/:slug/admin
     fastify.register(async (subRequest) => {
         subRequest.addHook('onRequest', fastify.authenticate)
         subRequest.addHook('onRequest', ensureVendorAdmin)
+        subRequest.addHook('onRequest', ensureSlugMatchesTokenVendor)
 
         // --- EPIC A: Dashboard Metrics ---
         subRequest.get('/metrics', async (request, reply) => {

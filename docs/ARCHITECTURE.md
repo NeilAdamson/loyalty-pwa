@@ -1,8 +1,8 @@
 # Architecture — Multi-tenant Loyalty PWA (Afrihost Cloud/VPS, Node)
 
 ## 0. Document control
-- Version: 1.1
-- Date: 2026-01-20
+- Version: 1.2
+- Date: 2026-05-05
 - Hosting: Hetzner VPS
 - HTTPS: required (AutoSSL)
 
@@ -75,6 +75,8 @@ flowchart LR
   - URL path vendor_slug -> resolves vendor_id
   - Auth token claims include vendor_id
 - Every query for tenant-scoped resources MUST filter by vendor_id.
+- Vendor-admin HTTP routes (`/api/v1/v/:slug/admin/*`) **must** enforce that the path `:slug` matches the authenticated vendor's `vendor_slug` (JWT carries `vendor_id` only; slug mismatch returns `403`). This is defense-in-depth on top of `vendor_id`-scoped queries.
+- Public `GET /api/v1/v/:vendorSlug/portal/status` uses the same slug resolution rules as staff login (`VendorService.resolveBySlug`: vendor exists and status is `ACTIVE` or `TRIAL`). Used by `/vendor/login` to validate a slug before redirecting to `/v/:slug/staff` without leaking tenant branding.
 
 ## 5. Identity and session model
 
@@ -88,9 +90,10 @@ flowchart LR
 - PIN is stored as a hash and must be unique per staff account within a vendor.
 - Session token: JWT, TTL 12 hours, idle timeout 30 minutes.
 - Staff with `role: "ADMIN"` can access vendor admin endpoints.
+- **Operational slug UX**: tenants are addressed by `vendor_slug` in the URL (`/v/{slug}/…`). The marketing entry `/vendor/login` collects the slug once per device (optional); teams should bookmark `/v/{slug}/staff` on fixed hardware. The PWA may persist the last-used slug in `localStorage` for convenience.
 
 ### 5.3 Admin auth
-- **Vendor Admin**: Authenticates via staff login with `role: "ADMIN"`. Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
+- **Vendor Admin / vendor manager**: Authenticates via staff login with `role: "ADMIN"` (same personae as “Vendor Admin” in the PRD). Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
 - **Platform Admin**: email+password authentication. Uses HttpOnly cookies (set via `/api/v1/admin/auth/login`). Cookies are used for all platform admin endpoints (`/api/v1/admin/*`).
   - Email addresses are restricted to `@punchcard.co.za` domain (auto-generated from username)
   - Password reset: `/admin/forgot-password` sends reset email, `/admin/reset-password` completes the flow

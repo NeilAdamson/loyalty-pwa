@@ -137,7 +137,9 @@ const VendorStaff: React.FC = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Staff Management</h1>
-                    <p className="page-subtitle">Manage access and permissions for your team.</p>
+                    <p className="page-subtitle">
+                        Create Stamper logins for the counter scanner, or Admin logins for managers (full vendor portal).
+                    </p>
                 </div>
                 <button
                     onClick={openAddModal}
@@ -171,7 +173,7 @@ const VendorStaff: React.FC = () => {
                                     <td className="font-mono text-accent text-sm bg-white/5 inline-block px-2 py-1 rounded mx-4 my-2">{staff.username}</td>
                                     <td>
                                         <span className={`badge ${staff.role === 'ADMIN' ? 'badge-purple' : 'badge-blue'}`}>
-                                            {staff.role}
+                                            {staff.role === 'ADMIN' ? 'Admin (manager)' : 'Stamper'}
                                         </span>
                                     </td>
                                     <td>
@@ -245,8 +247,8 @@ const VendorStaff: React.FC = () => {
                                             onChange={(e) => setNewRole(e.target.value as 'ADMIN' | 'STAMPER')}
                                             className="glass-input appearance-none cursor-pointer"
                                         >
-                                            <option value="STAMPER">Stamper</option>
-                                            <option value="ADMIN">Admin</option>
+                                            <option value="STAMPER">Stamper — counter scanning only</option>
+                                            <option value="ADMIN">Admin — manager / full vendor portal</option>
                                         </select>
                                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-muted">
                                             {/* Explicit width/height to prevent giant arrow */}
@@ -274,7 +276,12 @@ const VendorStaff: React.FC = () => {
 
                             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-6">
                                 <p className="text-xs text-blue-200 leading-relaxed">
-                                    <strong>Note:</strong> {editingStaff ? 'Updating the PIN will require the staff member to use the new code immediately.' : 'A simplified username will be generated automatically.'}
+                                    <strong>Note:</strong>{' '}
+                                    {editingStaff
+                                        ? 'Updating the PIN will require the staff member to use the new code immediately.'
+                                        : 'A simplified username will be generated automatically.'}{' '}
+                                    <strong>Admin</strong> is the vendor manager role (dashboard, members, branding);{' '}
+                                    <strong>Stamper</strong> only uses the scanner.
                                 </p>
                             </div>
 

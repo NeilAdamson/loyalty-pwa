@@ -21,6 +21,18 @@ const VendorSettings: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+    const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+
+    const copyToClipboard = async (label: string, text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedLabel(label);
+            window.setTimeout(() => setCopiedLabel(null), 2000);
+        } catch {
+            setMessage({ text: 'Could not copy — select and copy manually.', type: 'error' });
+            window.setTimeout(() => setMessage(null), 4000);
+        }
+    };
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -182,6 +194,63 @@ const VendorSettings: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Portal shortcuts — share with staff / bookmark on devices */}
+                <div className="glass-panel p-8 mb-8">
+                    <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                        <span>🔗</span> Staff portal shortcuts
+                    </h2>
+                    <p className="text-sm text-dim mb-4">
+                        Bookmark these on shop tablets or share with your team. Slug in the URL must match your Store ID
+                        above.
+                    </p>
+                    <ul className="space-y-3 text-sm">
+                        <li className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between gap-x-4">
+                            <div>
+                                <div className="font-medium text-white">Staff login (recommended bookmark)</div>
+                                <code className="text-accent text-xs break-all">
+                                    {typeof window !== 'undefined'
+                                        ? `${window.location.origin}/v/${slug}/staff`
+                                        : `/v/${slug}/staff`}
+                                </code>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-ghost text-sm whitespace-nowrap shrink-0"
+                                onClick={() =>
+                                    copyToClipboard(
+                                        'staff',
+                                        `${typeof window !== 'undefined' ? window.location.origin : ''}/v/${slug}/staff`
+                                    )
+                                }
+                            >
+                                {copiedLabel === 'staff' ? 'Copied' : 'Copy URL'}
+                            </button>
+                        </li>
+                        <li className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between gap-x-4">
+                            <div>
+                                <div className="font-medium text-white">Vendor portal entry (slug picker)</div>
+                                <code className="text-accent text-xs break-all">
+                                    {typeof window !== 'undefined'
+                                        ? `${window.location.origin}/vendor/login`
+                                        : '/vendor/login'}
+                                </code>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-ghost text-sm whitespace-nowrap shrink-0"
+                                onClick={() =>
+                                    copyToClipboard(
+                                        'portal',
+                                        `${typeof window !== 'undefined' ? window.location.origin : ''}/vendor/login`
+                                    )
+                                }
+                            >
+                                {copiedLabel === 'portal' ? 'Copied' : 'Copy URL'}
+                            </button>
+                        </li>
+                    </ul>
                 </div>
 
                 {/* Subscription Status Card (Placeholder for now) */}
