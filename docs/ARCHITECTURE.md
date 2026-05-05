@@ -90,6 +90,7 @@ flowchart LR
 - PIN is stored as a hash and must be unique per staff account within a vendor.
 - Session token: JWT, TTL 12 hours, idle timeout 30 minutes.
 - Staff with `role: "ADMIN"` can access vendor admin endpoints.
+- **`GET /api/v1/staff/me`** (Bearer staff JWT): returns `{ staff_id, name, username, role }` for the enabled staff row matching `staff_id` + `vendor_id` in the token. Used by the vendor admin shell to show who is signed in. Member sessions omit `staff_id` and receive `403 Staff session required`.
 - **Operational slug UX**: tenants are addressed by `vendor_slug` in the URL (`/v/{slug}/…`). The marketing entry `/vendor/login` collects the slug once per device (optional); teams should bookmark `/v/{slug}/staff` on fixed hardware. The PWA may persist the last-used slug in `localStorage` for convenience.
 
 ### 5.3 Admin auth

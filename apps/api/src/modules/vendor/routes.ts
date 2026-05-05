@@ -27,6 +27,40 @@ const vendorRoutes: FastifyPluginAsync = async (fastify) => {
         }
     )
 
+    // Current staff session (vendor portal / scanner). Member tokens do not include staff_id.
+    fastify.get(
+        '/staff/me',
+        {
+            onRequest: [fastify.authenticate]
+        },
+        async (request, reply) => {
+            const { staff_id: staffId, vendor_id: vendorId } = request.user
+            if (!staffId || !vendorId) {
+                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff session required' })
+            }
+
+            const staff = await fastify.prisma.staffUser.findFirst({
+                where: {
+                    staff_id: staffId,
+                    vendor_id: vendorId,
+                    status: 'ENABLED'
+                },
+                select: {
+                    staff_id: true,
+                    name: true,
+                    username: true,
+                    role: true,
+                }
+            })
+
+            if (!staff) {
+                return reply.status(404).send({ code: 'NOT_FOUND', message: 'Staff not found or disabled' })
+            }
+
+            return staff
+        }
+    )
+
     // Public: Staff portal lookup — vendor exists and may log in (ACTIVE or TRIAL per VendorService)
     // GET /v/:vendorSlug/portal/status
     // Used by /vendor/login to validate slug before redirect (does not expose tenant branding).
