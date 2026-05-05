@@ -7,6 +7,8 @@ The database is implemented in PostgreSQL using Prisma ORM.
 
 ### Tenancy
 *   **Vendor** (`vendors`): Root tenant.
+    - `average_visit_value` (`DECIMAL(10,2)`, required): vendor-defined estimate of spend per stamp visit.
+    - `reward_cost` (`DECIMAL(10,2)`, required): vendor-defined cost per redemption.
 *   **VendorBranding** (`vendor_branding`): Theming configuration.
 *   **Branch** (`branches`): Physical locations.
 

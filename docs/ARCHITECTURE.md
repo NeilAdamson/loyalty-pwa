@@ -130,6 +130,19 @@ flowchart LR
 - Logs: structured JSON logs (API) + Caddy access logs.
 - Admin audit logs stored in DB.
 
+### 9.1 Vendor analytics pipeline (MVP)
+- Vendor analytics is served by tenant-scoped vendor-admin endpoints under `/api/v1/v/:slug/admin/*`.
+- Calculations are computed from:
+  - `members` (growth/activity)
+  - `card_instances` (completion and near-reward state)
+  - `stamp_transactions` and `redemption_transactions` (usage, behavior, and staff throughput)
+  - `vendors.average_visit_value` and `vendors.reward_cost` (estimated revenue/ROI)
+- Reporting windows are normalized to:
+  - current month
+  - previous month
+  - rolling 30 days
+- Estimated metrics are explicitly labeled as estimated in API and UI contracts.
+
 
 ### Local development (mandatory)
 All local development MUST run the full stack inside Docker containers using Docker Compose (Windows 11 supported).

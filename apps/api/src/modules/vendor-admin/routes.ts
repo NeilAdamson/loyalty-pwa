@@ -1,9 +1,40 @@
 import { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
+const TIME_BUCKETS = ['AM', 'PM', 'Evening'] as const
+
+const toPositiveNumber = (value: unknown, fieldName: string): number => {
+    if (value === undefined || value === null || value === '') {
+        throw { code: 'BAD_REQUEST', message: `${fieldName} is required` }
+    }
+
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        throw { code: 'BAD_REQUEST', message: `${fieldName} must be a positive number` }
+    }
+    return parsed
+}
+
+const startOfMonth = (base: Date): Date => new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), 1))
+
+const addDays = (base: Date, days: number): Date => {
+    const next = new Date(base)
+    next.setUTCDate(next.getUTCDate() + days)
+    return next
+}
+
+const getDateWindows = () => {
+    const now = new Date()
+    const currentMonthStart = startOfMonth(now)
+    const previousMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1))
+    const rolling30DaysStart = addDays(now, -30)
+    return { now, currentMonthStart, previousMonthStart, rolling30DaysStart }
+}
+
 const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
 
-    const ensureVendorAdmin = async (request: any, reply: any) => {
+    const ensureVendorAdmin = async (request: { user?: { vendor_id?: string, role?: string } }) => {
         const user = request.user
         if (!user || !user.vendor_id || user.role !== 'ADMIN') {
             throw { code: 'FORBIDDEN', message: 'Access denied: Vendor Admin only' }
@@ -20,34 +51,66 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             const user = request.user
             const vendorId = user.vendor_id
 
-            const now = new Date()
-            const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30))
-            const ninetyDaysAgo = new Date(new Date().setDate(new Date().getDate() - 90))
+            const { now, currentMonthStart, previousMonthStart, rolling30DaysStart } = getDateWindows()
+
+            const vendor = await fastify.prisma.vendor.findUnique({
+                where: { vendor_id: vendorId },
+                select: { average_visit_value: true, reward_cost: true }
+            })
+            if (!vendor) return reply.status(404).send({ message: 'Vendor not found' })
 
             const [
                 totalMembers,
-                activeMembers,
-                totalStamps,
-                totalRedemptions,
-                outstandingCards
+                newMembers30d,
+                _activeMembers30d,
+                currentMonthStamps,
+                previousMonthStamps,
+                currentMonthRedemptions,
+                previousMonthRedemptions,
+                outstandingCards,
+                totalCardsStarted,
+                staffActivityRaw,
+                repeatVisitRaw,
+                topCustomersRaw,
+                atRiskCustomersRaw,
+                nearRewardCustomersRaw,
+                activityWindow
             ] = await Promise.all([
                 fastify.prisma.member.count({ where: { vendor_id: vendorId } }),
                 fastify.prisma.member.count({
                     where: {
                         vendor_id: vendorId,
-                        last_active_at: { gte: ninetyDaysAgo }
+                        created_at: { gte: rolling30DaysStart }
                     }
                 }),
                 fastify.prisma.stampTransaction.count({
                     where: {
                         vendor_id: vendorId,
-                        stamped_at: { gte: thirtyDaysAgo }
+                        stamped_at: { gte: rolling30DaysStart }
+                    }
+                }),
+                fastify.prisma.stampTransaction.count({
+                    where: {
+                        vendor_id: vendorId,
+                        stamped_at: { gte: currentMonthStart, lt: now }
+                    }
+                }),
+                fastify.prisma.stampTransaction.count({
+                    where: {
+                        vendor_id: vendorId,
+                        stamped_at: { gte: previousMonthStart, lt: currentMonthStart }
                     }
                 }),
                 fastify.prisma.redemptionTransaction.count({
                     where: {
                         vendor_id: vendorId,
-                        redeemed_at: { gte: thirtyDaysAgo }
+                        redeemed_at: { gte: currentMonthStart, lt: now }
+                    }
+                }),
+                fastify.prisma.redemptionTransaction.count({
+                    where: {
+                        vendor_id: vendorId,
+                        redeemed_at: { gte: previousMonthStart, lt: currentMonthStart }
                     }
                 }),
                 fastify.prisma.cardInstance.count({
@@ -56,21 +119,305 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                         status: 'ACTIVE',
                         stamps_count: { gt: 0 }
                     }
+                }),
+                fastify.prisma.cardInstance.count({
+                    where: {
+                        vendor_id: vendorId,
+                        stamps_count: { gt: 0 }
+                    }
+                }),
+                fastify.prisma.staffUser.findMany({
+                    where: { vendor_id: vendorId },
+                    select: {
+                        staff_id: true,
+                        name: true,
+                        _count: {
+                            select: {
+                                stamp_txs: true,
+                                redeem_txs: true
+                            }
+                        }
+                    },
+                    orderBy: { name: 'asc' }
+                }),
+                fastify.prisma.member.findMany({
+                    where: { vendor_id: vendorId },
+                    select: {
+                        member_id: true,
+                        cards: {
+                            select: {
+                                stamp_txs: {
+                                    where: { stamped_at: { gte: rolling30DaysStart } },
+                                    select: { stamp_tx_id: true }
+                                }
+                            }
+                        }
+                    }
+                }),
+                fastify.prisma.member.findMany({
+                    where: { vendor_id: vendorId },
+                    select: {
+                        member_id: true,
+                        name: true,
+                        phone_e164: true,
+                        cards: {
+                            select: {
+                                stamp_txs: {
+                                    where: { stamped_at: { gte: rolling30DaysStart } },
+                                    select: { stamp_tx_id: true }
+                                }
+                            }
+                        }
+                    }
+                }),
+                fastify.prisma.member.findMany({
+                    where: {
+                        vendor_id: vendorId,
+                        last_active_at: { lt: rolling30DaysStart }
+                    },
+                    select: { member_id: true, name: true, phone_e164: true, last_active_at: true },
+                    take: 10,
+                    orderBy: { last_active_at: 'asc' }
+                }),
+                fastify.prisma.cardInstance.findMany({
+                    where: {
+                        vendor_id: vendorId,
+                        status: 'ACTIVE',
+                        stamps_count: { gte: 1 }
+                    },
+                    select: {
+                        member: { select: { member_id: true, name: true, phone_e164: true } },
+                        stamps_count: true,
+                        program: { select: { stamps_required: true } }
+                    }
+                }),
+                fastify.prisma.stampTransaction.findMany({
+                    where: { vendor_id: vendorId, stamped_at: { gte: rolling30DaysStart } },
+                    select: { stamped_at: true, card_id: true }
                 })
             ])
 
+            const activeMembersCount = repeatVisitRaw.filter((member) =>
+                member.cards.some((card) => card.stamp_txs.length > 0)
+            ).length
+            const repeatMembersCount = repeatVisitRaw.filter((member) => {
+                const totalVisits = member.cards.reduce((acc, card) => acc + card.stamp_txs.length, 0)
+                return totalVisits > 1
+            }).length
+
+            const topCustomers = topCustomersRaw
+                .map((member) => {
+                    const stamps = member.cards.reduce((acc, card) => acc + card.stamp_txs.length, 0)
+                    return {
+                        member_id: member.member_id,
+                        member_name: member.name,
+                        member_phone: member.phone_e164,
+                        stamps
+                    }
+                })
+                .filter((member) => member.stamps > 0)
+                .sort((a, b) => b.stamps - a.stamps)
+                .slice(0, 10)
+
+            const nearRewardCustomers = nearRewardCustomersRaw
+                .map((card) => {
+                    const stampsRemaining = card.program.stamps_required - card.stamps_count
+                    return {
+                        member_id: card.member.member_id,
+                        member_name: card.member.name,
+                        member_phone: card.member.phone_e164,
+                        stamps_remaining: stampsRemaining,
+                        stamps_count: card.stamps_count,
+                        stamps_required: card.program.stamps_required
+                    }
+                })
+                .filter((card) => card.stamps_remaining >= 1 && card.stamps_remaining <= 2)
+                .sort((a, b) => a.stamps_remaining - b.stamps_remaining)
+                .slice(0, 10)
+
+            const stampsByDay = DAY_NAMES.map((day) => ({ day, stamps: 0 }))
+            const stampsByTimeBucket = TIME_BUCKETS.map((bucket) => ({ bucket, stamps: 0 }))
+            const firstStampByCard = new Map<string, Date>()
+            for (const stamp of activityWindow) {
+                const stampDate = new Date(stamp.stamped_at)
+                stampsByDay[stampDate.getUTCDay()].stamps += 1
+
+                const hour = stampDate.getUTCHours()
+                if (hour < 12) stampsByTimeBucket[0].stamps += 1
+                else if (hour < 17) stampsByTimeBucket[1].stamps += 1
+                else stampsByTimeBucket[2].stamps += 1
+
+                const existing = firstStampByCard.get(stamp.card_id)
+                if (!existing || stampDate < existing) firstStampByCard.set(stamp.card_id, stampDate)
+            }
+
+            const redemptionsForAverage = await fastify.prisma.redemptionTransaction.findMany({
+                where: { vendor_id: vendorId },
+                select: { card_id: true, redeemed_at: true }
+            })
+            const rewardDurationsDays = redemptionsForAverage
+                .map((redemption) => {
+                    const firstStampAt = firstStampByCard.get(redemption.card_id)
+                    if (!firstStampAt) return null
+                    const diffMs = new Date(redemption.redeemed_at).getTime() - firstStampAt.getTime()
+                    return diffMs >= 0 ? diffMs / (1000 * 60 * 60 * 24) : null
+                })
+                .filter((days): days is number => typeof days === 'number')
+            const averageTimeToRewardDays = rewardDurationsDays.length > 0
+                ? Number((rewardDurationsDays.reduce((acc, value) => acc + value, 0) / rewardDurationsDays.length).toFixed(1))
+                : 0
+
+            const averageVisitValue = Number(vendor.average_visit_value)
+            const rewardCost = Number(vendor.reward_cost)
+            const estimatedRevenueCurrentMonth = Number((currentMonthStamps * averageVisitValue).toFixed(2))
+            const rewardCostCurrentMonth = Number((currentMonthRedemptions * rewardCost).toFixed(2))
+            const estimatedRoiRatio = rewardCostCurrentMonth > 0
+                ? Number((estimatedRevenueCurrentMonth / rewardCostCurrentMonth).toFixed(2))
+                : 0
+
             return {
+                reporting_periods: {
+                    current_month_start: currentMonthStart.toISOString(),
+                    previous_month_start: previousMonthStart.toISOString(),
+                    rolling_30_days_start: rolling30DaysStart.toISOString(),
+                    as_of: now.toISOString()
+                },
                 total_members: totalMembers,
-                active_members: activeMembers,
-                total_stamps_30d: totalStamps,
-                total_redemptions_30d: totalRedemptions,
-                redemption_rate: totalStamps > 0 ? ((totalRedemptions / totalStamps) * 100).toFixed(1) : 0,
-                outstanding_rewards: outstandingCards
+                new_members_30d: newMembers30d,
+                active_members_30d: activeMembersCount,
+                total_stamps_30d: activityWindow.length,
+                total_stamps_current_month: currentMonthStamps,
+                total_stamps_previous_month: previousMonthStamps,
+                total_redemptions_current_month: currentMonthRedemptions,
+                total_redemptions_previous_month: previousMonthRedemptions,
+                outstanding_rewards: outstandingCards,
+                card_completion_rate: totalCardsStarted > 0 ? Number((currentMonthRedemptions / totalCardsStarted).toFixed(4)) : 0,
+                average_time_to_reward_days: averageTimeToRewardDays,
+                average_visit_value: averageVisitValue,
+                reward_cost: rewardCost,
+                estimated_revenue_current_month: estimatedRevenueCurrentMonth,
+                total_reward_cost_current_month: rewardCostCurrentMonth,
+                estimated_roi_ratio: estimatedRoiRatio,
+                estimated_roi_label: estimatedRoiRatio > 0 ? `${estimatedRoiRatio}x return` : 'N/A',
+                repeat_visit_indicator_30d: activeMembersCount > 0 ? Number(((repeatMembersCount / activeMembersCount) * 100).toFixed(1)) : 0,
+                behavior_insights: {
+                    stamps_by_day: stampsByDay,
+                    stamps_by_time_bucket: stampsByTimeBucket
+                },
+                customer_insights: {
+                    top_customers_30d: topCustomers,
+                    at_risk_customers_30d: atRiskCustomersRaw,
+                    near_reward_customers: nearRewardCustomers
+                },
+                staff_activity: staffActivityRaw.map((staff) => ({
+                    staff_id: staff.staff_id,
+                    staff_name: staff.name,
+                    stamps_issued: staff._count.stamp_txs,
+                    redemptions_processed: staff._count.redeem_txs
+                }))
             }
         })
 
+        subRequest.get('/insights/behavior', async (request) => {
+            const vendorId = request.user.vendor_id
+            const { rolling30DaysStart } = getDateWindows()
+            const stamps = await fastify.prisma.stampTransaction.findMany({
+                where: { vendor_id: vendorId, stamped_at: { gte: rolling30DaysStart } },
+                select: { stamped_at: true }
+            })
+
+            const stampsByDay = DAY_NAMES.map((day) => ({ day, stamps: 0 }))
+            const stampsByTimeBucket = TIME_BUCKETS.map((bucket) => ({ bucket, stamps: 0 }))
+            for (const stamp of stamps) {
+                const stampDate = new Date(stamp.stamped_at)
+                stampsByDay[stampDate.getUTCDay()].stamps += 1
+                const hour = stampDate.getUTCHours()
+                if (hour < 12) stampsByTimeBucket[0].stamps += 1
+                else if (hour < 17) stampsByTimeBucket[1].stamps += 1
+                else stampsByTimeBucket[2].stamps += 1
+            }
+
+            return { period: 'rolling_30_days', stamps_by_day: stampsByDay, stamps_by_time_bucket: stampsByTimeBucket }
+        })
+
+        subRequest.get('/insights/customers', async (request) => {
+            const vendorId = request.user.vendor_id
+            const { rolling30DaysStart } = getDateWindows()
+            const [members, atRiskCustomersRaw, nearRewardCustomersRaw] = await Promise.all([
+                fastify.prisma.member.findMany({
+                    where: { vendor_id: vendorId },
+                    select: {
+                        member_id: true,
+                        name: true,
+                        phone_e164: true,
+                        cards: { select: { stamp_txs: { where: { stamped_at: { gte: rolling30DaysStart } }, select: { stamp_tx_id: true } } } }
+                    }
+                }),
+                fastify.prisma.member.findMany({
+                    where: { vendor_id: vendorId, last_active_at: { lt: rolling30DaysStart } },
+                    select: { member_id: true, name: true, phone_e164: true, last_active_at: true },
+                    take: 10,
+                    orderBy: { last_active_at: 'asc' }
+                }),
+                fastify.prisma.cardInstance.findMany({
+                    where: { vendor_id: vendorId, status: 'ACTIVE', stamps_count: { gte: 1 } },
+                    select: {
+                        member: { select: { member_id: true, name: true, phone_e164: true } },
+                        stamps_count: true,
+                        program: { select: { stamps_required: true } }
+                    }
+                })
+            ])
+
+            const topCustomers = members
+                .map((member) => {
+                    const stamps = member.cards.reduce((acc, card) => acc + card.stamp_txs.length, 0)
+                    return { member_id: member.member_id, member_name: member.name, member_phone: member.phone_e164, stamps }
+                })
+                .filter((member) => member.stamps > 0)
+                .sort((a, b) => b.stamps - a.stamps)
+                .slice(0, 10)
+
+            const nearRewardCustomers = nearRewardCustomersRaw
+                .map((card) => ({
+                    member_id: card.member.member_id,
+                    member_name: card.member.name,
+                    member_phone: card.member.phone_e164,
+                    stamps_remaining: card.program.stamps_required - card.stamps_count
+                }))
+                .filter((card) => card.stamps_remaining >= 1 && card.stamps_remaining <= 2)
+                .sort((a, b) => a.stamps_remaining - b.stamps_remaining)
+                .slice(0, 10)
+
+            return {
+                period: 'rolling_30_days',
+                top_customers_30d: topCustomers,
+                at_risk_customers_30d: atRiskCustomersRaw,
+                near_reward_customers: nearRewardCustomers
+            }
+        })
+
+        subRequest.get('/insights/staff', async (request) => {
+            const vendorId = request.user.vendor_id
+            const staff = await fastify.prisma.staffUser.findMany({
+                where: { vendor_id: vendorId },
+                select: {
+                    staff_id: true,
+                    name: true,
+                    _count: { select: { stamp_txs: true, redeem_txs: true } }
+                },
+                orderBy: { name: 'asc' }
+            })
+            return staff.map((staffRow) => ({
+                staff_id: staffRow.staff_id,
+                staff_name: staffRow.name,
+                stamps_issued: staffRow._count.stamp_txs,
+                redemptions_processed: staffRow._count.redeem_txs
+            }))
+        })
+
         // Activity Feed
-        subRequest.get('/activity', async (request, reply) => {
+        subRequest.get('/activity', async (request) => {
             const user = request.user
             const vendorId = user.vendor_id
 
@@ -120,20 +467,26 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
 
 
         // --- EPIC B: Member Management ---
-        subRequest.get<{ Querystring: { search?: string, status?: string } }>('/members', async (request, reply) => {
+        subRequest.get<{ Querystring: { search?: string, status?: string } }>('/members', async (request) => {
             const { search, status } = request.query
             const vendorId = request.user.vendor_id
+            if (!vendorId) throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
 
-            const where: any = { vendor_id: vendorId }
+            const where: {
+                vendor_id: string;
+                status?: string;
+                OR?: Array<{ name: { contains: string; mode: 'insensitive' } } | { phone_e164: { contains: string } }>;
+            } = { vendor_id: vendorId }
 
             if (search) {
+                const searchTerm = search
                 where.OR = [
-                    { name: { contains: search, mode: 'insensitive' } },
-                    { phone_e164: { contains: search } }
+                    { name: { contains: searchTerm, mode: 'insensitive' } },
+                    { phone_e164: { contains: searchTerm } }
                 ]
             }
             if (status) {
-                where.status = status
+                where.status = status as string
             }
 
             const members = await fastify.prisma.member.findMany({
@@ -220,7 +573,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
         })
 
         // --- EPIC C: Staff Management ---
-        subRequest.get('/staff', async (request, reply) => {
+        subRequest.get('/staff', async (request) => {
             const vendorId = request.user.vendor_id
             return fastify.prisma.staffUser.findMany({
                 where: { vendor_id: vendorId },
@@ -228,7 +581,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             })
         })
 
-        subRequest.post<{ Body: { name: string, pin: string, role: string } }>('/staff', async (request, reply) => {
+        subRequest.post<{ Body: { name: string, pin: string, role: string } }>('/staff', async (request) => {
             const { name, pin, role } = request.body
             const vendorId = request.user.vendor_id
             if (!vendorId) throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
@@ -264,7 +617,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             const staff = await fastify.prisma.staffUser.findFirst({ where: { staff_id: id, vendor_id: vendorId } })
             if (!staff) return reply.status(404).send({ message: 'Staff not found' })
 
-            const updateData: any = {}
+            const updateData: { name?: string; role?: string; pin_hash?: string; pin_last_changed_at?: Date } = {}
             if (name) updateData.name = name
             if (role) updateData.role = role
             if (pin) {
@@ -295,26 +648,31 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
 
 
         // --- EPIC D: Business Info ---
-        subRequest.get('/business', async (request, reply) => {
+        subRequest.get('/business', async (request) => {
             const vendorId = request.user.vendor_id
             return fastify.prisma.vendor.findUnique({
                 where: { vendor_id: vendorId }
             })
         })
 
-        subRequest.put<{ Body: { trading_name?: string } }>('/business', async (request, reply) => {
+        subRequest.put<{ Body: { trading_name?: string, average_visit_value?: number, reward_cost?: number } }>('/business', async (request) => {
             const vendorId = request.user.vendor_id
-            const { trading_name } = request.body
+            const { trading_name, average_visit_value, reward_cost } = request.body
+
+            const data: { trading_name?: string, average_visit_value?: number, reward_cost?: number } = {}
+            if (trading_name !== undefined) data.trading_name = trading_name
+            if (average_visit_value !== undefined) data.average_visit_value = toPositiveNumber(average_visit_value, 'average_visit_value')
+            if (reward_cost !== undefined) data.reward_cost = toPositiveNumber(reward_cost, 'reward_cost')
 
             const updated = await fastify.prisma.vendor.update({
                 where: { vendor_id: vendorId },
-                data: { trading_name }
+                data
             })
             return updated
         })
 
         // --- EPIC E: Branding ---
-        subRequest.get('/branding', async (request, reply) => {
+        subRequest.get('/branding', async (request) => {
             const vendorId = request.user.vendor_id
             const branding = await fastify.prisma.vendorBranding.findUnique({
                 where: { vendor_id: vendorId }
@@ -374,7 +732,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                 // Update Program (if reward info provided)
                 if (data.reward_title || data.stamps_required) {
                     // Find active program
-                    let program = await fastify.prisma.program.findFirst({
+                    const program = await fastify.prisma.program.findFirst({
                         where: { vendor_id: vendorId, is_active: true }
                     })
 
@@ -390,12 +748,13 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                 }
 
                 return branding
-            } catch (err: any) {
+            } catch (err: unknown) {
                 request.log.error(err, 'Failed to update branding')
-                const statusCode = err.statusCode || 500
-                const message = err.message || 'Failed to save branding'
+                const statusCode = typeof err === 'object' && err !== null && 'statusCode' in err ? Number((err as { statusCode: number }).statusCode) : 500
+                const message = typeof err === 'object' && err !== null && 'message' in err ? String((err as { message: string }).message) : 'Failed to save branding'
+                const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code: string }).code) : 'INTERNAL_SERVER_ERROR'
                 return reply.code(statusCode).send({
-                    code: err.code || 'INTERNAL_SERVER_ERROR',
+                    code,
                     message
                 })
             }

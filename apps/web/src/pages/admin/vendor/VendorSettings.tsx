@@ -12,7 +12,11 @@ const VendorSettings: React.FC = () => {
     const [tradingName, setTradingName] = useState('');
     const [legalName, setLegalName] = useState('');
     const [vendorSlug, setVendorSlug] = useState('');
+    const [averageVisitValue, setAverageVisitValue] = useState('');
+    const [rewardCost, setRewardCost] = useState('');
     const initialTradingNameRef = useRef<string>('');
+    const initialAverageVisitValueRef = useRef<string>('');
+    const initialRewardCostRef = useRef<string>('');
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -29,8 +33,14 @@ const VendorSettings: React.FC = () => {
                 const tradingNameValue = data.trading_name || '';
                 setTradingName(tradingNameValue);
                 setLegalName(data.legal_name || '');
-                setVendorSlug(data.slug || '');
+                setVendorSlug(data.vendor_slug || '');
+                const averageVisitValueValue = data.average_visit_value ? String(data.average_visit_value) : '';
+                const rewardCostValue = data.reward_cost ? String(data.reward_cost) : '';
+                setAverageVisitValue(averageVisitValueValue);
+                setRewardCost(rewardCostValue);
                 initialTradingNameRef.current = tradingNameValue;
+                initialAverageVisitValueRef.current = averageVisitValueValue;
+                initialRewardCostRef.current = rewardCostValue;
             } catch (error) {
                 console.error('Error fetching settings:', error);
             } finally {
@@ -41,7 +51,9 @@ const VendorSettings: React.FC = () => {
     }, [slug, token]);
 
     // Check if form is dirty
-    const isDirty = tradingName !== initialTradingNameRef.current;
+    const isDirty = tradingName !== initialTradingNameRef.current
+        || averageVisitValue !== initialAverageVisitValueRef.current
+        || rewardCost !== initialRewardCostRef.current;
 
     // Block navigation if there are unsaved changes (but not during save)
     useUnsavedChanges({ isDirty, message: 'You have unsaved settings changes. Are you sure you want to leave?', saving: saving });
@@ -53,10 +65,16 @@ const VendorSettings: React.FC = () => {
 
         try {
             await api.put(`/api/v1/v/${slug}/admin/business`,
-                { trading_name: tradingName },
+                {
+                    trading_name: tradingName,
+                    average_visit_value: Number(averageVisitValue),
+                    reward_cost: Number(rewardCost)
+                },
                 { headers: { 'Authorization': `Bearer ${token}` } }
             );
             initialTradingNameRef.current = tradingName;
+            initialAverageVisitValueRef.current = averageVisitValue;
+            initialRewardCostRef.current = rewardCost;
             setMessage({ text: 'Settings saved successfully!', type: 'success' });
 
             // Clear message after 3 seconds
@@ -126,6 +144,41 @@ const VendorSettings: React.FC = () => {
                                     disabled
                                     className="glass-input opacity-60 cursor-not-allowed"
                                 />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="input-label">Average Visit Value</label>
+                                <input
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    value={averageVisitValue}
+                                    onChange={(e) => setAverageVisitValue(e.target.value)}
+                                    className="glass-input"
+                                    placeholder="e.g. 85.00"
+                                    required
+                                />
+                                <p className="text-xs text-dim mt-2">
+                                    Used to calculate estimated revenue from stamp activity.
+                                </p>
+                            </div>
+                            <div>
+                                <label className="input-label">Reward Cost</label>
+                                <input
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    value={rewardCost}
+                                    onChange={(e) => setRewardCost(e.target.value)}
+                                    className="glass-input"
+                                    placeholder="e.g. 25.00"
+                                    required
+                                />
+                                <p className="text-xs text-dim mt-2">
+                                    Used to calculate estimated loyalty cost and ROI.
+                                </p>
                             </div>
                         </div>
                     </div>

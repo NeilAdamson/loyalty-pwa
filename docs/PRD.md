@@ -209,6 +209,25 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
   - stamps (last 30d)
   - redemptions (last 30d)
   - staff activity (stamps per staff)
+- Vendor analytics MVP also includes:
+  - `new_members_30d`
+  - current month vs previous month stamps and redemptions
+  - card completion rate (`total_redemptions / total_cards_started`)
+  - average time to reward (days from first stamp to redemption)
+  - estimated revenue (`total_stamps_current_month * average_visit_value`)
+  - estimated reward cost (`total_redemptions_current_month * reward_cost`)
+  - estimated ROI (`estimated_revenue / estimated_reward_cost`) as `Nx return`
+  - peak activity by day and by time window (AM/PM/Evening)
+  - repeat visit indicator (`% of members with >1 stamp in last 30 days`)
+  - top customers (stamps, rolling 30 days)
+  - at-risk customers (no activity in last 30 days)
+  - near-reward customers (1-2 stamps from completion)
+
+**FR-E2 Vendor analytics configuration**
+- Vendor admin can set and edit:
+  - `average_visit_value` (required, positive)
+  - `reward_cost` (required, positive)
+- These values are used for estimated metrics and can be updated from vendor business settings.
 
 ## 10. Required screens
 

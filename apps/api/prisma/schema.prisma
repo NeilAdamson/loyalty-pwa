@@ -26,6 +26,8 @@ model Vendor {
   
   billing_start_date     DateTime @default(now()) @db.Timestamptz
   monthly_billing_amount Decimal  @default(0.00) @db.Decimal(10, 2)
+  average_visit_value    Decimal  @default(1.00) @db.Decimal(10, 2)
+  reward_cost            Decimal  @default(1.00) @db.Decimal(10, 2)
   
   contact_name    String @default("")
   contact_surname String @default("")

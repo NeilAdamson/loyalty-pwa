@@ -1,0 +1,3 @@
+ALTER TABLE "vendors"
+ADD COLUMN "average_visit_value" DECIMAL(10,2) NOT NULL DEFAULT 1.00,
+ADD COLUMN "reward_cost" DECIMAL(10,2) NOT NULL DEFAULT 1.00;

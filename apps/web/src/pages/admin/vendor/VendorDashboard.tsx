@@ -5,11 +5,33 @@ import { api } from '../../../utils/api';
 
 interface DashboardMetrics {
     total_members: number;
-    active_members: number;
+    new_members_30d: number;
+    active_members_30d: number;
     total_stamps_30d: number;
-    total_redemptions_30d: number;
-    redemption_rate: string;
+    total_stamps_current_month: number;
+    total_stamps_previous_month: number;
+    total_redemptions_current_month: number;
+    total_redemptions_previous_month: number;
     outstanding_rewards: number;
+    card_completion_rate: number;
+    average_time_to_reward_days: number;
+    average_visit_value: number;
+    reward_cost: number;
+    estimated_revenue_current_month: number;
+    total_reward_cost_current_month: number;
+    estimated_roi_ratio: number;
+    estimated_roi_label: string;
+    repeat_visit_indicator_30d: number;
+    behavior_insights: {
+        stamps_by_day: Array<{ day: string; stamps: number }>;
+        stamps_by_time_bucket: Array<{ bucket: string; stamps: number }>;
+    };
+    customer_insights: {
+        top_customers_30d: Array<{ member_id: string; member_name: string; member_phone: string; stamps: number }>;
+        at_risk_customers_30d: Array<{ member_id: string; name: string; phone_e164: string }>;
+        near_reward_customers: Array<{ member_id: string; member_name: string; member_phone: string; stamps_remaining: number }>;
+    };
+    staff_activity: Array<{ staff_id: string; staff_name: string; stamps_issued: number; redemptions_processed: number }>;
 }
 
 interface ActivityItem {
@@ -72,32 +94,141 @@ const VendorDashboard: React.FC = () => {
                     title="Total Members"
                     value={metrics?.total_members || 0}
                     icon="👥"
-                    trend={`${metrics?.active_members} active (90d)`}
+                    trend={`${metrics?.active_members_30d || 0} active (30d) | ${metrics?.new_members_30d || 0} new`}
                     iconBg="bg-purple-500/20"
                     iconColor="text-purple-400"
                 />
                 <MetricCard
-                    title="Stamps (30d)"
-                    value={metrics?.total_stamps_30d || 0}
+                    title="Current Month Stamps"
+                    value={metrics?.total_stamps_current_month || 0}
                     icon="🎫"
+                    trend={`Prev month: ${metrics?.total_stamps_previous_month || 0}`}
                     iconBg="bg-yellow-500/20"
                     iconColor="text-yellow-400"
                 />
                 <MetricCard
-                    title="Redemptions (30d)"
-                    value={metrics?.total_redemptions_30d || 0}
+                    title="Current Month Redemptions"
+                    value={metrics?.total_redemptions_current_month || 0}
                     icon="🎁"
+                    trend={`Prev month: ${metrics?.total_redemptions_previous_month || 0}`}
                     iconBg="bg-red-500/20"
                     iconColor="text-red-400"
                 />
                 <MetricCard
-                    title="Outstanding Rewards"
-                    value={metrics?.outstanding_rewards || 0}
-                    icon="⚠️"
-                    trend="Liability Exposure"
+                    title="Estimated Revenue (Current Month)"
+                    value={formatCurrency(metrics?.estimated_revenue_current_month || 0)}
+                    icon="💰"
+                    trend={`Avg visit value: ${formatCurrency(metrics?.average_visit_value || 0)}`}
+                    iconBg="bg-emerald-500/20"
+                    iconColor="text-emerald-400"
+                />
+                <MetricCard
+                    title="Estimated ROI"
+                    value={metrics?.estimated_roi_label || 'N/A'}
+                    icon="📈"
+                    trend={`Reward cost: ${formatCurrency(metrics?.total_reward_cost_current_month || 0)}`}
+                    iconBg="bg-blue-500/20"
+                    iconColor="text-blue-400"
+                />
+                <MetricCard
+                    title="Card Completion Rate"
+                    value={`${((metrics?.card_completion_rate || 0) * 100).toFixed(1)}%`}
+                    icon="✅"
+                    trend={`Avg time to reward: ${metrics?.average_time_to_reward_days || 0} days`}
                     iconBg="bg-orange-500/20"
                     iconColor="text-orange-400"
                 />
+                <MetricCard
+                    title="Repeat Visits (30d)"
+                    value={`${metrics?.repeat_visit_indicator_30d || 0}%`}
+                    icon="🔁"
+                    trend={`Total stamps (30d): ${metrics?.total_stamps_30d || 0}`}
+                    iconBg="bg-orange-500/20"
+                    iconColor="text-orange-400"
+                />
+            </div>
+
+            <div className="glass-panel p-6 mb-8">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <span>🕒</span> Peak Activity
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 className="text-sm font-semibold text-dim mb-3">By Day</h3>
+                        <ul className="space-y-2">
+                            {metrics?.behavior_insights.stamps_by_day.map((day) => (
+                                <li key={day.day} className="flex justify-between text-sm text-white">
+                                    <span>{day.day}</span>
+                                    <span className="font-semibold">{day.stamps}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-semibold text-dim mb-3">By Time Window</h3>
+                        <ul className="space-y-2">
+                            {metrics?.behavior_insights.stamps_by_time_bucket.map((bucket) => (
+                                <li key={bucket.bucket} className="flex justify-between text-sm text-white">
+                                    <span>{bucket.bucket}</span>
+                                    <span className="font-semibold">{bucket.stamps}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+                <InsightList
+                    title="Top Customers (30d)"
+                    emptyText="No active customers in the last 30 days."
+                    items={metrics?.customer_insights.top_customers_30d.map((customer) =>
+                        `${customer.member_name} - ${customer.stamps} stamps`
+                    ) || []}
+                />
+                <InsightList
+                    title="At-Risk Customers"
+                    emptyText="No at-risk customers right now."
+                    items={metrics?.customer_insights.at_risk_customers_30d.map((customer) => customer.name) || []}
+                />
+                <InsightList
+                    title="Near Reward Customers"
+                    emptyText="No members are within 1-2 stamps of a reward."
+                    items={metrics?.customer_insights.near_reward_customers.map((customer) =>
+                        `${customer.member_name} - ${customer.stamps_remaining} to go`
+                    ) || []}
+                />
+            </div>
+
+            <div className="glass-panel p-6 mb-8">
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <span>🧑‍💼</span> Staff Activity
+                </h2>
+                <div className="premium-table-container">
+                    <table className="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Staff Member</th>
+                                <th>Stamps Issued</th>
+                                <th>Redemptions Processed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {metrics?.staff_activity.map((staff) => (
+                                <tr key={staff.staff_id}>
+                                    <td>{staff.staff_name}</td>
+                                    <td>{staff.stamps_issued}</td>
+                                    <td>{staff.redemptions_processed}</td>
+                                </tr>
+                            ))}
+                            {(!metrics?.staff_activity || metrics.staff_activity.length === 0) && (
+                                <tr>
+                                    <td colSpan={3} className="p-8 text-center text-muted">No staff activity yet.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Recent Activity */}
@@ -161,6 +292,30 @@ const VendorDashboard: React.FC = () => {
         </div>
     );
 };
+
+const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'ZAR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(value || 0);
+};
+
+const InsightList: React.FC<{ title: string; items: string[]; emptyText: string }> = ({ title, items, emptyText }) => (
+    <div className="glass-panel p-6">
+        <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
+        {items.length === 0 ? (
+            <p className="text-sm text-muted">{emptyText}</p>
+        ) : (
+            <ul className="space-y-2">
+                {items.map((item) => (
+                    <li key={item} className="text-sm text-white/90">{item}</li>
+                ))}
+            </ul>
+        )}
+    </div>
+);
 
 const MetricCard: React.FC<{ 
     title: string, 

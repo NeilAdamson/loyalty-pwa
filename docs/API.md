@@ -180,6 +180,69 @@ Body:
 - `403 FORBIDDEN`: User is not a vendor admin
 - `500 INTERNAL_SERVER_ERROR`: Server error (check logs for details)
 
+### Vendor Analytics & Business Settings (Protected: Vendor Admin)
+All vendor analytics endpoints are under `/api/v1/v/:slug/admin/*` and require `Authorization: Bearer <VendorAdminToken>`.
+
+**Get Business Settings**
+`GET /api/v1/v/:slug/admin/business`
+
+Returns vendor business profile including analytics config fields:
+- `trading_name`
+- `vendor_slug`
+- `average_visit_value`
+- `reward_cost`
+
+**Update Business Settings**
+`PUT /api/v1/v/:slug/admin/business`
+
+Body:
+```json
+{
+  "trading_name": "Demo Cafe",
+  "average_visit_value": 85.00,
+  "reward_cost": 25.00
+}
+```
+
+Rules:
+- `average_visit_value` and `reward_cost` must be positive numbers when supplied.
+- Values can be edited by vendor admin and apply to subsequent analytics reads.
+
+**Dashboard Metrics**
+`GET /api/v1/v/:slug/admin/metrics`
+
+Returns:
+- Member metrics: `total_members`, `new_members_30d`, `active_members_30d`
+- Stamp metrics: `total_stamps_current_month`, `total_stamps_previous_month`, `total_stamps_30d`
+- Redemption metrics: `total_redemptions_current_month`, `total_redemptions_previous_month`
+- Completion & timing: `card_completion_rate`, `average_time_to_reward_days`
+- Estimated value: `estimated_revenue_current_month`, `total_reward_cost_current_month`, `estimated_roi_ratio`, `estimated_roi_label`
+- Behavioral insights: `behavior_insights.stamps_by_day`, `behavior_insights.stamps_by_time_bucket`
+- Customer insights: `customer_insights.top_customers_30d`, `customer_insights.at_risk_customers_30d`, `customer_insights.near_reward_customers`
+- Staff insights: `staff_activity[]` with `stamps_issued` and `redemptions_processed`
+
+**Behavior Insights**
+`GET /api/v1/v/:slug/admin/insights/behavior`
+
+Returns stamp distributions for rolling 30 days:
+- `stamps_by_day`
+- `stamps_by_time_bucket` (`AM`, `PM`, `Evening`)
+
+**Customer Insights**
+`GET /api/v1/v/:slug/admin/insights/customers`
+
+Returns:
+- `top_customers_30d`
+- `at_risk_customers_30d`
+- `near_reward_customers`
+
+**Staff Insights**
+`GET /api/v1/v/:slug/admin/insights/staff`
+
+Returns per-staff aggregates:
+- `stamps_issued`
+- `redemptions_processed`
+
 ### Platform Admin
 **Create Vendor**
 `POST /api/v1/admin/vendors`
