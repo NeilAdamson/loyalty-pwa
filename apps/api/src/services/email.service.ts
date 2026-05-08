@@ -3,6 +3,15 @@ import type { Transporter } from 'nodemailer'
 
 const ADMIN_EMAIL_DOMAIN = 'punchcard.co.za'
 
+function escapeHtml(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+}
+
 interface EmailConfig {
     host: string
     port: number
@@ -23,7 +32,11 @@ function getEmailConfig(): EmailConfig | null {
     const fromEmail = process.env.SMTP_FROM || user || ''
     const from = fromEmail.includes('<') ? fromEmail : `Punchcard <${fromEmail}>`
 
-    if (!host || !user || !pass) {
+    const hasPlaceholderValue = [host, user, pass, fromEmail].some((value) =>
+        !value || /smtp\.example\.com|noreply@example\.com|your_|change[_-]?me/i.test(value)
+    )
+
+    if (!host || !user || !pass || hasPlaceholderValue) {
         console.warn('[EmailService] SMTP not configured - emails will be logged only')
         return null
     }
@@ -129,6 +142,110 @@ If you didn't request this reset, you can safely ignore this email.
             return true
         } catch (error) {
             console.error('[EmailService] Failed to send email:', error)
+            return false
+        }
+    }
+
+    async sendVendorRegistrationCode(toEmail: string, code: string, firstName: string, tradingName: string): Promise<boolean> {
+        const subject = 'Your Punchcard vendor registration code'
+        const safeFirstName = escapeHtml(firstName || 'there')
+        const safeTradingName = escapeHtml(tradingName || 'your business')
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #222;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 32px 20px;">
+        <h1 style="margin: 0 0 18px; color: #007bff;">Punchcard</h1>
+        <p>Hi ${safeFirstName},</p>
+        <p>Use this code to finish registering ${safeTradingName}:</p>
+        <p style="font-size: 32px; font-weight: 800; letter-spacing: 8px; margin: 24px 0;">${code}</p>
+        <p>This code expires in 15 minutes. If you did not request this, you can ignore this email.</p>
+    </div>
+</body>
+</html>
+        `.trim()
+        const textContent = `
+Hi ${firstName || 'there'},
+
+Use this code to finish registering ${tradingName || 'your business'}:
+${code}
+
+This code expires in 15 minutes. If you did not request this, you can ignore this email.
+        `.trim()
+
+        if (!this.transporter || !this.config) {
+            console.log('[EmailService] SMTP not configured - logging vendor registration email instead:')
+            console.log(`  To: ${toEmail}`)
+            console.log(`  Subject: ${subject}`)
+            console.log(`  Registration Code: ${code}`)
+            return true
+        }
+
+        try {
+            await this.transporter.sendMail({
+                from: this.config.from,
+                to: toEmail,
+                subject,
+                text: textContent,
+                html: htmlContent
+            })
+            console.log(`[EmailService] Vendor registration code sent to ${toEmail}`)
+            return true
+        } catch (error) {
+            console.error('[EmailService] Failed to send vendor registration code:', error)
+            return false
+        }
+    }
+
+    async sendVendorPasswordResetEmail(toEmail: string, resetToken: string, firstName: string): Promise<boolean> {
+        const resetUrl = `${process.env.CORS_ALLOWED_ORIGIN || 'http://localhost:5173'}/vendor/admin/reset-password?token=${resetToken}`
+        const subject = 'Reset your Punchcard vendor password'
+        const safeFirstName = escapeHtml(firstName || 'there')
+        const safeResetUrl = escapeHtml(resetUrl)
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #222;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 32px 20px;">
+        <h1 style="margin: 0 0 18px; color: #007bff;">Punchcard</h1>
+        <p>Hi ${safeFirstName},</p>
+        <p>Use the link below to reset your vendor admin password:</p>
+        <p><a href="${safeResetUrl}" style="display:inline-block;background:#007bff;color:white;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:700;">Reset Password</a></p>
+        <p style="word-break: break-all; font-size: 13px; color: #666;">${safeResetUrl}</p>
+        <p>This link expires in 1 hour. If you did not request this, you can ignore this email.</p>
+    </div>
+</body>
+</html>
+        `.trim()
+        const textContent = `
+Hi ${firstName || 'there'},
+
+Use this link to reset your Punchcard vendor admin password:
+${resetUrl}
+
+This link expires in 1 hour. If you did not request this, you can ignore this email.
+        `.trim()
+
+        if (!this.transporter || !this.config) {
+            console.log('[EmailService] SMTP not configured - logging vendor reset email instead:')
+            console.log(`  To: ${toEmail}`)
+            console.log(`  Subject: ${subject}`)
+            console.log(`  Reset URL: ${resetUrl}`)
+            return true
+        }
+
+        try {
+            await this.transporter.sendMail({
+                from: this.config.from,
+                to: toEmail,
+                subject,
+                text: textContent,
+                html: htmlContent
+            })
+            console.log(`[EmailService] Vendor password reset email sent to ${toEmail}`)
+            return true
+        } catch (error) {
+            console.error('[EmailService] Failed to send vendor reset email:', error)
             return false
         }
     }

@@ -29,6 +29,10 @@ const AdminForgotPassword = lazyWithTiming('AdminForgotPassword', () => import('
 const AdminResetPassword = lazyWithTiming('AdminResetPassword', () => import('./pages/admin/AdminResetPassword'));
 const LandingPage = lazyWithTiming('LandingPage', () => import('./pages/LandingPage'));
 const VendorLookup = lazyWithTiming('VendorLookup', () => import('./pages/VendorLookup'));
+const VendorRegister = lazyWithTiming('VendorRegister', () => import('./pages/VendorRegister'));
+const VendorAdminLogin = lazyWithTiming('VendorAdminLogin', () => import('./pages/VendorAdminLogin'));
+const VendorAdminForgotPassword = lazyWithTiming('VendorAdminForgotPassword', () => import('./pages/VendorAdminForgotPassword'));
+const VendorAdminResetPassword = lazyWithTiming('VendorAdminResetPassword', () => import('./pages/VendorAdminResetPassword'));
 
 const routeFallback = (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
@@ -72,6 +76,22 @@ const router = createBrowserRouter([
     {
         path: "/vendor/login",
         element: withSuspense(<VendorLookup />),
+    },
+    {
+        path: "/vendor/register",
+        element: withSuspense(<VendorRegister />),
+    },
+    {
+        path: "/vendor/admin/login",
+        element: withSuspense(<VendorAdminLogin />),
+    },
+    {
+        path: "/vendor/admin/forgot-password",
+        element: withSuspense(<VendorAdminForgotPassword />),
+    },
+    {
+        path: "/vendor/admin/reset-password",
+        element: withSuspense(<VendorAdminResetPassword />),
     },
     {
         path: "/admin/login",

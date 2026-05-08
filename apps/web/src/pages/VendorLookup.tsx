@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthShell from '../components/AuthShell';
 import AdminInput from '../components/admin/ui/AdminInput';
 import AdminButton from '../components/admin/ui/AdminButton';
@@ -95,7 +95,7 @@ const VendorLookup: React.FC = () => {
     return (
         <AuthShell
             title="Vendor Portal"
-            subtitle="Enter your Store Slug to open staff login. Managers use Admin accounts (see your owner)."
+            subtitle="Counter staff use Store Slug plus username/PIN. Owners and managers use email/password."
         >
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {recentSlug && (
@@ -173,8 +173,17 @@ const VendorLookup: React.FC = () => {
                 </div>
 
                 <AdminButton type="submit" variant="primary" isLoading={isLoading} fullWidth>
-                    Go to Login
+                    Go to Staff Login
                 </AdminButton>
+
+                <div style={{ display: 'grid', gap: '8px', textAlign: 'center', fontSize: '13px' }}>
+                    <Link to="/vendor/admin/login" style={{ color: 'var(--primary)' }}>
+                        Owner / manager email login
+                    </Link>
+                    <Link to="/vendor/register" style={{ color: 'var(--text-secondary)' }}>
+                        Register a new vendor
+                    </Link>
+                </div>
 
                 <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                     <button

@@ -31,8 +31,9 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ## 5. Key decisions locked for MVP
 - OTP channel: **phone-based OTP via SMSFlow SMS**
-- Staff login: **username + PIN** (PIN stored as hash, unique per staff account within a vendor)
-- Vendor onboarding: **platform-admin-only**
+- Vendor admin login: **email + password** with email-delivered registration code for self-service onboarding
+- Staff login: **username + PIN** (PIN stored as hash, unique username per staff account within a vendor)
+- Vendor onboarding: **self-service supported**; platform admin can still create vendors manually
 - Multi-branch: **required**
 - Cooldown policy: **global default; vendor can increase but not decrease**
 - Card expiry: **no expiry in MVP** (future option: global fixed expiry via configuration)
@@ -52,7 +53,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ## 7. Personas and roles
 - Platform Admin: Creates vendors, configures billing status, supports vendors, reviews fraud, suspends vendors.
-- Vendor Admin / vendor manager: Configures branding, program rules, branches, staff PINs. **Implemented as the staff role `ADMIN`** (username + PIN); after login, uses `/v/{slug}/admin/*`. Product copy may say “manager”; the database value remains `ADMIN`.
+- Vendor Admin / vendor manager: Configures branding, program rules, branches, staff PINs, billing details, and setup. Primary login is **email + password** through `/vendor/admin/login`; after login, uses `/v/{slug}/admin/*`.
 - Staff (Stamper): Stamps and redeems at the point of service. **Implemented as the staff role `STAMPER`** (`/v/{slug}/staff/scan`).
 - Member: Joins, views card, presents rotating token for stamping/redeeming.
 
@@ -66,7 +67,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 ## 9. Functional requirements (numbered, testable)
 
 ### EPIC A — Platform admin (multi-tenant control)
-**FR-A1 Vendor create (platform-admin-only)**
+**FR-A1 Vendor create (platform admin)**
 - Platform Admin can create a vendor with:
   - `legal_name`, `trading_name`, `vendor_slug` (unique), contact details
   - billing plan metadata and status
@@ -75,6 +76,18 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
   - `vendor_id` (UUID)
   - `public_signup_url` and QR code
   - Default active program (v1) with 10 stamps.
+
+**FR-A1b Vendor self-service registration**
+- A vendor owner can register without platform-admin intervention by providing:
+  - owner name and email
+  - trading/legal business names
+  - contact phone
+- System sends a short-lived registration code to the owner email.
+- After code verification and password creation, the system creates:
+  - vendor in `TRIAL` status
+  - vendor owner admin account
+  - default branch, branding, and active program
+  - onboarding wizard state set to incomplete
 
 **FR-A2 Vendor suspend / reactivate**
 - Suspending vendor MUST:
@@ -123,9 +136,10 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 **FR-B4 Staff management**
 - Vendor Admin can create staff:
-  - name, branch_id (required), role (`ADMIN` = vendor manager / full portal | `STAMPER` = scanner only), status
+  - name, username, branch_id (required), role (`ADMIN` = legacy manager / full portal | `STAMPER` = scanner only), status
   - 6-digit PIN (required)
-- PIN uniqueness constraint: within a vendor, PIN MUST be unique across enabled staff accounts.
+- Staff users do not require email addresses.
+- PINs MUST be stored as hashes.
 - Disabling staff takes effect immediately.
 
 **FR-B5 QR management**

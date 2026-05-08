@@ -34,10 +34,14 @@ model Vendor {
   contact_phone   String @default("")
   contact_role    String?
 
+  onboarding_status       String    @default("INCOMPLETE") // 'INCOMPLETE','COMPLETE'
+  onboarding_completed_at DateTime? @db.Timestamptz
+
   created_at      DateTime @default(now()) @db.Timestamptz
   updated_at      DateTime @updatedAt @db.Timestamptz
 
   branding        VendorBranding?
+  vendor_admins   VendorAdminUser[]
   branches        Branch[]
   staff           StaffUser[]
   members         Member[]
@@ -70,6 +74,51 @@ model AdminUser {
   updated_at      DateTime  @updatedAt @db.Timestamptz
 
   @@map("admin_users")
+}
+
+// Vendor owner/admin accounts use email + password and are separate from staff PIN users.
+model VendorAdminUser {
+  vendor_admin_id String    @id @default(uuid()) @db.Uuid
+  vendor_id       String    @db.Uuid
+  email           String    @unique
+  password_hash   String
+  first_name      String
+  last_name       String
+  role            String    @default("OWNER") // 'OWNER','MANAGER'
+  status          String    @default("ACTIVE") // 'PENDING','ACTIVE','DISABLED'
+  email_verified_at DateTime? @db.Timestamptz
+  reset_token     String?
+  reset_token_exp DateTime? @db.Timestamptz
+  last_login_at   DateTime? @db.Timestamptz
+  created_at      DateTime  @default(now()) @db.Timestamptz
+  updated_at      DateTime  @updatedAt @db.Timestamptz
+
+  vendor          Vendor    @relation(fields: [vendor_id], references: [vendor_id])
+
+  @@index([vendor_id])
+  @@map("vendor_admin_users")
+}
+
+model VendorRegistration {
+  registration_id String    @id @default(uuid()) @db.Uuid
+  email           String
+  first_name      String
+  last_name       String
+  trading_name    String
+  legal_name      String?
+  contact_phone   String?
+  vendor_slug     String?
+  code_hash       String
+  expires_at      DateTime  @db.Timestamptz
+  attempts        Int       @default(0)
+  status          String    @default("PENDING") // 'PENDING','VERIFIED','COMPLETED','EXPIRED'
+  verified_at     DateTime? @db.Timestamptz
+  completed_at    DateTime? @db.Timestamptz
+  created_at      DateTime  @default(now()) @db.Timestamptz
+  updated_at      DateTime  @updatedAt @db.Timestamptz
+
+  @@index([email, status])
+  @@map("vendor_registrations")
 }
 
 // 3.2 vendor_branding

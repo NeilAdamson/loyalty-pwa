@@ -7,6 +7,15 @@ interface User {
     vendorId: string;
 }
 
+interface AuthTokenPayload {
+    sub?: string;
+    role?: 'MEMBER' | 'STAFF' | 'STAMPER' | 'ADMIN';
+    vendor_id?: string;
+    staff_id?: string;
+    vendor_admin_id?: string;
+    member_id?: string;
+}
+
 interface AuthContextType {
     token: string | null;
     user: User | null;
@@ -25,17 +34,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (token) {
             try {
-                const decoded: any = jwtDecode(token);
+                const decoded = jwtDecode<AuthTokenPayload>(token);
                 // Determine role based on payload structure
                 let role: 'MEMBER' | 'STAFF' | 'STAMPER' | 'ADMIN' = decoded.role || 'MEMBER';
-                let id = decoded.sub; // Standard subject
+                let id = decoded.sub || ''; // Standard subject
 
                 if (decoded.staff_id) {
                     if (!role) role = 'STAFF'; // Fallback
                     id = decoded.staff_id;
+                } else if (decoded.vendor_admin_id) {
+                    role = 'ADMIN';
+                    id = decoded.vendor_admin_id;
                 } else if (decoded.member_id) {
                     if (!role) role = 'MEMBER';
                     id = decoded.member_id;
+                }
+
+                if (!id || !decoded.vendor_id) {
+                    throw new Error('Token missing required identity fields');
                 }
 
                 setUser({

@@ -5,7 +5,7 @@ export function ProtectedRoute({ children, allowedRoles }: { children: JSX.Eleme
     const { token, user, isLoading } = useAuth();
 
     if (isLoading) return <div>Loading...</div>;
-    if (!token || !user) return <Navigate to="/" />;
+    if (!token || !user) return <Navigate to={allowedRoles?.includes('ADMIN') ? '/vendor/admin/login' : '/'} />;
     if (allowedRoles && !allowedRoles.includes(user.role)) return <div>Unauthorized</div>;
 
     return children;

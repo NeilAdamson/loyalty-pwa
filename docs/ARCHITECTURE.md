@@ -87,12 +87,13 @@ flowchart LR
 - Staff portal is vendor-scoped. Staff enters username + PIN.
 - PIN is stored as a hash and must be unique per staff account within a vendor.
 - Session token: JWT, TTL 12 hours, idle timeout 30 minutes.
-- Staff with `role: "ADMIN"` can access vendor admin endpoints.
+- Staff with `role: "ADMIN"` can access vendor admin endpoints as a legacy manager path; new owner/manager accounts should use vendor-admin email/password auth.
 - **`GET /api/v1/staff/me`** (Bearer staff JWT): returns `{ staff_id, name, username, role }` for the enabled staff row matching `staff_id` + `vendor_id` in the token. Used by the vendor admin shell to show who is signed in. Member sessions omit `staff_id` and receive `403 Staff session required`.
 - **Operational slug UX**: tenants are addressed by `vendor_slug` in the URL (`/v/{slug}/…`). The marketing entry `/vendor/login` collects the slug once per device (optional); teams should bookmark `/v/{slug}/staff` on fixed hardware. The PWA may persist the last-used slug in `localStorage` for convenience.
 
 ### 5.3 Admin auth
-- **Vendor Admin / vendor manager**: Authenticates via staff login with `role: "ADMIN"` (same personae as “Vendor Admin” in the PRD). Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
+- **Vendor Admin / vendor owner**: Authenticates with email + password through `/vendor/admin/login`. Self-service registration at `/vendor/register` verifies the owner email with a short-lived registration code, then creates the vendor, owner account, default branch, default branding, and default program. Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
+- **Legacy vendor manager staff**: Staff users with `role: "ADMIN"` can still access vendor-admin endpoints after username + PIN login.
 - **Platform Admin**: email+password authentication. Uses HttpOnly cookies (set via `/api/v1/admin/auth/login`). Cookies are used for all platform admin endpoints (`/api/v1/admin/*`).
   - Email addresses are restricted to `@punchcard.co.za` domain (auto-generated from username)
   - Password reset: `/admin/forgot-password` sends reset email, `/admin/reset-password` completes the flow

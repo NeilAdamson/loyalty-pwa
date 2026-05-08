@@ -5,13 +5,19 @@ import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../utils/api';
 
 interface StaffMe {
-    staff_id: string;
+    id?: string;
+    staff_id?: string;
+    vendor_admin_id?: string;
     name: string;
-    username: string;
+    username?: string;
+    email?: string;
     role: string;
+    auth_type?: 'VENDOR_ADMIN' | 'STAFF_ADMIN';
 }
 
 function staffRoleLabel(role: string): string {
+    if (role === 'OWNER') return 'Owner';
+    if (role === 'MANAGER') return 'Manager';
     if (role === 'ADMIN') return 'Manager';
     if (role === 'STAMPER') return 'Stamper';
     return role;
@@ -57,7 +63,7 @@ const VendorAdminLayout: React.FC = () => {
         let cancelled = false;
         const loadStaff = async () => {
             try {
-                const res = await api.get<StaffMe>('/api/v1/staff/me');
+                const res = await api.get<StaffMe>('/api/v1/vendor-admin/me');
                 if (!cancelled) setStaffMe(res.data);
             } catch {
                 if (!cancelled) setStaffMe(null);
@@ -70,14 +76,17 @@ const VendorAdminLayout: React.FC = () => {
     }, [slug]);
 
     const handleLogout = () => {
+        const wasVendorAdmin = staffMe?.auth_type === 'VENDOR_ADMIN';
         logout();
-        navigate(`/v/${slug}/staff`); // Redirect to staff login
+        navigate(wasVendorAdmin ? '/vendor/admin/login' : `/v/${slug}/staff`);
     };
 
     const navItems = [
         { name: 'Dashboard', path: `/v/${slug}/admin/dashboard`, icon: '📊' },
+        { name: 'Setup', path: `/v/${slug}/admin/onboarding`, icon: '✅' },
         { name: 'Members', path: `/v/${slug}/admin/members`, icon: '👥' },
         { name: 'Staff', path: `/v/${slug}/admin/staff`, icon: '🛡️' },
+        { name: 'Program', path: `/v/${slug}/admin/program`, icon: '🎁' },
         { name: 'Branding', path: `/v/${slug}/admin/branding`, icon: '🎨' },
         { name: 'Settings', path: `/v/${slug}/admin/settings`, icon: '⚙️' },
     ];
@@ -135,7 +144,7 @@ const VendorAdminLayout: React.FC = () => {
                             <div className="sidebar-user-text">
                                 <div className="sidebar-user-name">{staffMe.name}</div>
                                 <div className="sidebar-user-meta">
-                                    @{staffMe.username} · {staffRoleLabel(staffMe.role)}
+                                    {staffMe.username ? `@${staffMe.username}` : staffMe.email} · {staffRoleLabel(staffMe.role)}
                                 </div>
                             </div>
                         </div>
@@ -153,7 +162,7 @@ const VendorAdminLayout: React.FC = () => {
                         <span className="vendor-admin-session-label">Signed in as</span>
                         <strong className="vendor-admin-session-name">{staffMe.name}</strong>
                         <span className="vendor-admin-session-sep">·</span>
-                        <span className="vendor-admin-session-user">@{staffMe.username}</span>
+                        <span className="vendor-admin-session-user">{staffMe.username ? `@${staffMe.username}` : staffMe.email}</span>
                         <span className="vendor-admin-session-badge">{staffRoleLabel(staffMe.role)}</span>
                     </div>
                 )}

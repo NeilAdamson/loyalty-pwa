@@ -1,6 +1,13 @@
 import { PrismaClient } from '@prisma/client'
 import { ERROR_CODES } from '../plugins/errors'
 
+export type ProgramInput = {
+    stamps_required: number
+    reward_title: string
+    reward_description: string
+    terms_text: string
+}
+
 export class ProgramService {
     constructor(private prisma: PrismaClient) { }
 
@@ -64,5 +71,68 @@ export class ProgramService {
         return this.prisma.program.findFirst({
             where: { vendor_id: vendorId, is_active: true }
         })
+    }
+
+    async listPrograms(vendorId: string) {
+        return this.prisma.program.findMany({
+            where: { vendor_id: vendorId },
+            orderBy: { version: 'desc' },
+            include: {
+                _count: {
+                    select: { cards: true }
+                }
+            }
+        })
+    }
+
+    async createActiveVersion(vendorId: string, data: ProgramInput) {
+        const [lastProgram, activeProgram] = await Promise.all([
+            this.prisma.program.findFirst({
+                where: { vendor_id: vendorId },
+                orderBy: { version: 'desc' }
+            }),
+            this.getActiveProgram(vendorId)
+        ])
+
+        const unchanged = activeProgram
+            && activeProgram.stamps_required === data.stamps_required
+            && activeProgram.reward_title === data.reward_title
+            && activeProgram.reward_description === data.reward_description
+            && activeProgram.terms_text === data.terms_text
+
+        if (unchanged) {
+            return {
+                program: activeProgram,
+                previousProgram: activeProgram,
+                created: false
+            }
+        }
+
+        const nextVersion = (lastProgram?.version || 0) + 1
+
+        const program = await this.prisma.$transaction(async (tx) => {
+            await tx.program.updateMany({
+                where: { vendor_id: vendorId, is_active: true },
+                data: { is_active: false }
+            })
+
+            return tx.program.create({
+                data: {
+                    vendor_id: vendorId,
+                    version: nextVersion,
+                    is_active: true,
+                    stamps_required: data.stamps_required,
+                    reward_title: data.reward_title,
+                    reward_description: data.reward_description,
+                    terms_text: data.terms_text
+                }
+            })
+        })
+
+        return {
+            program,
+            previousProgram: activeProgram,
+            created: true
+        }
     }
 }

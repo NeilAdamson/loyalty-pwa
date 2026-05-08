@@ -9,7 +9,10 @@ async function main() {
     // 1. Vendor (Upsert)
     const vendor = await prisma.vendor.upsert({
         where: { vendor_slug: 'demo-cafe' },
-        update: {},
+        update: {
+            onboarding_status: 'COMPLETE',
+            onboarding_completed_at: new Date()
+        },
         create: {
             legal_name: 'Demo Cafe Ltd',
             trading_name: 'The Demo Cafe',
@@ -21,10 +24,33 @@ async function main() {
             monthly_billing_amount: 199.00,
             contact_name: 'John',
             contact_surname: 'Manager',
-            contact_phone: '+1234567890'
+            contact_phone: '+1234567890',
+            onboarding_status: 'COMPLETE',
+            onboarding_completed_at: new Date()
         }
     })
     console.log('Created/Found vendor:', vendor.trading_name)
+
+    const demoVendorAdminPassword = await bcrypt.hash('password1234', 10)
+    const demoVendorAdmin = await prisma.vendorAdminUser.upsert({
+        where: { email: 'owner@demo-cafe.test' },
+        update: {
+            vendor_id: vendor.vendor_id,
+            password_hash: demoVendorAdminPassword,
+            status: 'ACTIVE'
+        },
+        create: {
+            vendor_id: vendor.vendor_id,
+            email: 'owner@demo-cafe.test',
+            password_hash: demoVendorAdminPassword,
+            first_name: 'Demo',
+            last_name: 'Owner',
+            role: 'OWNER',
+            status: 'ACTIVE',
+            email_verified_at: new Date()
+        }
+    })
+    console.log('Created/Updated demo vendor admin:', demoVendorAdmin.email)
 
     // 2. Branding (Upsert)
     await prisma.vendorBranding.upsert({

@@ -15,7 +15,8 @@ declare module '@fastify/jwt' {
             vendor_id?: string
             sub?: string
             role?: string
-            type?: 'ADMIN' | 'MEMBER' | 'STAFF'
+            type?: 'ADMIN' | 'MEMBER' | 'STAFF' | 'VENDOR_ADMIN'
+            vendor_admin_id?: string
             staff_id?: string
             member_id?: string
             card_id?: string
@@ -25,7 +26,8 @@ declare module '@fastify/jwt' {
             vendor_id?: string
             sub?: string
             role?: string
-            type?: 'ADMIN' | 'MEMBER' | 'STAFF'
+            type?: 'ADMIN' | 'MEMBER' | 'STAFF' | 'VENDOR_ADMIN'
+            vendor_admin_id?: string
             staff_id?: string
             member_id?: string
             card_id?: string

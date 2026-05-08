@@ -1,6 +1,7 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { SMSFlowService } from '../../services/smsflow.service'
+import { ProgramInput, ProgramService } from '../../services/program.service'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
 const TIME_BUCKETS = ['AM', 'PM', 'Evening'] as const
@@ -45,6 +46,13 @@ type MessageSender = {
     sendMessage(to: string, body: string): Promise<void>
 }
 
+type ProgramRequestBody = {
+    stamps_required?: unknown
+    reward_title?: unknown
+    reward_description?: unknown
+    terms_text?: unknown
+}
+
 const toHttpError = (err: unknown, fallbackMessage: string) => {
     if (typeof err === 'object' && err !== null) {
         const candidate = err as { statusCode?: unknown; code?: unknown; message?: unknown }
@@ -69,6 +77,32 @@ const errorMessage = (err: unknown, fallbackMessage: string): string => {
         if (typeof candidate.message === 'string' && candidate.message) return candidate.message
     }
     return fallbackMessage
+}
+
+const normalizeRequiredText = (value: unknown, fieldName: string, maxLength: number): string => {
+    if (typeof value !== 'string' || !value.trim()) {
+        throw { statusCode: 400, code: 'VALIDATION_ERROR', message: `${fieldName} is required` }
+    }
+
+    const normalized = value.trim()
+    if (normalized.length > maxLength) {
+        throw { statusCode: 400, code: 'VALIDATION_ERROR', message: `${fieldName} must be ${maxLength} characters or fewer` }
+    }
+    return normalized
+}
+
+const normalizeProgramInput = (body: ProgramRequestBody): ProgramInput => {
+    const stampsRequired = Number(body.stamps_required)
+    if (!Number.isInteger(stampsRequired) || stampsRequired < 2 || stampsRequired > 30) {
+        throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'stamps_required must be a whole number between 2 and 30' }
+    }
+
+    return {
+        stamps_required: stampsRequired,
+        reward_title: normalizeRequiredText(body.reward_title, 'reward_title', 80),
+        reward_description: normalizeRequiredText(body.reward_description, 'reward_description', 240),
+        terms_text: normalizeRequiredText(body.terms_text, 'terms_text', 500)
+    }
 }
 
 const toPositiveNumber = (value: unknown, fieldName: string): number => {
@@ -155,14 +189,69 @@ const splitNudgeRecipients = (recipients: NudgeRecipient[]) => {
     return { eligible, invalidPhone, noConsent }
 }
 
+const normalizeStaffUsername = (value: unknown, fallbackName: string): string => {
+    const source = typeof value === 'string' && value.trim() ? value : fallbackName
+    return source.toString().toLowerCase().trim().replace(/[^a-z0-9_-]/g, '').slice(0, 30)
+}
+
+const validateStaffPin = (value: unknown): string => {
+    const pin = String(value || '').trim()
+    if (!/^\d{4,6}$/.test(pin)) {
+        throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'PIN must be 4 to 6 digits' }
+    }
+    return pin
+}
+
 const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
     const messageSender = getMessageSender()
+    const programService = new ProgramService(fastify.prisma)
 
-    const ensureVendorAdmin = async (request: { user?: { vendor_id?: string, role?: string } }) => {
+    const ensureVendorAdmin = async (request: { user?: { vendor_id?: string, role?: string, vendor_admin_id?: string, staff_id?: string } }) => {
         const user = request.user
         if (!user || !user.vendor_id || user.role !== 'ADMIN') {
-            throw { code: 'FORBIDDEN', message: 'Access denied: Vendor Admin only' }
+            throw { statusCode: 403, code: 'FORBIDDEN', message: 'Access denied: Vendor Admin only' }
         }
+
+        if (user.vendor_admin_id) {
+            const vendorAdmin = await fastify.prisma.vendorAdminUser.findFirst({
+                where: {
+                    vendor_admin_id: user.vendor_admin_id,
+                    vendor_id: user.vendor_id,
+                    status: 'ACTIVE'
+                },
+                select: { vendor_admin_id: true }
+            })
+            if (!vendorAdmin) {
+                throw { statusCode: 403, code: 'FORBIDDEN', message: 'Vendor admin account is disabled or invalid' }
+            }
+            return
+        }
+
+        if (user.staff_id) {
+            const staffAdmin = await fastify.prisma.staffUser.findFirst({
+                where: {
+                    staff_id: user.staff_id,
+                    vendor_id: user.vendor_id,
+                    role: 'ADMIN',
+                    status: 'ENABLED'
+                },
+                select: { staff_id: true }
+            })
+            if (!staffAdmin) {
+                throw { statusCode: 403, code: 'FORBIDDEN', message: 'Admin staff account is disabled or invalid' }
+            }
+            return
+        }
+
+        throw { statusCode: 403, code: 'FORBIDDEN', message: 'Vendor admin identity missing' }
+    }
+
+    const getVendorAdminActorId = (request: { user: { vendor_admin_id?: string, staff_id?: string } }) => {
+        const actorId = request.user.vendor_admin_id || request.user.staff_id
+        if (!actorId) {
+            throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Vendor admin context missing' }
+        }
+        return actorId
     }
 
     /** URL slug must match the vendor tied to the JWT (tenant isolation). */
@@ -350,8 +439,11 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             }
         }>('/nudges/send', async (request, reply) => {
             const vendorId = request.user.vendor_id
-            const staffId = request.user.staff_id
-            if (!vendorId || !staffId) {
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+            let actorId: string
+            try {
+                actorId = getVendorAdminActorId(request)
+            } catch {
                 return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor admin context missing' })
             }
 
@@ -449,7 +541,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             await fastify.prisma.adminAuditLog.create({
                 data: {
                     actor_type: 'VENDOR_ADMIN',
-                    actor_id: staffId,
+                    actor_id: actorId,
                     vendor_id: vendorId,
                     action: 'MANUAL_NUDGE_SEND',
                     payload: {
@@ -1012,25 +1104,37 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             })
         })
 
-        subRequest.post<{ Body: { name: string, pin: string, role: string } }>('/staff', async (request) => {
-            const { name, pin, role } = request.body
+        subRequest.post<{ Body: { name: string, username?: string, pin: string, role: string } }>('/staff', async (request) => {
+            const { name, username, pin, role } = request.body
             const vendorId = request.user.vendor_id
             if (!vendorId) throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
 
-            const pin_hash = await bcrypt.hash(pin, 10)
+            const staffName = normalizeRequiredText(name, 'name', 120)
+            const normalizedUsername = normalizeStaffUsername(username, staffName)
+            if (!normalizedUsername) throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Username is required' }
+            const normalizedPin = validateStaffPin(pin)
+            const normalizedRole = role === 'ADMIN' ? 'ADMIN' : 'STAMPER'
+
+            const existing = await fastify.prisma.staffUser.findFirst({
+                where: { vendor_id: vendorId, username: normalizedUsername },
+                select: { staff_id: true }
+            })
+            if (existing) {
+                throw { statusCode: 409, code: 'CONFLICT', message: `Username "${normalizedUsername}" is already in use` }
+            }
+
+            const pin_hash = await bcrypt.hash(normalizedPin, 10)
 
             const branch = await fastify.prisma.branch.findFirst({ where: { vendor_id: vendorId } })
             if (!branch) throw { code: 'BAD_REQUEST', message: 'No active branch found' }
-
-            const username = `${name.split(' ')[0].toLowerCase()}${Math.floor(1000 + Math.random() * 9000)}`;
 
             const staff = await fastify.prisma.staffUser.create({
                 data: {
                     vendor_id: vendorId,
                     branch_id: branch.branch_id,
-                    username,
-                    name,
-                    role: role as string,
+                    username: normalizedUsername,
+                    name: staffName,
+                    role: normalizedRole,
                     status: 'ENABLED',
                     pin_hash,
                     pin_last_changed_at: new Date()
@@ -1040,19 +1144,32 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             return staff
         })
 
-        subRequest.put<{ Params: { id: string }, Body: { name?: string, role?: string, pin?: string } }>('/staff/:id', async (request, reply) => {
+        subRequest.put<{ Params: { id: string }, Body: { name?: string, username?: string, role?: string, pin?: string, status?: string } }>('/staff/:id', async (request, reply) => {
             const { id } = request.params
-            const { name, role, pin } = request.body
+            const { name, username, role, pin, status } = request.body
             const vendorId = request.user.vendor_id
 
             const staff = await fastify.prisma.staffUser.findFirst({ where: { staff_id: id, vendor_id: vendorId } })
             if (!staff) return reply.status(404).send({ message: 'Staff not found' })
 
-            const updateData: { name?: string; role?: string; pin_hash?: string; pin_last_changed_at?: Date } = {}
+            const updateData: { name?: string; username?: string; role?: string; status?: string; pin_hash?: string; pin_last_changed_at?: Date } = {}
             if (name) updateData.name = name
-            if (role) updateData.role = role
+            if (role) updateData.role = role === 'ADMIN' ? 'ADMIN' : 'STAMPER'
+            if (status === 'ENABLED' || status === 'DISABLED') updateData.status = status
+            if (username !== undefined) {
+                const normalizedUsername = normalizeStaffUsername(username, staff.name)
+                if (!normalizedUsername) return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'Username is required' })
+                const existing = await fastify.prisma.staffUser.findFirst({
+                    where: { vendor_id: vendorId, username: normalizedUsername },
+                    select: { staff_id: true }
+                })
+                if (existing && existing.staff_id !== id) {
+                    return reply.status(409).send({ code: 'CONFLICT', message: `Username "${normalizedUsername}" is already in use` })
+                }
+                updateData.username = normalizedUsername
+            }
             if (pin) {
-                updateData.pin_hash = await bcrypt.hash(pin, 10)
+                updateData.pin_hash = await bcrypt.hash(validateStaffPin(pin), 10)
                 updateData.pin_last_changed_at = new Date()
             }
 
@@ -1081,25 +1198,258 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
         // --- EPIC D: Business Info ---
         subRequest.get('/business', async (request) => {
             const vendorId = request.user.vendor_id
+            if (!vendorId) throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Vendor context missing' }
             return fastify.prisma.vendor.findUnique({
-                where: { vendor_id: vendorId }
+                where: { vendor_id: vendorId },
+                include: {
+                    branches: {
+                        orderBy: { branch_id: 'asc' }
+                    }
+                }
             })
         })
 
-        subRequest.put<{ Body: { trading_name?: string, average_visit_value?: number, reward_cost?: number } }>('/business', async (request) => {
+        subRequest.put<{
+            Body: {
+                trading_name?: string
+                legal_name?: string
+                billing_email?: string
+                billing_address?: string
+                tax_id?: string
+                company_reg_no?: string
+                contact_name?: string
+                contact_surname?: string
+                contact_phone?: string
+                average_visit_value?: number
+                reward_cost?: number
+                branch_name?: string
+                branch_address_text?: string
+                branch_city?: string
+                branch_region?: string
+            }
+        }>('/business', async (request) => {
             const vendorId = request.user.vendor_id
-            const { trading_name, average_visit_value, reward_cost } = request.body
+            if (!vendorId) throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Vendor context missing' }
+            const {
+                trading_name,
+                legal_name,
+                billing_email,
+                billing_address,
+                tax_id,
+                company_reg_no,
+                contact_name,
+                contact_surname,
+                contact_phone,
+                average_visit_value,
+                reward_cost,
+                branch_name,
+                branch_address_text,
+                branch_city,
+                branch_region
+            } = request.body
 
-            const data: { trading_name?: string, average_visit_value?: number, reward_cost?: number } = {}
+            const data: {
+                trading_name?: string
+                legal_name?: string
+                billing_email?: string | null
+                billing_address?: string | null
+                tax_id?: string | null
+                company_reg_no?: string | null
+                contact_name?: string
+                contact_surname?: string
+                contact_phone?: string
+                average_visit_value?: number
+                reward_cost?: number
+            } = {}
             if (trading_name !== undefined) data.trading_name = trading_name
+            if (legal_name !== undefined) data.legal_name = legal_name
+            if (billing_email !== undefined) data.billing_email = billing_email || null
+            if (billing_address !== undefined) data.billing_address = billing_address || null
+            if (tax_id !== undefined) data.tax_id = tax_id || null
+            if (company_reg_no !== undefined) data.company_reg_no = company_reg_no || null
+            if (contact_name !== undefined) data.contact_name = contact_name
+            if (contact_surname !== undefined) data.contact_surname = contact_surname
+            if (contact_phone !== undefined) data.contact_phone = contact_phone
             if (average_visit_value !== undefined) data.average_visit_value = toPositiveNumber(average_visit_value, 'average_visit_value')
             if (reward_cost !== undefined) data.reward_cost = toPositiveNumber(reward_cost, 'reward_cost')
 
+            if (branch_name !== undefined || branch_address_text !== undefined || branch_city !== undefined || branch_region !== undefined) {
+                const firstBranch = await fastify.prisma.branch.findFirst({
+                    where: { vendor_id: vendorId },
+                    orderBy: { branch_id: 'asc' }
+                })
+
+                if (firstBranch) {
+                    await fastify.prisma.branch.update({
+                        where: { branch_id: firstBranch.branch_id },
+                        data: {
+                            name: branch_name !== undefined ? (branch_name || 'Main Branch') : firstBranch.name,
+                            address_text: branch_address_text !== undefined ? (branch_address_text || null) : firstBranch.address_text,
+                            city: branch_city !== undefined ? (branch_city || null) : firstBranch.city,
+                            region: branch_region !== undefined ? (branch_region || null) : firstBranch.region
+                        }
+                    })
+                } else {
+                    await fastify.prisma.branch.create({
+                        data: {
+                            vendor_id: vendorId,
+                            name: branch_name || 'Main Branch',
+                            address_text: branch_address_text || null,
+                            city: branch_city || null,
+                            region: branch_region || null,
+                            is_active: true
+                        }
+                    })
+                }
+            }
+
             const updated = await fastify.prisma.vendor.update({
                 where: { vendor_id: vendorId },
-                data
+                data,
+                include: {
+                    branches: {
+                        orderBy: { branch_id: 'asc' }
+                    }
+                }
             })
             return updated
+        })
+
+        subRequest.get('/onboarding/status', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+            const vendor = await fastify.prisma.vendor.findUnique({
+                where: { vendor_id: vendorId },
+                select: {
+                    onboarding_status: true,
+                    onboarding_completed_at: true
+                }
+            })
+            return vendor || { onboarding_status: 'INCOMPLETE', onboarding_completed_at: null }
+        })
+
+        subRequest.post('/onboarding/complete', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+            let actorId: string
+            try {
+                actorId = getVendorAdminActorId(request)
+            } catch {
+                return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor admin context missing' })
+            }
+
+            const updated = await fastify.prisma.vendor.update({
+                where: { vendor_id: vendorId },
+                data: {
+                    onboarding_status: 'COMPLETE',
+                    onboarding_completed_at: new Date()
+                },
+                select: {
+                    vendor_slug: true,
+                    onboarding_status: true,
+                    onboarding_completed_at: true
+                }
+            })
+
+            await fastify.prisma.adminAuditLog.create({
+                data: {
+                    actor_type: 'VENDOR_ADMIN',
+                    actor_id: actorId,
+                    vendor_id: vendorId,
+                    action: 'VENDOR_ONBOARDING_COMPLETE',
+                    payload: {
+                        vendor_slug: updated.vendor_slug
+                    }
+                }
+            })
+
+            return { success: true, vendor: updated }
+        })
+
+        // --- EPIC B: Program Management ---
+        subRequest.get('/program', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+
+            const history = await programService.listPrograms(vendorId)
+            const historyRecords = history.map((program) => ({
+                program_id: program.program_id,
+                version: program.version,
+                is_active: program.is_active,
+                stamps_required: program.stamps_required,
+                reward_title: program.reward_title,
+                reward_description: program.reward_description,
+                terms_text: program.terms_text,
+                created_at: program.created_at,
+                cards_count: program._count.cards
+            }))
+
+            return {
+                active_program: historyRecords.find((program) => program.is_active) ?? null,
+                history: historyRecords
+            }
+        })
+
+        subRequest.put<{ Body: ProgramRequestBody }>('/program', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+            let actorId: string
+            try {
+                actorId = getVendorAdminActorId(request)
+            } catch {
+                return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor admin context missing' })
+            }
+
+            let input: ProgramInput
+            try {
+                input = normalizeProgramInput(request.body)
+            } catch (err: unknown) {
+                const httpError = toHttpError(err, 'Invalid program details')
+                return reply.status(httpError.statusCode).send({
+                    code: httpError.code,
+                    message: httpError.message
+                })
+            }
+
+            const result = await programService.createActiveVersion(vendorId, input)
+
+            if (result.created) {
+                await fastify.prisma.adminAuditLog.create({
+                    data: {
+                        actor_type: 'VENDOR_ADMIN',
+                        actor_id: actorId,
+                        vendor_id: vendorId,
+                        action: 'PROGRAM_VERSION_CREATE',
+                        payload: {
+                            previous_program_id: result.previousProgram?.program_id ?? null,
+                            previous_version: result.previousProgram?.version ?? null,
+                            new_program_id: result.program.program_id,
+                            new_version: result.program.version,
+                            stamps_required: result.program.stamps_required,
+                            reward_title: result.program.reward_title
+                        }
+                    }
+                })
+            }
+
+            const history = await programService.listPrograms(vendorId)
+            const historyRecords = history.map((program) => ({
+                program_id: program.program_id,
+                version: program.version,
+                is_active: program.is_active,
+                stamps_required: program.stamps_required,
+                reward_title: program.reward_title,
+                reward_description: program.reward_description,
+                terms_text: program.terms_text,
+                created_at: program.created_at,
+                cards_count: program._count.cards
+            }))
+
+            return {
+                active_program: historyRecords.find((program) => program.program_id === result.program.program_id) ?? null,
+                created_version: result.created,
+                history: historyRecords
+            }
         })
 
         // --- EPIC E: Branding ---
@@ -1121,9 +1471,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                 card_style: string,
                 logo_url?: string,
                 wordmark_url?: string,
-                welcome_text?: string,
-                reward_title?: string,
-                stamps_required?: number
+                welcome_text?: string
             }
         }>('/branding', async (request, reply) => {
             try {
@@ -1159,24 +1507,6 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                         welcome_text: data.welcome_text
                     }
                 })
-
-                // Update Program (if reward info provided)
-                if (data.reward_title || data.stamps_required) {
-                    // Find active program
-                    const program = await fastify.prisma.program.findFirst({
-                        where: { vendor_id: vendorId, is_active: true }
-                    })
-
-                    if (program) {
-                        await fastify.prisma.program.update({
-                            where: { program_id: program.program_id },
-                            data: {
-                                reward_title: data.reward_title || program.reward_title,
-                                stamps_required: data.stamps_required || program.stamps_required
-                            }
-                        })
-                    }
-                }
 
                 return branding
             } catch (err: unknown) {

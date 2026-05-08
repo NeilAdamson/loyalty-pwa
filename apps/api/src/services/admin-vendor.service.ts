@@ -1,4 +1,22 @@
-import { PrismaClient, Vendor } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
+
+type VendorUpdatePayload = Record<string, unknown> & {
+    branding?: Record<string, unknown>
+    program?: Record<string, unknown>
+    branch_city?: unknown
+    branch_region?: unknown
+}
+
+const optionalString = (value: unknown): string | null | undefined => {
+    if (value === undefined) return undefined
+    if (value === null || String(value).trim() === '') return null
+    return String(value).trim()
+}
+
+const stringWithDefault = (value: unknown, fallback: string): string => {
+    const normalized = optionalString(value)
+    return normalized ?? fallback
+}
 
 export class AdminVendorService {
     constructor(private prisma: PrismaClient) { }
@@ -8,16 +26,9 @@ export class AdminVendorService {
         const limit = params.limit || 20
         const skip = (page - 1) * limit
 
-        const where: any = {}
+        const where: Prisma.VendorWhereInput = {}
         if (params.status) where.status = params.status
         if (params.query) {
-            where.OR = [
-                { trading_name: { contains: params.query, mode: 'insensitive' } },
-                { is: { vendor_slug: { contains: params.query, mode: 'insensitive' } } } // 'is' unavailable? maybe just vendor_slug.
-                // Prisma 'mode: insensitive' works. 
-                // But vendor_slug is unique, so let's check exact or strict contains.
-            ]
-            // Fix: vendor_slug is String.
             where.OR = [
                 { trading_name: { contains: params.query, mode: 'insensitive' } },
                 { vendor_slug: { contains: params.query, mode: 'insensitive' } }
@@ -60,6 +71,8 @@ export class AdminVendorService {
                 status: 'ACTIVE', // or TRIAL
                 billing_plan_id: 'FREE',
                 billing_status: 'TRIAL',
+                onboarding_status: 'COMPLETE',
+                onboarding_completed_at: new Date(),
                 monthly_billing_amount: Number(vendorData.monthly_billing_amount),
                 billing_start_date: new Date(vendorData.billing_start_date || Date.now()),
                 // Create default branding?
@@ -106,11 +119,11 @@ export class AdminVendorService {
         })
     }
 
-    async update(vendorId: string, data: any) {
+    async update(vendorId: string, data: VendorUpdatePayload) {
         const { branding, program, ...rest } = data
 
         // Pick and sanitize allowed fields (Prisma rejects empty strings for DateTime/Decimal)
-        const vendorUpdate: any = {}
+        const vendorUpdate: Prisma.VendorUpdateInput = {}
         if (rest.legal_name !== undefined) vendorUpdate.legal_name = String(rest.legal_name).trim()
         if (rest.trading_name !== undefined) vendorUpdate.trading_name = String(rest.trading_name).trim()
         if (rest.vendor_slug !== undefined) vendorUpdate.vendor_slug = String(rest.vendor_slug).trim()
@@ -124,7 +137,7 @@ export class AdminVendorService {
             if (!Number.isNaN(amt)) vendorUpdate.monthly_billing_amount = amt
         }
         if (rest.billing_start_date !== undefined && rest.billing_start_date !== '') {
-            const d = new Date(rest.billing_start_date)
+            const d = new Date(String(rest.billing_start_date))
             if (!Number.isNaN(d.getTime())) vendorUpdate.billing_start_date = d
         }
 
@@ -132,7 +145,7 @@ export class AdminVendorService {
         if (program) {
             const progData: { reward_title?: string; stamps_required?: number } = {}
             if (program.reward_title !== undefined) progData.reward_title = String(program.reward_title).trim()
-            const sr = parseInt(program.stamps_required, 10)
+            const sr = parseInt(String(program.stamps_required || ''), 10)
             if (!Number.isNaN(sr) && sr >= 2 && sr <= 30) progData.stamps_required = sr
             if (Object.keys(progData).length > 0) {
                 await this.prisma.program.updateMany({
@@ -157,8 +170,8 @@ export class AdminVendorService {
                 await this.prisma.branch.update({
                     where: { branch_id: firstBranch.branch_id },
                     data: {
-                        city: branch_city,
-                        region: branch_region
+                        city: optionalString(branch_city),
+                        region: optionalString(branch_region)
                     }
                 })
             } else {
@@ -168,8 +181,8 @@ export class AdminVendorService {
                     data: {
                         vendor_id: vendorId,
                         name: 'Main Branch', // Default name
-                        city: branch_city || '',
-                        region: branch_region || '',
+                        city: optionalString(branch_city) || '',
+                        region: optionalString(branch_region) || '',
                         is_active: true
                     }
                 })
@@ -177,33 +190,28 @@ export class AdminVendorService {
         }
 
         // Prepare Branding Update
-        let brandingUpdate = undefined
+        let brandingUpdate: Prisma.VendorBrandingUpdateOneWithoutVendorNestedInput | undefined = undefined
         if (branding) {
             // Pick branding fields to avoid passing metadata
             const bFields = {
-                primary_color: branding.primary_color,
-                secondary_color: branding.secondary_color,
-                accent_color: branding.accent_color,
-                background_color: branding.background_color,
-                card_text_color: branding.card_text_color,
-                logo_url: branding.logo_url,
-                wordmark_url: branding.wordmark_url,
-                card_style: branding.card_style,
-                card_bg_image_url: branding.card_bg_image_url,
-                welcome_text: branding.welcome_text,
-                card_title: branding.card_title
+                primary_color: stringWithDefault(branding.primary_color, '#000000'),
+                secondary_color: stringWithDefault(branding.secondary_color, '#ffffff'),
+                accent_color: stringWithDefault(branding.accent_color, '#3B82F6'),
+                background_color: optionalString(branding.background_color),
+                card_text_color: stringWithDefault(branding.card_text_color, '#ffffff'),
+                logo_url: optionalString(branding.logo_url),
+                wordmark_url: optionalString(branding.wordmark_url),
+                card_style: stringWithDefault(branding.card_style, 'SOLID'),
+                card_bg_image_url: optionalString(branding.card_bg_image_url),
+                welcome_text: optionalString(branding.welcome_text),
+                card_title: optionalString(branding.card_title)
             }
 
             brandingUpdate = {
                 upsert: {
                     create: {
-                        ...bFields,
-                        primary_color: bFields.primary_color || '#000000',
-                        secondary_color: bFields.secondary_color || '#ffffff',
-                        accent_color: bFields.accent_color || '#3B82F6',
-                        card_text_color: bFields.card_text_color || '#ffffff',
-                        card_style: bFields.card_style || 'SOLID'
-                    } as any,
+                        ...bFields
+                    },
                     update: bFields
                 }
             }
@@ -230,6 +238,7 @@ export class AdminVendorService {
             await tx.program.deleteMany({ where: { vendor_id: vendorId } })
 
             await tx.member.deleteMany({ where: { vendor_id: vendorId } })
+            await tx.vendorAdminUser.deleteMany({ where: { vendor_id: vendorId } })
             await tx.staffUser.deleteMany({ where: { vendor_id: vendorId } })
 
             await tx.vendorBranding.deleteMany({ where: { vendor_id: vendorId } })

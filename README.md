@@ -47,16 +47,21 @@ A multi-tenant digital loyalty stamp card system built with Node.js, Prisma, Pos
 
 ### Demo Vendor
 *   **Vendor Slug**: `demo-cafe` (Access at `/v/demo-cafe`)
+*   **Vendor Owner Email**: `owner@demo-cafe.test`
+*   **Vendor Owner Password**: `password1234`
 *   **Staff Username**: `alice`
 *   **Staff PIN**: `1234`
 
 ### Vendor & staff portal (tenant)
 
-- **Vendor portal entry**: [`/vendor/login`](http://localhost:5173/vendor/login) — enter the **store slug** (Store ID), then sign in with staff **username + PIN** at `/v/{slug}/staff`.
+- **Vendor self-service registration**: [`/vendor/register`](http://localhost:5173/vendor/register) — creates a vendor owner account with email verification, then opens the setup wizard.
+- **Vendor admin login**: [`/vendor/admin/login`](http://localhost:5173/vendor/admin/login) — owners/managers use email + password for admin tasks.
+- **Staff portal entry**: [`/vendor/login`](http://localhost:5173/vendor/login) — enter the **store slug** (Store ID), then sign in with staff **username + PIN** at `/v/{slug}/staff`.
 - **Direct staff login (bookmark-friendly)**: `/v/{slug}/staff` — skips the slug picker; ideal for fixed tablets at the counter.
 - **Roles** (staff accounts):
-  - **`ADMIN`** — vendor manager: after login, opens `/v/{slug}/admin/*` (dashboard, members, staff, branding, settings).
+  - **`ADMIN`** — legacy staff-manager login: after PIN login, opens `/v/{slug}/admin/*`. Owner/manager email accounts should use `/vendor/admin/login`.
   - **`STAMPER`** — counter role only: after login, opens `/v/{slug}/staff/scan` (stamp / redeem scanner).
+- **Onboarding wizard**: self-service vendors land on `/v/{slug}/admin/onboarding` to complete business details, branch, program, branding, staff, and billing setup.
 - **Slug validation**: `/vendor/login` checks `GET /api/v1/v/{slug}/portal/status` before redirect (vendor must exist and not be suspended; matches staff-login eligibility including trial vendors).
 - **Recent slug**: The browser remembers the last successful slug on this device for quicker return visits.
 

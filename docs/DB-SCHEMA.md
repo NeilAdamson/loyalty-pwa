@@ -19,6 +19,8 @@ The database is implemented in PostgreSQL using Prisma ORM.
     - `first_name`, `last_name`: Admin's full name
     - `reset_token`, `reset_token_exp`: Password reset functionality
 *   **StaffUser** (`staff_users`): Employees who stamp/redeem (Role: `STAMPER`, `ADMIN`).
+*   **VendorAdminUser** (`vendor_admin_users`): Vendor owners/managers who use email + password for admin tasks.
+*   **VendorRegistration** (`vendor_registrations`): Pending self-service vendor registrations with hashed email verification codes.
 *   **Member** (`members`): End-users identified by phone (`phone_e164`).
 
 ### Core Loyalty

@@ -91,6 +91,21 @@ async function authorizeUpload(request: any, reply: any) {
     }
 
     const user = request.user;
+    if (user?.vendor_id && user?.vendor_admin_id && user.role === 'ADMIN') {
+        const vendorAdmin = await request.server.prisma.vendorAdminUser.findFirst({
+            where: {
+                vendor_admin_id: user.vendor_admin_id,
+                vendor_id: user.vendor_id,
+                status: 'ACTIVE'
+            },
+            select: { vendor_admin_id: true, vendor_id: true }
+        });
+
+        if (vendorAdmin) {
+            return { actor_type: 'VENDOR_ADMIN', actor_id: vendorAdmin.vendor_admin_id, vendor_id: vendorAdmin.vendor_id };
+        }
+    }
+
     if (!user?.vendor_id || !user?.staff_id || user.role !== 'ADMIN') {
         reply.status(403).send({ code: 'FORBIDDEN', message: 'Vendor admin access required' });
         return null;
@@ -138,12 +153,14 @@ server.register(authPlugin)
 
 // Register Modules
 import authRoutes from './modules/auth/routes'
+import vendorAuthRoutes from './modules/vendor-auth/routes'
 import vendorRoutes from './modules/vendor/routes'
 import programRoutes from './modules/program/routes'
 import memberRoutes from './modules/member/routes'
 import transactionRoutes from './modules/transaction/routes'
 
 server.register(authRoutes, { prefix: '/api/v1' })
+server.register(vendorAuthRoutes, { prefix: '/api/v1' })
 server.register(vendorRoutes, { prefix: '/api/v1' })
 server.register(programRoutes, { prefix: '/api/v1' })
 server.register(memberRoutes, { prefix: '/api/v1' })

@@ -64,7 +64,51 @@ Returns: `{ "token": "JWT", "staff": { ... } }`
 - `staff.role` is `STAMPER` for scanner-only access, or `ADMIN` for vendor-admin access.
 
 ### Vendor Admin Auth
-Vendor admins authenticate via staff login with `role: "ADMIN"`. After login, use the returned token as a Bearer token for vendor admin endpoints.
+Vendor owners/managers authenticate with email + password. Legacy staff users with `role: "ADMIN"` may still access vendor-admin endpoints after staff PIN login.
+
+**Start self-service registration**
+`POST /api/v1/vendor/register/start`
+Body:
+```json
+{
+  "email": "owner@example.com",
+  "first_name": "Jane",
+  "last_name": "Owner",
+  "trading_name": "Demo Cafe",
+  "legal_name": "Demo Cafe Pty Ltd",
+  "contact_phone": "+27821234567"
+}
+```
+Returns a `registration_id`; the API emails a 6-digit code.
+
+**Verify registration code**
+`POST /api/v1/vendor/register/verify`
+Body: `{ "registration_id": "...", "code": "123456" }`
+
+**Complete registration**
+`POST /api/v1/vendor/register/complete`
+Body:
+```json
+{
+  "registration_id": "...",
+  "vendor_slug": "demo-cafe",
+  "password": "minimum8chars"
+}
+```
+Creates the vendor, owner admin account, default branch, default branding, and default loyalty program. Returns `{ token, vendor_admin, vendor }`.
+
+**Vendor admin login**
+`POST /api/v1/vendor/auth/login`
+Body: `{ "email": "owner@example.com", "password": "..." }`
+Returns `{ token, vendor_admin, vendor }`.
+
+**Vendor admin password reset**
+- `POST /api/v1/vendor/auth/forgot-password` — Body: `{ "email": "owner@example.com" }`
+- `POST /api/v1/vendor/auth/reset-password` — Body: `{ "token": "...", "password": "minimum8chars" }`
+
+**Current vendor admin session**
+`GET /api/v1/vendor-admin/me`
+Returns the active vendor admin or legacy staff-admin identity.
 
 **Note**: Vendor admin routes are under `/api/v1/v/:slug/admin/*` and require Bearer token authentication (not cookies).
 
@@ -140,6 +184,50 @@ Headers: `Authorization: Bearer <VendorAdminToken>`
 **Get Active Program** (Public)
 `GET /v/:vendorSlug/programs/active`
 
+### Vendor Program (Protected: Vendor Admin)
+All vendor program endpoints are under `/api/v1/v/:slug/admin/program` and require Bearer token authentication.
+
+**Get Program**
+`GET /api/v1/v/:slug/admin/program`
+
+Returns:
+```json
+{
+  "active_program": {
+    "program_id": "...",
+    "version": 2,
+    "is_active": true,
+    "stamps_required": 10,
+    "reward_title": "Free Coffee",
+    "reward_description": "Get a free black coffee.",
+    "terms_text": "One redemption per full card.",
+    "created_at": "...",
+    "cards_count": 12
+  },
+  "history": []
+}
+```
+
+**Publish New Program Version**
+`PUT /api/v1/v/:slug/admin/program`
+
+Body:
+```json
+{
+  "stamps_required": 10,
+  "reward_title": "Free Coffee",
+  "reward_description": "Get a free black coffee.",
+  "terms_text": "One redemption per full card."
+}
+```
+
+Rules:
+- `stamps_required` must be a whole number from 2 to 30.
+- Program text fields are required.
+- Saving changed values creates a new active program version.
+- Existing active cards remain tied to their original program version.
+- A `PROGRAM_VERSION_CREATE` audit record is written when a new version is created.
+
 ### Vendor Branding (Protected: Vendor Admin)
 All branding endpoints are under `/api/v1/v/:slug/admin/branding` and require Bearer token authentication.
 
@@ -180,9 +268,7 @@ Body:
   "card_style": "SOLID",
   "logo_url": "https://...",
   "wordmark_url": "https://...",
-  "welcome_text": "Welcome to...",
-  "reward_title": "Free Coffee",
-  "stamps_required": 10
+  "welcome_text": "Welcome to..."
 }
 ```
 
@@ -190,7 +276,6 @@ Body:
 - `primary_color` and `secondary_color` are required (defaults provided: `#000000` and `#ffffff` if missing)
 - `accent_color`, `card_text_color`, and `card_style` have defaults (`#3B82F6`, `#ffffff`, `SOLID`)
 - All other fields are optional
-- `reward_title` and `stamps_required` update the active program if provided
 
 **Error Responses:**
 - `401 UNAUTHORIZED`: Missing or invalid Bearer token
@@ -206,6 +291,9 @@ All vendor analytics endpoints are under `/api/v1/v/:slug/admin/*` and require `
 Returns vendor business profile including analytics config fields:
 - `trading_name`
 - `vendor_slug`
+- `legal_name`
+- contact and billing fields
+- first branch details in `branches`
 - `average_visit_value`
 - `reward_cost`
 
@@ -216,6 +304,18 @@ Body:
 ```json
 {
   "trading_name": "Demo Cafe",
+  "legal_name": "Demo Cafe Pty Ltd",
+  "contact_name": "Jane",
+  "contact_surname": "Owner",
+  "contact_phone": "+27821234567",
+  "billing_email": "accounts@example.com",
+  "billing_address": "1 Main Road",
+  "tax_id": "optional",
+  "company_reg_no": "optional",
+  "branch_name": "Main Branch",
+  "branch_address_text": "1 Main Road",
+  "branch_city": "Cape Town",
+  "branch_region": "Western Cape",
   "average_visit_value": 85.00,
   "reward_cost": 25.00
 }
@@ -224,6 +324,10 @@ Body:
 Rules:
 - `average_visit_value` and `reward_cost` must be positive numbers when supplied.
 - Values can be edited by vendor admin and apply to subsequent analytics reads.
+
+**Onboarding**
+- `GET /api/v1/v/:slug/admin/onboarding/status`
+- `POST /api/v1/v/:slug/admin/onboarding/complete`
 
 **Dashboard Metrics**
 `GET /api/v1/v/:slug/admin/metrics`

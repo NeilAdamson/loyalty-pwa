@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../utils/api';
@@ -24,14 +24,17 @@ const VendorStaff: React.FC = () => {
 
     // New Staff Form State
     const [newName, setNewName] = useState('');
+    const [newUsername, setNewUsername] = useState('');
     const [newPin, setNewPin] = useState('');
     const [newRole, setNewRole] = useState<'ADMIN' | 'STAMPER'>('STAMPER');
-    const initialStaffDataRef = React.useRef<{ name: string; pin: string; role: 'ADMIN' | 'STAMPER' } | null>(null);
+    const initialStaffDataRef = React.useRef<{ name: string; username: string; pin: string; role: 'ADMIN' | 'STAMPER' } | null>(null);
 
-    const fetchStaff = async () => {
+    const fetchStaff = useCallback(async () => {
+        if (!slug || !token) return;
+
         setLoading(true);
         try {
-            const res = await api.get(`/api/v1/v/${slug}/admin/staff`, {
+            const res = await api.get<Staff[]>(`/api/v1/v/${slug}/admin/staff`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setStaffList(res.data);
@@ -40,15 +43,16 @@ const VendorStaff: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [slug, token]);
 
     useEffect(() => {
-        if (token) fetchStaff();
-    }, [slug, token]);
+        void fetchStaff();
+    }, [fetchStaff]);
 
     const openAddModal = () => {
         setEditingStaff(null);
         setNewName('');
+        setNewUsername('');
         setNewPin('');
         setNewRole('STAMPER');
         initialStaffDataRef.current = null; // New form, no initial data
@@ -58,9 +62,10 @@ const VendorStaff: React.FC = () => {
     const openEditModal = (staff: Staff) => {
         setEditingStaff(staff);
         setNewName(staff.name);
+        setNewUsername(staff.username);
         setNewPin(''); // Keep blank to indicate no change
         setNewRole(staff.role);
-        initialStaffDataRef.current = { name: staff.name, pin: '', role: staff.role };
+        initialStaffDataRef.current = { name: staff.name, username: staff.username, pin: '', role: staff.role };
         setIsAddModalOpen(true);
     };
 
@@ -69,7 +74,7 @@ const VendorStaff: React.FC = () => {
         try {
             if (editingStaff) {
                 // Update existing staff
-                const payload: any = { name: newName, role: newRole };
+                const payload: { name: string; username: string; role: 'ADMIN' | 'STAMPER'; pin?: string } = { name: newName, username: newUsername, role: newRole };
                 if (newPin && newPin.length >= 4) {
                     payload.pin = newPin;
                 }
@@ -81,17 +86,18 @@ const VendorStaff: React.FC = () => {
             } else {
                 // Create new staff
                 await api.post(`/api/v1/v/${slug}/admin/staff`,
-                    { name: newName, pin: newPin, role: newRole },
+                    { name: newName, username: newUsername, pin: newPin, role: newRole },
                     { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } }
                 );
             }
 
-            initialStaffDataRef.current = editingStaff ? { name: newName, pin: newPin, role: newRole } : null;
+            initialStaffDataRef.current = editingStaff ? { name: newName, username: newUsername, pin: newPin, role: newRole } : null;
             setIsAddModalOpen(false);
             setEditingStaff(null);
             setNewName('');
+            setNewUsername('');
             setNewPin('');
-            fetchStaff(); // Refresh list
+            void fetchStaff(); // Refresh list
         } catch (error) {
             console.error('Error saving staff:', error);
             alert('Failed to save staff.');
@@ -101,9 +107,10 @@ const VendorStaff: React.FC = () => {
     // Check if staff form is dirty
     const isStaffDirty = editingStaff 
         ? (newName !== initialStaffDataRef.current?.name || 
+           newUsername !== initialStaffDataRef.current?.username ||
            newRole !== initialStaffDataRef.current?.role || 
            (newPin.trim() !== '' && newPin !== initialStaffDataRef.current?.pin))
-        : (newName.trim() !== '' || newPin.trim() !== '');
+        : (newName.trim() !== '' || newUsername.trim() !== '' || newPin.trim() !== '');
 
     // Block navigation if modal is open with unsaved changes
     useUnsavedChanges({ 
@@ -238,6 +245,18 @@ const VendorStaff: React.FC = () => {
                                 />
                             </div>
 
+                            <div className="mb-4">
+                                <label className="input-label">Username</label>
+                                <input
+                                    type="text"
+                                    value={newUsername}
+                                    onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                                    className="glass-input font-mono"
+                                    placeholder="e.g. alice"
+                                    required
+                                />
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label className="input-label">Role</label>
@@ -279,8 +298,8 @@ const VendorStaff: React.FC = () => {
                                     <strong>Note:</strong>{' '}
                                     {editingStaff
                                         ? 'Updating the PIN will require the staff member to use the new code immediately.'
-                                        : 'A simplified username will be generated automatically.'}{' '}
-                                    <strong>Admin</strong> is the vendor manager role (dashboard, members, branding);{' '}
+                                        : 'Use a short username your staff can remember.'}{' '}
+                                    <strong>Admin</strong> is the vendor manager role (dashboard, members, program, branding);{' '}
                                     <strong>Stamper</strong> only uses the scanner.
                                 </p>
                             </div>

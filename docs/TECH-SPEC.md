@@ -94,6 +94,8 @@ API base: `/api/v1`
 - status TEXT CHECK IN ('TRIAL','ACTIVE','SUSPENDED') NOT NULL
 - billing_plan_id TEXT NOT NULL
 - billing_status TEXT CHECK IN ('TRIAL','PAID','OVERDUE','SUSPENDED') NOT NULL
+- onboarding_status TEXT CHECK IN ('INCOMPLETE','COMPLETE') NOT NULL DEFAULT 'INCOMPLETE'
+- onboarding_completed_at TIMESTAMPTZ NULL
 - created_at TIMESTAMPTZ NOT NULL
 - created_at TIMESTAMPTZ NOT NULL
 - updated_at TIMESTAMPTZ NOT NULL
@@ -117,6 +119,40 @@ API base: `/api/v1`
 - Email addresses are restricted to the `@punchcard.co.za` domain
 - Email is computed from username (immutable after creation)
 - Password reset tokens are stored hashed and expire after 1 hour
+
+### 3.14 vendor_admin_users
+- vendor_admin_id UUID PK
+- vendor_id UUID FK NOT NULL
+- email TEXT UNIQUE NOT NULL
+- password_hash TEXT NOT NULL
+- first_name TEXT NOT NULL
+- last_name TEXT NOT NULL
+- role TEXT CHECK IN ('OWNER','MANAGER') NOT NULL DEFAULT 'OWNER'
+- status TEXT CHECK IN ('PENDING','ACTIVE','DISABLED') NOT NULL DEFAULT 'ACTIVE'
+- email_verified_at TIMESTAMPTZ NULL
+- reset_token TEXT NULL
+- reset_token_exp TIMESTAMPTZ NULL
+- last_login_at TIMESTAMPTZ NULL
+- created_at TIMESTAMPTZ NOT NULL
+- updated_at TIMESTAMPTZ NOT NULL
+
+### 3.15 vendor_registrations
+- registration_id UUID PK
+- email TEXT NOT NULL
+- first_name TEXT NOT NULL
+- last_name TEXT NOT NULL
+- trading_name TEXT NOT NULL
+- legal_name TEXT NULL
+- contact_phone TEXT NULL
+- vendor_slug TEXT NULL
+- code_hash TEXT NOT NULL
+- expires_at TIMESTAMPTZ NOT NULL
+- attempts INT NOT NULL DEFAULT 0
+- status TEXT CHECK IN ('PENDING','VERIFIED','COMPLETED','EXPIRED') NOT NULL DEFAULT 'PENDING'
+- verified_at TIMESTAMPTZ NULL
+- completed_at TIMESTAMPTZ NULL
+- created_at TIMESTAMPTZ NOT NULL
+- updated_at TIMESTAMPTZ NOT NULL
 
 ### 3.2 vendor_branding
 - vendor_id UUID PK/FK
@@ -491,7 +527,7 @@ Implement separately with admin auth:
 
 ### Authentication Methods
 - **Platform Admin** (`/api/v1/admin/*`): Uses HttpOnly cookies (set via `POST /api/v1/admin/auth/login`)
-- **Vendor Admin** (`/api/v1/v/:slug/admin/*`): Uses Bearer tokens in `Authorization` header
+- **Vendor Admin** (`/api/v1/v/:slug/admin/*`): Uses Bearer tokens in `Authorization` header. Tokens can belong to `vendor_admin_users` (email/password) or legacy enabled staff `ADMIN` accounts.
 
 **Important**: The frontend API client automatically injects Bearer tokens for vendor admin routes. Platform admin routes use cookies and do not require Bearer tokens.
 
@@ -505,18 +541,34 @@ Implement separately with admin auth:
 ### Vendor Admin APIs
 All vendor admin endpoints are under `/api/v1/v/:slug/admin/*` and require Bearer token authentication.
 
+**Self-service Vendor Auth:**
+- `POST /api/v1/vendor/register/start` - Start registration and email a 6-digit code.
+- `POST /api/v1/vendor/register/verify` - Verify the registration code.
+- `POST /api/v1/vendor/register/complete` - Create vendor, owner admin, default branch, default branding, and default program.
+- `POST /api/v1/vendor/auth/login` - Vendor admin email/password login.
+- `POST /api/v1/vendor/auth/forgot-password` - Request password reset email.
+- `POST /api/v1/vendor/auth/reset-password` - Complete password reset.
+- `GET /api/v1/vendor-admin/me` - Current vendor admin or legacy staff-admin session.
+
 **Branding Management:**
 - `GET /api/v1/v/:slug/admin/branding` - Get current branding
 - `PUT /api/v1/v/:slug/admin/branding` - Update branding
   - Body includes: `primary_color`, `secondary_color`, `accent_color`, `background_color`, `card_text_color`, `card_style`, `logo_url`, `wordmark_url`, `welcome_text`
-  - Optional: `reward_title`, `stamps_required` (updates active program)
   - Required fields (`primary_color`, `secondary_color`) have defaults if missing
   - Returns updated branding object
 
+**Program Management:**
+- `GET /api/v1/v/:slug/admin/program` - Get active program and version history
+- `PUT /api/v1/v/:slug/admin/program` - Publish a new active program version
+  - Body includes: `stamps_required`, `reward_title`, `reward_description`, `terms_text`
+  - `stamps_required` must be a whole number between 2 and 30
+  - Updating changed program values creates a new program row/version and deactivates the previous active version
+  - Existing cards stay tied to the program version they were created with
+
 **Other Vendor Admin APIs:**
 - branch CRUD
-- program create/activate new version
 - staff CRUD (including PIN reset)
+- onboarding status and completion
 
 All admin actions MUST write `admin_audit_log`.
 
