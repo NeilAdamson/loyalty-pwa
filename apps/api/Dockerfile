@@ -39,6 +39,7 @@ COPY --from=builder /app/verify-constraints.ts ./verify-constraints.ts
 COPY --from=builder /app/verify-error-mapping.ts ./verify-error-mapping.ts
 COPY --from=builder /app/verify-member-card.ts ./verify-member-card.ts
 COPY --from=builder /app/verify-modules.ts ./verify-modules.ts
+COPY --from=builder /app/verify-transaction-integrity.ts ./verify-transaction-integrity.ts
 COPY --from=builder /app/verify-tx.ts ./verify-tx.ts
 COPY --from=builder /app/test_api_create.ts ./test_api_create.ts
 

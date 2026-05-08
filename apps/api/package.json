@@ -19,6 +19,7 @@
         "verify:modules": "tsx verify-modules.ts",
         "verify:error-mapping": "tsx verify-error-mapping.ts",
         "verify:member-card": "tsx verify-member-card.ts",
+        "verify:tx-integrity": "tsx verify-transaction-integrity.ts",
         "verify:tx": "tsx verify-tx.ts"
     },
     "dependencies": {

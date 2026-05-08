@@ -116,6 +116,7 @@ flowchart LR
 ## 7. Transaction integrity
 - `stamp_transactions` and `redemption_transactions` are append-only.
 - Card state changes are performed within a DB transaction:
+  - lock the target `card_instances` row for update
   - validate card state
   - enforce cooldown
   - insert token_use

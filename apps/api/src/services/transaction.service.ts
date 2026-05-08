@@ -1,101 +1,113 @@
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import { ERROR_CODES } from '../plugins/errors'
 
 // Helper for cooldown check (e.g. 5 seconds)
 const STAMP_COOLDOWN_MS = 5000
 
+type LockedCardRow = {
+    card_id: string
+    vendor_id: string
+    member_id: string
+    program_id: string
+    status: string
+    stamps_count: number
+    stamps_required: number
+}
+
+type TransactionClient = Prisma.TransactionClient
+
+type TransactionTokenPayload = {
+    card_id: string
+    member_id: string
+    jti: string
+}
+
+function appError(statusCode: number, code: string, message: string) {
+    return { statusCode, code, message }
+}
+
+function isUniqueConstraintError(error: unknown) {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
+}
+
 export class TransactionService {
     constructor(private prisma: PrismaClient) { }
 
-    /**
-     * Parse and Validate Rotating Token Payload
-     * Note: Signature verification happens in the Route via fastify.jwt.verify
-     * Here we check logical constraints (Replay, Expiry if not checked by JWT)
-     */
-    async validateToken(vendorId: string, jti: string) {
-        // 1. Check Replay Protection
-        const used = await this.prisma.tokenUse.findUnique({
-            where: {
-                vendor_id_token_jti: {
-                    vendor_id: vendorId,
-                    token_jti: jti
-                }
-            }
-        })
-        if (used) {
-            throw {
-                statusCode: 409,
-                code: 'TOKEN_REPLAYED',
-                message: 'This token has already been used'
-            }
+    private async lockCardForUpdate(tx: TransactionClient, vendorId: string, cardId: string) {
+        const rows = await tx.$queryRaw<LockedCardRow[]>`
+            SELECT
+                c.card_id::text AS card_id,
+                c.vendor_id::text AS vendor_id,
+                c.member_id::text AS member_id,
+                c.program_id::text AS program_id,
+                c.status,
+                c.stamps_count,
+                p.stamps_required
+            FROM "card_instances" c
+            INNER JOIN "programs" p ON p.program_id = c.program_id
+            WHERE c.card_id = ${cardId}::uuid
+              AND c.vendor_id = ${vendorId}::uuid
+            FOR UPDATE OF c
+        `
+
+        const card = rows[0]
+        if (!card) {
+            throw appError(404, ERROR_CODES.NOT_FOUND, 'Card not found')
         }
+
+        return card
     }
 
-    async stamp(vendorId: string, staffId: string, branchId: string, payload: any) {
-        const { card_id, jti } = payload
-
-        // 1. Validate Token Replay
-        await this.validateToken(vendorId, jti)
-
-        // 2. Fetch Card + Status Check
-        const card = await this.prisma.cardInstance.findUnique({
-            where: { card_id },
-            include: { program: true }
-        })
-
-        if (!card || card.status !== 'ACTIVE') {
-            throw {
-                statusCode: 409, // Conflict with state
-                code: ERROR_CODES.CARD_ALREADY_ACTIVE, // Not quite, maybe CARD_NOT_ACTIVE
-                message: 'Card is not active'
-            }
-        }
-
-        if (card.vendor_id !== vendorId) {
-            throw { statusCode: 404, code: ERROR_CODES.NOT_FOUND, message: 'Card not found' }
-        }
-
-        // 3. Check Card Full?
-        if (card.stamps_count >= card.program.stamps_required) {
-            throw {
-                statusCode: 400,
-                code: 'CARD_FULL',
-                message: 'Card is already full, ready to redeem'
-            }
-        }
-
-        // 4. Cooldown Check
-        // Find last stamp transaction for this card
-        const lastTx = await this.prisma.stampTransaction.findFirst({
-            where: { card_id },
-            orderBy: { stamped_at: 'desc' }
-        })
-        if (lastTx) {
-            const diff = Date.now() - lastTx.stamped_at.getTime()
-            if (diff < STAMP_COOLDOWN_MS) {
-                throw {
-                    statusCode: 429,
-                    code: 'RATE_LIMITED',
-                    message: 'Stamping too fast'
-                }
-            }
-        }
-
-        // 5. Atomic Transaction
-        return this.prisma.$transaction(async (tx) => {
-            // A. Mark Token Used
+    private async markTokenUsed(tx: TransactionClient, vendorId: string, jti: string) {
+        try {
             await tx.tokenUse.create({
                 data: { vendor_id: vendorId, token_jti: jti }
             })
+        } catch (error) {
+            if (isUniqueConstraintError(error)) {
+                throw appError(409, ERROR_CODES.TOKEN_REPLAYED, 'This token has already been used')
+            }
+            throw error
+        }
+    }
 
-            // B. Increment Stamp
+    async stamp(vendorId: string, staffId: string, branchId: string, payload: TransactionTokenPayload) {
+        const { card_id, jti, member_id } = payload
+
+        return this.prisma.$transaction(async (tx) => {
+            const card = await this.lockCardForUpdate(tx, vendorId, card_id)
+
+            await this.markTokenUsed(tx, vendorId, jti)
+
+            if (card.member_id !== member_id) {
+                throw appError(404, ERROR_CODES.NOT_FOUND, 'Card not found')
+            }
+
+            if (card.status !== 'ACTIVE') {
+                throw appError(409, ERROR_CODES.CARD_NOT_ACTIVE, 'Card is not active')
+            }
+
+            if (card.stamps_count >= card.stamps_required) {
+                throw appError(400, ERROR_CODES.CARD_FULL, 'Card is already full, ready to redeem')
+            }
+
+            const lastTx = await tx.stampTransaction.findFirst({
+                where: { card_id, vendor_id: vendorId },
+                orderBy: { stamped_at: 'desc' }
+            })
+            if (lastTx) {
+                const diff = Date.now() - lastTx.stamped_at.getTime()
+                if (diff < STAMP_COOLDOWN_MS) {
+                    throw appError(429, ERROR_CODES.RATE_LIMITED, 'Stamping too fast')
+                }
+            }
+
             const updatedCard = await tx.cardInstance.update({
                 where: { card_id },
                 data: { stamps_count: { increment: 1 } },
                 include: { program: true }
             })
 
-            // C. Log Transaction
             await tx.stampTransaction.create({
                 data: {
                     vendor_id: vendorId,
@@ -110,39 +122,26 @@ export class TransactionService {
         })
     }
 
-    async redeem(vendorId: string, staffId: string, branchId: string, payload: any) {
+    async redeem(vendorId: string, staffId: string, branchId: string, payload: TransactionTokenPayload) {
         const { card_id, jti, member_id } = payload
 
-        // 1. Validate Token Replay
-        await this.validateToken(vendorId, jti)
-
-        // 2. Fetch Card
-        const card = await this.prisma.cardInstance.findUnique({
-            where: { card_id },
-            include: { program: true }
-        })
-
-        if (!card || card.status !== 'ACTIVE') {
-            throw { statusCode: 409, code: 'CARD_NOT_ELIGIBLE', message: 'Card not active' }
-        }
-
-        // 3. Check Eligibility
-        if (card.stamps_count < card.program.stamps_required) {
-            throw {
-                statusCode: 400,
-                code: 'CARD_NOT_ELIGIBLE',
-                message: 'Card does not have enough stamps'
-            }
-        }
-
-        // 4. Atomic Transaction
         return this.prisma.$transaction(async (tx) => {
-            // A. Mark Token Used
-            await tx.tokenUse.create({
-                data: { vendor_id: vendorId, token_jti: jti }
-            })
+            const card = await this.lockCardForUpdate(tx, vendorId, card_id)
 
-            // B. Mark Old Card Redeemed
+            await this.markTokenUsed(tx, vendorId, jti)
+
+            if (card.member_id !== member_id) {
+                throw appError(404, ERROR_CODES.NOT_FOUND, 'Card not found')
+            }
+
+            if (card.status !== 'ACTIVE') {
+                throw appError(409, ERROR_CODES.CARD_NOT_ELIGIBLE, 'Card not active')
+            }
+
+            if (card.stamps_count < card.stamps_required) {
+                throw appError(400, ERROR_CODES.CARD_NOT_ELIGIBLE, 'Card does not have enough stamps')
+            }
+
             await tx.cardInstance.update({
                 where: { card_id },
                 data: {
@@ -151,7 +150,6 @@ export class TransactionService {
                 }
             })
 
-            // C. Log Redemption
             await tx.redemptionTransaction.create({
                 data: {
                     vendor_id: vendorId,
@@ -162,10 +160,6 @@ export class TransactionService {
                 }
             })
 
-            // D. Create New Active Card (if Active Program exists)
-            // We need to fetch active program again to ensure we use current version?
-            // Or just use the same program ID? 
-            // Usually, we want the LATEST active program.
             const activeProgram = await tx.program.findFirst({
                 where: { vendor_id: vendorId, is_active: true }
             })

@@ -29,17 +29,45 @@ export const ERROR_CODES = {
     STAFF_PIN_INVALID: 'STAFF_PIN_INVALID',
 } as const
 
+type ApiError = FastifyError & {
+    statusCode?: number
+    code?: string
+}
+
 // Map constraint names to Error Codes
 const CONSTRAINT_MAP: Record<string, string> = {
     'ux_programs_one_active_per_vendor': ERROR_CODES.PROGRAM_ALREADY_ACTIVE,
     'ux_cards_one_active_per_member_vendor': ERROR_CODES.CARD_ALREADY_ACTIVE,
+    'token_use_pkey': ERROR_CODES.TOKEN_REPLAYED,
+}
+
+function getUniqueConstraintCode(error: Prisma.PrismaClientKnownRequestError) {
+    const target = error.meta?.target
+    const targetText = Array.isArray(target) ? target.join(',') : typeof target === 'string' ? target : ''
+
+    if (targetText.includes('vendor_id') && targetText.includes('token_jti')) {
+        return ERROR_CODES.TOKEN_REPLAYED
+    }
+
+    return CONSTRAINT_MAP[targetText] ?? ERROR_CODES.CONFLICT
 }
 
 export default fp(async (fastify) => {
-    fastify.setErrorHandler((error: FastifyError & { statusCode?: number; message?: string }, request, reply) => {
-        const status = typeof error.statusCode === 'number' ? error.statusCode : 500
-        const message = typeof error.message === 'string' && error.message ? error.message : 'Critical Error'
+    fastify.setErrorHandler((error: ApiError, _request, reply) => {
+        let status = typeof error.statusCode === 'number' ? error.statusCode : 500
+        let code = error.code
+        let message = typeof error.message === 'string' && error.message ? error.message : 'Critical Error'
+
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            status = 409
+            code = getUniqueConstraintCode(error)
+            message = code === ERROR_CODES.TOKEN_REPLAYED ? 'This token has already been used' : 'Unique constraint violation'
+        }
+
         if (status >= 500) console.error('Server error:', error)
-        return reply.status(status).send({ message })
+        return reply.status(status).send({
+            code: code ?? ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message
+        })
     })
 })
