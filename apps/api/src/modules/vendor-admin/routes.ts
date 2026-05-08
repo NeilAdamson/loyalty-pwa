@@ -1,8 +1,75 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import bcrypt from 'bcryptjs'
+import { SMSFlowService } from '../../services/smsflow.service'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
 const TIME_BUCKETS = ['AM', 'PM', 'Evening'] as const
+const NUDGE_AUDIENCES = ['NEAR_REWARD', 'AT_RISK_30D'] as const
+const MAX_MANUAL_NUDGE_RECIPIENTS = 200
+const MAX_MANUAL_NUDGE_BATCHES_PER_DAY = 5
+const OPT_OUT_SUFFIX = 'Reply STOP to opt out.'
+
+type NudgeAudience = typeof NUDGE_AUDIENCES[number]
+
+type NudgeRecipient = {
+    member_id: string
+    name: string
+    phone_e164: string
+    consent_marketing: boolean
+    last_active_at?: Date | null
+    stamps_remaining?: number
+    stamps_count?: number
+    stamps_required?: number
+    reward_title?: string
+}
+
+type NearRewardCardRecord = {
+    stamps_count: number
+    member: {
+        member_id: string
+        name: string
+        phone_e164: string
+        status: string
+        consent_marketing: boolean
+    }
+    program: {
+        stamps_required: number
+        reward_title: string
+    }
+}
+
+type NearRewardCandidate = NudgeRecipient & { member_status: string }
+
+type MessageSender = {
+    isConfigured(): boolean
+    sendMessage(to: string, body: string): Promise<void>
+}
+
+const toHttpError = (err: unknown, fallbackMessage: string) => {
+    if (typeof err === 'object' && err !== null) {
+        const candidate = err as { statusCode?: unknown; code?: unknown; message?: unknown }
+        return {
+            statusCode: typeof candidate.statusCode === 'number' ? candidate.statusCode : 400,
+            code: typeof candidate.code === 'string' ? candidate.code : 'VALIDATION_ERROR',
+            message: typeof candidate.message === 'string' ? candidate.message : fallbackMessage
+        }
+    }
+
+    return {
+        statusCode: 400,
+        code: 'VALIDATION_ERROR',
+        message: fallbackMessage
+    }
+}
+
+const errorMessage = (err: unknown, fallbackMessage: string): string => {
+    if (err instanceof Error && err.message) return err.message
+    if (typeof err === 'object' && err !== null) {
+        const candidate = err as { message?: unknown }
+        if (typeof candidate.message === 'string' && candidate.message) return candidate.message
+    }
+    return fallbackMessage
+}
 
 const toPositiveNumber = (value: unknown, fieldName: string): number => {
     if (value === undefined || value === null || value === '') {
@@ -32,7 +99,64 @@ const getDateWindows = () => {
     return { now, currentMonthStart, previousMonthStart, rolling30DaysStart }
 }
 
+const isNudgeAudience = (value: unknown): value is NudgeAudience =>
+    typeof value === 'string' && (NUDGE_AUDIENCES as readonly string[]).includes(value)
+
+const isValidE164 = (value: string): boolean => /^\+\d{10,15}$/.test(value)
+
+const getMessageSender = (): MessageSender => {
+    return new SMSFlowService()
+}
+
+const defaultNudgeTemplate = (audience: NudgeAudience): string => {
+    if (audience === 'NEAR_REWARD') {
+        return 'Hi {name}, you are only {stamps_remaining} stamp(s) away from your {reward} at {vendor}. Visit us soon and show your PunchCard.'
+    }
+    return 'Hi {name}, we miss you at {vendor}. Your digital PunchCard is ready when you visit again.'
+}
+
+const normalizeNudgeTemplate = (value: unknown, audience: NudgeAudience): string => {
+    const raw = typeof value === 'string' && value.trim() ? value.trim() : defaultNudgeTemplate(audience)
+    const withOptOut = /\bstop\b/i.test(raw) ? raw : `${raw} ${OPT_OUT_SUFFIX}`
+
+    if (withOptOut.length < 20) {
+        throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Nudge message is too short' }
+    }
+    if (withOptOut.length > 320) {
+        throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'Nudge message must be 320 characters or fewer' }
+    }
+    return withOptOut
+}
+
+const renderNudgeTemplate = (template: string, recipient: NudgeRecipient, vendorName: string): string => {
+    const replacements: Record<string, string> = {
+        name: recipient.name || 'there',
+        vendor: vendorName,
+        reward: recipient.reward_title || 'reward',
+        stamps_remaining: typeof recipient.stamps_remaining === 'number' ? String(recipient.stamps_remaining) : ''
+    }
+
+    return template.replace(/\{(name|vendor|reward|stamps_remaining)\}/g, (_, key: string) => replacements[key] ?? '')
+}
+
+const smsSegmentCount = (body: string): number => Math.max(1, Math.ceil(body.length / 160))
+
+const phoneTail = (phone: string): string => {
+    const digits = phone.replace(/\D/g, '')
+    return digits.length >= 4 ? `...${digits.slice(-4)}` : '...'
+}
+
+const splitNudgeRecipients = (recipients: NudgeRecipient[]) => {
+    const invalidPhone = recipients.filter((recipient) => !isValidE164(recipient.phone_e164))
+    const validPhone = recipients.filter((recipient) => isValidE164(recipient.phone_e164))
+    const eligible = validPhone.filter((recipient) => recipient.consent_marketing === true)
+    const noConsent = validPhone.filter((recipient) => recipient.consent_marketing !== true)
+
+    return { eligible, invalidPhone, noConsent }
+}
+
 const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
+    const messageSender = getMessageSender()
 
     const ensureVendorAdmin = async (request: { user?: { vendor_id?: string, role?: string } }) => {
         const user = request.user
@@ -63,11 +187,295 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
         }
     }
 
+    const loadNudgeAudience = async (vendorId: string, audience: NudgeAudience) => {
+        const vendor = await fastify.prisma.vendor.findUnique({
+            where: { vendor_id: vendorId },
+            select: { trading_name: true }
+        })
+        if (!vendor) {
+            throw { statusCode: 404, code: 'NOT_FOUND', message: 'Vendor not found' }
+        }
+
+        if (audience === 'NEAR_REWARD') {
+            const cards = await fastify.prisma.cardInstance.findMany({
+                where: {
+                    vendor_id: vendorId,
+                    status: 'ACTIVE',
+                    stamps_count: { gte: 1 }
+                },
+                select: {
+                    stamps_count: true,
+                    member: {
+                        select: {
+                            member_id: true,
+                            name: true,
+                            phone_e164: true,
+                            status: true,
+                            consent_marketing: true
+                        }
+                    },
+                    program: {
+                        select: {
+                            stamps_required: true,
+                            reward_title: true
+                        }
+                    }
+                }
+            })
+
+            const seenMembers = new Set<string>()
+            const recipients: NudgeRecipient[] = (cards as NearRewardCardRecord[])
+                .map((card): NearRewardCandidate => ({
+                    member_id: card.member.member_id,
+                    name: card.member.name,
+                    phone_e164: card.member.phone_e164,
+                    member_status: card.member.status,
+                    consent_marketing: card.member.consent_marketing,
+                    stamps_remaining: card.program.stamps_required - card.stamps_count,
+                    stamps_count: card.stamps_count,
+                    stamps_required: card.program.stamps_required,
+                    reward_title: card.program.reward_title
+                }))
+                .filter((recipient: NearRewardCandidate) => recipient.member_status === 'ACTIVE')
+                .filter((recipient: NearRewardCandidate) => (recipient.stamps_remaining || 0) >= 1 && (recipient.stamps_remaining || 0) <= 2)
+                .filter((recipient: NearRewardCandidate) => {
+                    if (seenMembers.has(recipient.member_id)) return false
+                    seenMembers.add(recipient.member_id)
+                    return true
+                })
+                .map(({ member_status: _memberStatus, ...recipient }: NearRewardCandidate): NudgeRecipient => recipient)
+
+            return { vendorName: vendor.trading_name, recipients }
+        }
+
+        const { rolling30DaysStart } = getDateWindows()
+        const recipients = await fastify.prisma.member.findMany({
+            where: {
+                vendor_id: vendorId,
+                status: 'ACTIVE',
+                last_active_at: { lt: rolling30DaysStart }
+            },
+            select: {
+                member_id: true,
+                name: true,
+                phone_e164: true,
+                consent_marketing: true,
+                last_active_at: true
+            },
+            orderBy: { last_active_at: 'asc' }
+        })
+
+        return { vendorName: vendor.trading_name, recipients }
+    }
+
+    const buildNudgePreview = (
+        audience: NudgeAudience,
+        vendorName: string,
+        recipients: NudgeRecipient[],
+        template: string
+    ) => {
+        const { eligible, invalidPhone, noConsent } = splitNudgeRecipients(recipients)
+        const renderedMessages = eligible.map((recipient) => renderNudgeTemplate(template, recipient, vendorName))
+
+        return {
+            audience,
+            provider_configured: messageSender.isConfigured(),
+            recipient_count: eligible.length,
+            audience_count: recipients.length,
+            excluded_no_consent_count: noConsent.length,
+            excluded_invalid_phone_count: invalidPhone.length,
+            max_recipients_per_send: MAX_MANUAL_NUDGE_RECIPIENTS,
+            message_template: template,
+            message_preview: eligible[0]
+                ? renderedMessages[0]
+                : renderNudgeTemplate(template, {
+                    member_id: 'preview',
+                    name: 'Customer',
+                    phone_e164: '+27000000000',
+                    consent_marketing: true,
+                    stamps_remaining: audience === 'NEAR_REWARD' ? 1 : undefined,
+                    reward_title: 'reward'
+                }, vendorName),
+            estimated_segments: renderedMessages.reduce((total, body) => total + smsSegmentCount(body), 0),
+            estimate_note: 'SMS provider billing may differ. No messages are sent until you confirm.',
+            sample_recipients: eligible.slice(0, 5).map((recipient) => ({
+                member_id: recipient.member_id,
+                name: recipient.name,
+                phone_tail: phoneTail(recipient.phone_e164),
+                stamps_remaining: recipient.stamps_remaining,
+                last_active_at: recipient.last_active_at
+            }))
+        }
+    }
+
     // Prefix: /v/:slug/admin
     fastify.register(async (subRequest) => {
         subRequest.addHook('onRequest', fastify.authenticate)
         subRequest.addHook('onRequest', ensureVendorAdmin)
         subRequest.addHook('onRequest', ensureSlugMatchesTokenVendor)
+
+        subRequest.get<{ Querystring: { audience?: string; message?: string } }>('/nudges/preview', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+
+            const { audience: audienceParam, message } = request.query
+            if (!isNudgeAudience(audienceParam)) {
+                return reply.status(400).send({
+                    code: 'VALIDATION_ERROR',
+                    message: 'Unsupported nudge audience'
+                })
+            }
+
+            let template: string
+            try {
+                template = normalizeNudgeTemplate(message, audienceParam)
+            } catch (err: unknown) {
+                const httpError = toHttpError(err, 'Invalid nudge message')
+                return reply.status(httpError.statusCode).send({
+                    code: httpError.code,
+                    message: httpError.message
+                })
+            }
+
+            const { vendorName, recipients } = await loadNudgeAudience(vendorId, audienceParam)
+            return buildNudgePreview(audienceParam, vendorName, recipients, template)
+        })
+
+        subRequest.post<{
+            Body: {
+                audience?: string
+                message?: string
+                confirm?: boolean
+                expected_recipient_count?: number
+            }
+        }>('/nudges/send', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            const staffId = request.user.staff_id
+            if (!vendorId || !staffId) {
+                return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor admin context missing' })
+            }
+
+            const { audience: audienceParam, message, confirm, expected_recipient_count } = request.body
+            if (!isNudgeAudience(audienceParam)) {
+                return reply.status(400).send({
+                    code: 'VALIDATION_ERROR',
+                    message: 'Unsupported nudge audience'
+                })
+            }
+            if (confirm !== true) {
+                return reply.status(400).send({
+                    code: 'NUDGE_CONFIRMATION_REQUIRED',
+                    message: 'Manual confirmation is required before sending nudges'
+                })
+            }
+            if (!messageSender.isConfigured()) {
+                return reply.status(503).send({
+                    code: 'MESSAGE_PROVIDER_NOT_CONFIGURED',
+                    message: 'SMS provider is not configured. No nudges were sent.'
+                })
+            }
+
+            let template: string
+            try {
+                template = normalizeNudgeTemplate(message, audienceParam)
+            } catch (err: unknown) {
+                const httpError = toHttpError(err, 'Invalid nudge message')
+                return reply.status(httpError.statusCode).send({
+                    code: httpError.code,
+                    message: httpError.message
+                })
+            }
+
+            const { vendorName, recipients } = await loadNudgeAudience(vendorId, audienceParam)
+            const { eligible, invalidPhone, noConsent } = splitNudgeRecipients(recipients)
+
+            if (typeof expected_recipient_count !== 'number' || expected_recipient_count !== eligible.length) {
+                return reply.status(409).send({
+                    code: 'NUDGE_RECIPIENT_COUNT_CHANGED',
+                    message: 'Recipient count changed. Preview the audience again before sending.',
+                    details: {
+                        expected_recipient_count,
+                        current_recipient_count: eligible.length
+                    }
+                })
+            }
+            if (eligible.length === 0) {
+                return reply.status(400).send({
+                    code: 'NUDGE_NO_RECIPIENTS',
+                    message: 'No opted-in customers are eligible for this nudge.'
+                })
+            }
+            if (eligible.length > MAX_MANUAL_NUDGE_RECIPIENTS) {
+                return reply.status(400).send({
+                    code: 'NUDGE_RECIPIENT_LIMIT_EXCEEDED',
+                    message: `Manual nudges are limited to ${MAX_MANUAL_NUDGE_RECIPIENTS} recipients per send.`
+                })
+            }
+
+            const todayStart = new Date()
+            todayStart.setUTCHours(0, 0, 0, 0)
+            const batchesToday = await fastify.prisma.adminAuditLog.count({
+                where: {
+                    vendor_id: vendorId,
+                    action: 'MANUAL_NUDGE_SEND',
+                    created_at: { gte: todayStart }
+                }
+            })
+            if (batchesToday >= MAX_MANUAL_NUDGE_BATCHES_PER_DAY) {
+                return reply.status(429).send({
+                    code: 'NUDGE_DAILY_BATCH_LIMIT',
+                    message: `Manual nudges are limited to ${MAX_MANUAL_NUDGE_BATCHES_PER_DAY} sends per vendor per day.`
+                })
+            }
+
+            const failures: Array<{ member_id: string; message: string }> = []
+            let sentCount = 0
+            let estimatedSegments = 0
+
+            for (const recipient of eligible) {
+                const body = renderNudgeTemplate(template, recipient, vendorName)
+                estimatedSegments += smsSegmentCount(body)
+                try {
+                    await messageSender.sendMessage(recipient.phone_e164, body)
+                    sentCount += 1
+                } catch (err: unknown) {
+                    failures.push({
+                        member_id: recipient.member_id,
+                        message: errorMessage(err, 'Send failed')
+                    })
+                }
+            }
+
+            await fastify.prisma.adminAuditLog.create({
+                data: {
+                    actor_type: 'VENDOR_ADMIN',
+                    actor_id: staffId,
+                    vendor_id: vendorId,
+                    action: 'MANUAL_NUDGE_SEND',
+                    payload: {
+                        audience: audienceParam,
+                        requested_count: eligible.length,
+                        sent_count: sentCount,
+                        failed_count: failures.length,
+                        excluded_no_consent_count: noConsent.length,
+                        excluded_invalid_phone_count: invalidPhone.length,
+                        estimated_segments: estimatedSegments,
+                        message_template: template,
+                        failure_sample: failures.slice(0, 10)
+                    }
+                }
+            })
+
+            return {
+                success: failures.length === 0,
+                audience: audienceParam,
+                requested_count: eligible.length,
+                sent_count: sentCount,
+                failed_count: failures.length,
+                estimated_segments: estimatedSegments,
+                failures: failures.slice(0, 10)
+            }
+        })
 
         // --- EPIC A: Dashboard Metrics ---
         subRequest.get('/metrics', async (request, reply) => {

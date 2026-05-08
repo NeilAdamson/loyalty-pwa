@@ -1,6 +1,7 @@
 import fp from 'fastify-plugin'
 import fastifyJwt from '@fastify/jwt'
 import { FastifyReply, FastifyRequest } from 'fastify'
+import { requireSecret } from '../utils/config'
 
 declare module 'fastify' {
     interface FastifyInstance {
@@ -34,11 +35,8 @@ declare module '@fastify/jwt' {
 }
 
 export default fp(async (fastify) => {
-    // Register JWT
-    // In a real app, use a strong secret from ENV. 
-    // For this milestone, we'll assume process.env.JWT_SECRET is set or fallback.
     await fastify.register(fastifyJwt, {
-        secret: process.env.JWT_SECRET || 'supersecret_dev_key_change_me',
+        secret: requireSecret('JWT_SECRET'),
     })
 
     // Auth Decorator

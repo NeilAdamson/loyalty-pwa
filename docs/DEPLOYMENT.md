@@ -52,6 +52,7 @@ CORS_ALLOWED_ORIGIN=https://punchcard.co.za
 
 # Security Secrets (Generate new random strings)
 JWT_SECRET=long_random_string_here
+COOKIE_SECRET=cookie_signing_random_string_here
 TOKEN_SIGNING_SECRET=another_long_random_string
 OTP_PEPPER=random_pepper_string
 
@@ -59,25 +60,16 @@ OTP_PEPPER=random_pepper_string
 ADMIN_EMAIL=admin@punchcard.co.za
 ADMIN_PASSWORD=secure_admin_password
 
-# OTP delivery: default is smsflow. Set OTP_PROVIDER=twilio to use Twilio. If provider not configured, OTP is logged only.
-# OTP_PROVIDER=smsflow   (default)
-# OTP_PROVIDER=twilio
-
-# --- Twilio (when OTP_PROVIDER=twilio) ---
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_FROM_NUMBER=14155238886
-# TWILIO_OTP_CHANNEL=sms   (default) use "sms" with trial "My Twilio phone number" (verified numbers only). Set to "whatsapp" to use WhatsApp instead.
-# TWILIO_API_KEY=
-# TWILIO_API_SECRET=
-
-# --- SMSFlow (when OTP_PROVIDER=smsflow) ---
-# POST https://api.smsflow.co.za/v1/messages — Bearer token = Client Secret (not Client ID). Phones: international without + (e.g. 27821234567).
-# SMSFLOW_API_KEY=your_client_secret
+# OTP delivery: SMSFlow only. If SMSFlow is not configured, OTP is logged only for local testing.
+# SMSFlow uses the Portal Integration flow:
+#   GET  /api/integration/authentication with Basic Auth (ClientID/ClientSecret)
+#   POST /api/integration/BulkMessages with the returned bearer token
+SMSFLOW_CLIENT_ID=your_client_id_from_portal
+SMSFLOW_CLIENT_SECRET=your_client_secret_from_portal
 # SMSFLOW_SENDER_ID=Loyalty   (optional; branding may require pre-approval)
 ```
 
-**Verifying OTP:** Call `GET /health`. The response includes `otp_provider` (`twilio` \| `smsflow`) and `otp_configured: true|false`. If `false`, set the chosen provider’s env vars (Twilio or SMSFlow) and restart the API. Check API logs for `[SMSService] Twilio ENABLED`, `[SMSFlowService] SMSFlow ENABLED`, or `DISABLED`.
+**Verifying OTP:** Call `GET /health`. The response includes `otp_provider: "smsflow"` and `otp_configured: true|false`. If `false`, set the SMSFlow env vars and restart the API. Check API logs for `[SMSFlowService] SMSFlow ENABLED` or `DISABLED`.
 
 
 

@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import AuthShell from '../components/AuthShell';
 import AdminInput from '../components/admin/ui/AdminInput';
 import AdminButton from '../components/admin/ui/AdminButton';
+
+const getApiErrorMessage = (err: unknown, fallback: string): string => {
+    if (axios.isAxiosError<{ message?: string }>(err)) {
+        return err.response?.data?.message || fallback;
+    }
+    return fallback;
+};
 
 const MemberAuth: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -16,6 +24,7 @@ const MemberAuth: React.FC = () => {
     const [step, setStep] = useState<'PHONE' | 'OTP'>('PHONE');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [marketingConsent, setMarketingConsent] = useState(false);
 
     // Strict lock to prevent double-fire
     const isSubmittingRef = React.useRef(false);
@@ -55,8 +64,8 @@ const MemberAuth: React.FC = () => {
         try {
             await api.post(`/api/v1/v/${slug}/auth/member/otp/request`, { phone });
             setStep('OTP');
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to send OTP');
+        } catch (err: unknown) {
+            setError(getApiErrorMessage(err, 'Failed to send OTP'));
             // Release lock immediately on error so they can retry
             isSubmittingRef.current = false;
         } finally {
@@ -73,11 +82,15 @@ const MemberAuth: React.FC = () => {
         setIsLoading(true);
         setError('');
         try {
-            const res = await api.post(`/api/v1/v/${slug}/auth/member/otp/verify`, { phone, code });
+            const res = await api.post(`/api/v1/v/${slug}/auth/member/otp/verify`, {
+                phone,
+                code,
+                consent_marketing: marketingConsent
+            });
             login(res.data.token); // Updates context
             navigate('/me/card'); // Redirect to protected route
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Invalid Code');
+        } catch (err: unknown) {
+            setError(getApiErrorMessage(err, 'Invalid Code'));
         } finally {
             setIsLoading(false);
         }
@@ -181,6 +194,24 @@ const MemberAuth: React.FC = () => {
                     <AdminButton type="submit" variant="primary" isLoading={isLoading} fullWidth>
                         Continue
                     </AdminButton>
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
+                        lineHeight: 1.45
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={marketingConsent}
+                            onChange={e => setMarketingConsent(e.target.checked)}
+                            style={{ marginTop: '2px' }}
+                        />
+                        <span>
+                            Send me reward reminders and occasional offers from this store. Message costs may apply and I can opt out later.
+                        </span>
+                    </label>
                 </form>
             ) : (
                 <form onSubmit={verifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

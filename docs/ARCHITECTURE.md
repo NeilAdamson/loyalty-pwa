@@ -25,7 +25,7 @@ flowchart LR
   P --> WEB[Web Container]
 
   API --> DB[(PostgreSQL)]
-  API --> SMS[SMS Provider API]
+  API --> SMS[SMSFlow API]
   API --> RL[(Rate limit store)]
 
   subgraph VPS
@@ -34,7 +34,7 @@ flowchart LR
     PWA
     DB
     RL
-    SMS[Twilio/SMSFlow SMS]
+    SMS[SMSFlow SMS]
   end
 ```
 
@@ -60,12 +60,10 @@ flowchart LR
 - MVP option A: Postgres (simple) with time-window counters.
 - Preferred: Redis (recommended on VPS) for efficient rate limits + token replay cache.
 
-### 3.5 OTP provider(s)
+### 3.5 OTP provider
 - OTP is implemented by sending a one-time code to the member's phone.
-- Providers:
-  - **SMSFlow** — SMS via the Portal Integration API (ClientID/ClientSecret → bearer token → BulkMessages).
-  - **Twilio Programmable Messaging** — SMS only.
-- Integration requires valid provider-specific credentials (`SMSFLOW_CLIENT_ID` / `SMSFLOW_CLIENT_SECRET` or `TWILIO_*`).
+- Provider: **SMSFlow** — SMS via the Portal Integration API (ClientID/ClientSecret → bearer token → BulkMessages).
+- Integration requires valid SMSFlow credentials (`SMSFLOW_CLIENT_ID` / `SMSFLOW_CLIENT_SECRET`).
 - The system supports “send OTP” and “verify OTP” using internal code generation + storage.
 
 ## 4. Tenant isolation
@@ -81,7 +79,7 @@ flowchart LR
 ## 5. Identity and session model
 
 ### 5.1 Member auth
-- Passwordless: phone + OTP delivered via SMS (SMSFlow or Twilio SMS).
+- Passwordless: phone + OTP delivered via SMSFlow SMS.
 - Session token: JWT (access token) stored as httpOnly cookie (preferred) OR in memory/local storage (fallback).
 - Session TTL: 30 days; refresh on activity.
 

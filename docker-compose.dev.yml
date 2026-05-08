@@ -15,8 +15,10 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
       # Dev Secrets (override .env if present)
-      - JWT_SECRET=dev_jwt_secret_12345
-      - TOKEN_SIGNING_SECRET=dev_token_secret_12345
+      - JWT_SECRET=dev_jwt_secret_12345_local_only
+      - COOKIE_SECRET=dev_cookie_secret_12345_local_only
+      - TOKEN_SIGNING_SECRET=dev_token_secret_12345_local_only
+      - OTP_PEPPER=dev_otp_pepper_12345_local_only
     ports:
       - "8000:8000"
     volumes:

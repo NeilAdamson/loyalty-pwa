@@ -16,9 +16,33 @@ const SMSFLOW_BASE_URL = process.env.SMSFLOW_BASE_URL || 'https://portal.smsflow
 const SMSFLOW_AUTH_URL = `${SMSFLOW_BASE_URL}/api/integration/authentication`;
 const SMSFLOW_MESSAGES_URL = `${SMSFLOW_BASE_URL}/api/integration/BulkMessages`;
 
+type JsonObject = Record<string, unknown>;
+
 /** Normalize E.164 to SMSFlow format: digits only, no leading + */
 function toSmsFlowNumber(e164: string): string {
     return e164.replace(/\D/g, '').replace(/^\+/, '');
+}
+
+function parseJsonObject(bodyText: string): JsonObject | null {
+    try {
+        const parsed: unknown = bodyText ? JSON.parse(bodyText) : null;
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as JsonObject : null;
+    } catch {
+        return null;
+    }
+}
+
+function getErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) return error.message;
+    return String(error);
+}
+
+function getErrorDetail(error: unknown): string {
+    if (error instanceof Error) {
+        const causeMessage = error.cause instanceof Error ? error.cause.message : undefined;
+        return causeMessage ?? error.message;
+    }
+    return String(error);
 }
 
 export class SMSFlowService {
@@ -56,7 +80,7 @@ export class SMSFlowService {
 
         const basic = Buffer.from(`${SMSFLOW_CLIENT_ID}:${SMSFLOW_CLIENT_SECRET}`, 'utf8').toString('base64');
 
-        let json: any;
+        let json: JsonObject | null;
         try {
             const res = await fetch(SMSFLOW_AUTH_URL, {
                 method: 'GET',
@@ -67,21 +91,17 @@ export class SMSFlowService {
             });
 
             const bodyText = await res.text();
-            try {
-                json = bodyText ? JSON.parse(bodyText) : null;
-            } catch {
-                json = null;
-            }
+            json = parseJsonObject(bodyText);
 
-            if (!res.ok || !json || !json.token) {
+            if (!res.ok || !json || typeof json.token !== 'string') {
                 console.error('[SMSFlowService] Failed to obtain login token from SMSFlow.', {
                     status: res.status,
                     body: bodyText,
                 });
                 throw new Error(`SMSFlow auth failed with status ${res.status}`);
             }
-        } catch (err: any) {
-            const detail = err?.message ?? String(err);
+        } catch (err: unknown) {
+            const detail = getErrorMessage(err);
             console.error('[SMSFlowService] Error calling SMSFlow authentication endpoint:', detail);
             throw { statusCode: 502, message: 'Could not obtain SMS provider token. Please try again.' };
         }
@@ -90,20 +110,19 @@ export class SMSFlowService {
             ? json.expiresInMinutes
             : 60; // sensible default if API omits it
 
-        this.authToken = json.token as string;
+        this.authToken = json.token;
         this.authTokenExpiresAt = Date.now() + expiresInMinutes * 60_000;
 
         return this.authToken as string;
     }
 
-    async sendOtp(to: string, code: string): Promise<void> {
+    async sendMessage(to: string, content: string): Promise<void> {
         if (!this.enabled) {
-            console.log(`[SMSFlowService] OTP not sent (SMSFlow not configured). Code for ${to}: ${code} — use this code to verify.`);
+            console.log(`[SMSFlowService] SMS not sent (SMSFlow not configured). Message for ${to}: ${content}`);
             return;
         }
 
         const toNumber = toSmsFlowNumber(to);
-        const content = `Your verification code is: ${code}`;
 
         const payload = {
             SendOptions: {
@@ -133,12 +152,7 @@ export class SMSFlowService {
             });
 
             const bodyText = await res.text();
-            let json: any;
-            try {
-                json = bodyText ? JSON.parse(bodyText) : null;
-            } catch {
-                json = null;
-            }
+            const json = parseJsonObject(bodyText);
 
             const statusCode = json?.statusCode;
             const isLogicalSuccess =
@@ -155,10 +169,22 @@ export class SMSFlowService {
                 throw new Error(`SMSFlow send failed (http=${res.status}, statusCode=${statusCode})`);
             }
 
-            console.log(`[SMSFlowService] OTP sent via SMSFlow to ${toNumber}.`);
-        } catch (error: any) {
-            const detail = error?.cause?.message ?? error?.message ?? String(error);
-            console.error(`[SMSFlowService] Error sending OTP to ${to}:`, detail);
+            console.log(`[SMSFlowService] SMS sent via SMSFlow to ${toNumber}.`);
+        } catch (error: unknown) {
+            const detail = getErrorDetail(error);
+            console.error(`[SMSFlowService] Error sending SMS to ${to}:`, detail);
+            console.log(`[Fallback Log] SMS for ${to}: ${content}`);
+            throw { statusCode: 502, message: 'Could not send SMS. Please try again.' };
+        }
+    }
+
+    async sendOtp(to: string, code: string): Promise<void> {
+        try {
+            await this.sendMessage(to, `Your verification code is: ${code}`);
+            if (this.enabled) {
+                console.log(`[SMSFlowService] OTP sent via SMSFlow to ${toSmsFlowNumber(to)}.`);
+            }
+        } catch (error) {
             console.log(`[Fallback Log] OTP for ${to}: ${code}`);
             throw { statusCode: 502, message: 'Could not send verification code. Please try again.' };
         }

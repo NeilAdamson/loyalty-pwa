@@ -3,26 +3,131 @@ import prismaPlugin from './plugins/prisma'
 import corsPlugin from './plugins/cors'
 import errorsPlugin from './plugins/errors'
 import authPlugin from './plugins/auth'
+import { assertRequiredSecurityEnv, requireSecret } from './utils/config'
 import fs from 'fs';
 import path from 'path';
-import { pipeline } from 'stream';
-import util from 'util';
+import { randomUUID } from 'crypto';
 
-const pump = util.promisify(pipeline);
+assertRequiredSecurityEnv();
 
 const server = fastify({
     logger: true
 });
 
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_MIME_TYPES: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/avif': 'avif',
+};
+
+function detectImageExtension(buffer: Buffer): string | null {
+    if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
+    if (
+        buffer.length >= 8 &&
+        buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4e &&
+        buffer[3] === 0x47 &&
+        buffer[4] === 0x0d &&
+        buffer[5] === 0x0a &&
+        buffer[6] === 0x1a &&
+        buffer[7] === 0x0a
+    ) return 'png';
+    if (
+        buffer.length >= 12 &&
+        buffer.toString('ascii', 0, 4) === 'RIFF' &&
+        buffer.toString('ascii', 8, 12) === 'WEBP'
+    ) return 'webp';
+    if (
+        buffer.length >= 16 &&
+        buffer.toString('ascii', 4, 8) === 'ftyp' &&
+        buffer.toString('ascii', 8, Math.min(buffer.length, 32)).includes('avif')
+    ) return 'avif';
+    return null;
+}
+
+async function streamToLimitedBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    let total = 0;
+
+    for await (const chunk of stream as any) {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        total += buffer.length;
+        if (total > MAX_UPLOAD_BYTES) {
+            throw { statusCode: 413, code: 'UPLOAD_TOO_LARGE', message: 'Image upload must be 5MB or smaller' };
+        }
+        chunks.push(buffer);
+    }
+
+    return Buffer.concat(chunks, total);
+}
+
+async function authorizeUpload(request: any, reply: any) {
+    const adminToken = request.cookies?.admin_token;
+    if (adminToken) {
+        try {
+            const decoded = request.server.jwt.verify(adminToken) as any;
+            if (decoded?.type === 'ADMIN' && decoded?.sub) {
+                const admin = await request.server.prisma.adminUser.findUnique({
+                    where: { admin_id: decoded.sub },
+                    select: { admin_id: true, status: true }
+                });
+                if (admin?.status === 'ACTIVE') {
+                    return { actor_type: 'PLATFORM_ADMIN', actor_id: admin.admin_id, vendor_id: null };
+                }
+            }
+        } catch {
+            // Fall through to bearer-token validation below.
+        }
+    }
+
+    try {
+        await request.jwtVerify();
+    } catch {
+        reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Admin authentication required' });
+        return null;
+    }
+
+    const user = request.user;
+    if (!user?.vendor_id || !user?.staff_id || user.role !== 'ADMIN') {
+        reply.status(403).send({ code: 'FORBIDDEN', message: 'Vendor admin access required' });
+        return null;
+    }
+
+    const staff = await request.server.prisma.staffUser.findFirst({
+        where: {
+            staff_id: user.staff_id,
+            vendor_id: user.vendor_id,
+            status: 'ENABLED',
+            role: 'ADMIN'
+        },
+        select: { staff_id: true, vendor_id: true }
+    });
+
+    if (!staff) {
+        reply.status(403).send({ code: 'FORBIDDEN', message: 'Vendor admin access required' });
+        return null;
+    }
+
+    return { actor_type: 'VENDOR_ADMIN', actor_id: staff.staff_id, vendor_id: staff.vendor_id };
+}
+
 // Register Core Plugins
 server.register(errorsPlugin) // Global Error Handler (Register first)
 server.register(corsPlugin)
 server.register(require('@fastify/cookie'), {
-    secret: "super-secret-cookie-signer-secret-change-me",
+    secret: requireSecret('COOKIE_SECRET'),
     hook: 'onRequest',
     parseOptions: {}
 })
-server.register(require('@fastify/multipart'))
+server.register(require('@fastify/multipart'), {
+    limits: {
+        files: 1,
+        fileSize: MAX_UPLOAD_BYTES,
+    }
+})
 server.register(require('@fastify/static'), {
     root: require('path').join(__dirname, '../uploads'),
     prefix: '/uploads/',
@@ -52,16 +157,75 @@ server.register(async function (fastify) {
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
     fastify.post('/uploads', async (req: any, reply) => {
-        const data = await req.file();
-        if (!data) return reply.status(400).send({ message: 'No file uploaded' });
+        const actor = await authorizeUpload(req, reply);
+        if (!actor) return reply;
 
-        const ext = path.extname(data.filename);
-        const uniqueName = `image-${Date.now()}-${Math.round(Math.random() * 1000)}${ext}`;
-        const filePath = path.join(uploadDir, uniqueName);
+        let data;
+        try {
+            data = await req.file();
+        } catch (err: any) {
+            const statusCode = err?.statusCode || 400;
+            return reply.status(statusCode).send({
+                code: statusCode === 413 ? 'UPLOAD_TOO_LARGE' : 'VALIDATION_ERROR',
+                message: statusCode === 413 ? 'Image upload must be 5MB or smaller' : 'Invalid upload request'
+            });
+        }
+        if (!data) return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'No file uploaded' });
 
-        await pump(data.file, fs.createWriteStream(filePath));
+        const expectedExt = ALLOWED_IMAGE_MIME_TYPES[data.mimetype];
+        if (!expectedExt) {
+            return reply.status(415).send({
+                code: 'UNSUPPORTED_MEDIA_TYPE',
+                message: 'Only JPEG, PNG, WebP, and AVIF images are allowed'
+            });
+        }
 
-        const fileUrl = `${process.env.API_BASE_URL || 'http://localhost:8000'}/uploads/${uniqueName}`;
+        let buffer: Buffer;
+        try {
+            buffer = await streamToLimitedBuffer(data.file);
+        } catch (err: any) {
+            const statusCode = err?.statusCode || 400;
+            return reply.status(statusCode).send({
+                code: err?.code || 'VALIDATION_ERROR',
+                message: err?.message || 'Invalid upload request'
+            });
+        }
+        const detectedExt = detectImageExtension(buffer);
+        if (!detectedExt || detectedExt !== expectedExt) {
+            return reply.status(415).send({
+                code: 'UNSUPPORTED_MEDIA_TYPE',
+                message: 'Uploaded file content does not match an allowed image type'
+            });
+        }
+
+        const scope = actor.vendor_id || 'platform';
+        const relativeDir = path.join('branding', scope);
+        const targetDir = path.join(uploadDir, relativeDir);
+        if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+
+        const uniqueName = `${randomUUID()}.${detectedExt}`;
+        const relativePath = path.join(relativeDir, uniqueName);
+        const filePath = path.join(uploadDir, relativePath);
+
+        await fs.promises.writeFile(filePath, buffer, { flag: 'wx' });
+
+        await fastify.prisma.adminAuditLog.create({
+            data: {
+                actor_type: actor.actor_type,
+                actor_id: actor.actor_id,
+                vendor_id: actor.vendor_id,
+                action: 'UPLOAD_BRANDING_IMAGE',
+                payload: {
+                    original_filename: data.filename,
+                    stored_path: relativePath.replace(/\\/g, '/'),
+                    mime_type: data.mimetype,
+                    size_bytes: buffer.length
+                }
+            }
+        });
+
+        const publicPath = relativePath.replace(/\\/g, '/');
+        const fileUrl = `${process.env.API_BASE_URL || 'http://localhost:8000'}/uploads/${publicPath}`;
         return { url: fileUrl };
     });
 }, { prefix: '/api/v1' });
@@ -85,19 +249,16 @@ server.register(require('./modules/admin/member.routes').adminMemberRoutes, { pr
 server.register(require('./modules/admin/users.routes').adminUserRoutes, { prefix: '/api/v1/admin/users' })
 
 import { SMSFlowService } from './services/smsflow.service';
-import { WhatsAppService } from './services/whatsapp.service';
 
-const OTP_PROVIDER_HEALTH = (process.env.OTP_PROVIDER || process.env.SMS_PROVIDER || 'smsflow').toLowerCase();
 // Instantiate once for health checks to avoid log spam and cache config
-const healthCheckSender = OTP_PROVIDER_HEALTH === 'smsflow' ? new SMSFlowService() : new WhatsAppService();
+const healthCheckSender = new SMSFlowService();
 
 server.get('/health', async (request, reply) => {
     return {
         status: 'ok',
         timestamp: new Date().toISOString(),
-        otp_provider: OTP_PROVIDER_HEALTH,
+        otp_provider: 'smsflow',
         otp_configured: healthCheckSender.isConfigured(),
-        twilio_configured: OTP_PROVIDER_HEALTH === 'twilio' ? healthCheckSender.isConfigured() : undefined,
     };
 });
 

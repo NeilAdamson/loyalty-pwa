@@ -330,9 +330,7 @@ Record fraud flags in transaction `flags` JSON when:
 - TTL: 5 minutes.
 
 ### 7.2 Delivery
-- Send OTP to `phone_e164` via SMS using the configured provider:
-  - **SMSFlow** (SMS) or
-  - **Twilio** (SMS only).
+- Send OTP to `phone_e164` via SMSFlow SMS.
 - Message template (exact text):
   - `Your {VENDOR_TRADING_NAME} verification code is: {OTP}. It expires in 5 minutes.`
 
@@ -549,15 +547,12 @@ A scheduled job runs daily:
 ## 12. Environment variables
 - `DATABASE_URL`
 - `JWT_SECRET`
+- `COOKIE_SECRET`
 - `TOKEN_SIGNING_SECRET`
 - `OTP_PEPPER`
-- `OTP_PROVIDER` (smsflow \| twilio)
 - `SMSFLOW_CLIENT_ID`
 - `SMSFLOW_CLIENT_SECRET`
 - `SMSFLOW_SENDER_ID`
-- `TWILIO_ACCOUNT_SID`
-- `TWILIO_AUTH_TOKEN`
-- `TWILIO_FROM_NUMBER`
 - `STAMP_COOLDOWN_SECONDS=5`
 - `REDIS_URL` (recommended)
 - `CORS_ALLOWED_ORIGIN`

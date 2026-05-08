@@ -1,21 +1,11 @@
 import { FastifyPluginAsync } from 'fastify'
 import { VendorService } from '../../services/vendor.service'
 import { AuthService } from '../../services/auth.service'
-import { WhatsAppService } from '../../services/whatsapp.service'
 import { SMSFlowService } from '../../services/smsflow.service'
-
-const OTP_PROVIDER = (process.env.OTP_PROVIDER || process.env.SMS_PROVIDER || 'smsflow').toLowerCase()
-
-function getOtpSender() {
-    if (OTP_PROVIDER === 'smsflow') {
-        return new SMSFlowService()
-    }
-    return new WhatsAppService()
-}
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
     const vendorService = new VendorService(fastify.prisma)
-    const otpSender = getOtpSender()
+    const otpSender = new SMSFlowService()
     const authService = new AuthService(fastify.prisma, otpSender)
 
     // Member OTP Request
@@ -33,14 +23,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     )
 
     // Member OTP Verify
-    fastify.post<{ Params: { vendorSlug: string }; Body: { phone: string; code: string } }>(
+    fastify.post<{ Params: { vendorSlug: string }; Body: { phone: string; code: string; consent_marketing?: boolean } }>(
         '/v/:vendorSlug/auth/member/otp/verify',
         async (request, reply) => {
             const { vendorSlug } = request.params
-            const { phone, code } = request.body
+            const { phone, code, consent_marketing } = request.body
 
             const vendor = await vendorService.resolveBySlug(vendorSlug)
-            const member = await authService.verifyMemberOtp(vendor.vendor_id, phone, code)
+            const member = await authService.verifyMemberOtp(vendor.vendor_id, phone, code, consent_marketing === true)
 
             // Issue Token
             const token = fastify.jwt.sign({

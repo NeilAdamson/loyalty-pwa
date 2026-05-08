@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../utils/api';
+
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    if (axios.isAxiosError<{ message?: string }>(error)) {
+        return error.response?.data?.message || fallback;
+    }
+    return fallback;
+};
 
 interface DashboardMetrics {
     total_members: number;
@@ -43,12 +51,51 @@ interface ActivityItem {
     staff_name: string;
 }
 
+type NudgeAudience = 'NEAR_REWARD' | 'AT_RISK_30D';
+
+interface NudgePreview {
+    audience: NudgeAudience;
+    provider_configured: boolean;
+    recipient_count: number;
+    audience_count: number;
+    excluded_no_consent_count: number;
+    excluded_invalid_phone_count: number;
+    max_recipients_per_send: number;
+    message_template: string;
+    message_preview: string;
+    estimated_segments: number;
+    estimate_note: string;
+    sample_recipients: Array<{
+        member_id: string;
+        name: string;
+        phone_tail: string;
+        stamps_remaining?: number;
+        last_active_at?: string | null;
+    }>;
+}
+
+interface NudgeSendResult {
+    success: boolean;
+    requested_count: number;
+    sent_count: number;
+    failed_count: number;
+    estimated_segments: number;
+}
+
 const VendorDashboard: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const { token } = useAuth();
     const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
     const [activity, setActivity] = useState<ActivityItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [nudgeAudience, setNudgeAudience] = useState<NudgeAudience | null>(null);
+    const [nudgePreview, setNudgePreview] = useState<NudgePreview | null>(null);
+    const [nudgeMessage, setNudgeMessage] = useState('');
+    const [nudgeLoading, setNudgeLoading] = useState(false);
+    const [nudgeSending, setNudgeSending] = useState(false);
+    const [nudgeError, setNudgeError] = useState('');
+    const [nudgeResult, setNudgeResult] = useState<NudgeSendResult | null>(null);
+    const [acknowledgeCosts, setAcknowledgeCosts] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -71,6 +118,67 @@ const VendorDashboard: React.FC = () => {
 
         if (token) fetchData();
     }, [slug, token]);
+
+    const openNudgeModal = async (audience: NudgeAudience) => {
+        if (!token || !slug) return;
+
+        setNudgeAudience(audience);
+        setNudgePreview(null);
+        setNudgeMessage('');
+        setNudgeError('');
+        setNudgeResult(null);
+        setAcknowledgeCosts(false);
+        setNudgeLoading(true);
+
+        try {
+            const res = await api.get<NudgePreview>(`/api/v1/v/${slug}/admin/nudges/preview`, {
+                params: { audience },
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setNudgePreview(res.data);
+            setNudgeMessage(res.data.message_template);
+        } catch (error: unknown) {
+            setNudgeError(getApiErrorMessage(error, 'Failed to load nudge preview'));
+        } finally {
+            setNudgeLoading(false);
+        }
+    };
+
+    const closeNudgeModal = () => {
+        if (nudgeSending) return;
+        setNudgeAudience(null);
+        setNudgePreview(null);
+        setNudgeMessage('');
+        setNudgeError('');
+        setNudgeResult(null);
+        setAcknowledgeCosts(false);
+    };
+
+    const sendNudge = async () => {
+        if (!token || !slug || !nudgeAudience || !nudgePreview) return;
+
+        setNudgeSending(true);
+        setNudgeError('');
+        setNudgeResult(null);
+
+        try {
+            const res = await api.post<NudgeSendResult>(
+                `/api/v1/v/${slug}/admin/nudges/send`,
+                {
+                    audience: nudgeAudience,
+                    message: nudgeMessage,
+                    confirm: true,
+                    expected_recipient_count: nudgePreview.recipient_count
+                },
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+            setNudgeResult(res.data);
+        } catch (error: unknown) {
+            setNudgeError(getApiErrorMessage(error, 'Failed to send nudge'));
+        } finally {
+            setNudgeSending(false);
+        }
+    };
 
     if (loading) return <div className="p-8 text-center text-muted">Loading dashboard...</div>;
 
@@ -169,6 +277,7 @@ const VendorDashboard: React.FC = () => {
                     emoji="🌵"
                     emptyText="Nobody has gone quiet long enough to flag — you're all caught up."
                     atRisk={metrics?.customer_insights.at_risk_customers_30d ?? []}
+                    onNudge={() => openNudgeModal('AT_RISK_30D')}
                 />
                 <CustomerInsightColumn
                     variant="near"
@@ -177,6 +286,7 @@ const VendorDashboard: React.FC = () => {
                     emoji="✨"
                     emptyText="No one is one stamp away — full cards will show up here."
                     nearReward={metrics?.customer_insights.near_reward_customers ?? []}
+                    onNudge={() => openNudgeModal('NEAR_REWARD')}
                 />
             </div>
 
@@ -290,6 +400,23 @@ const VendorDashboard: React.FC = () => {
                     </table>
                 </div>
             </section>
+
+            {nudgeAudience && (
+                <NudgeModal
+                    audience={nudgeAudience}
+                    preview={nudgePreview}
+                    message={nudgeMessage}
+                    loading={nudgeLoading}
+                    sending={nudgeSending}
+                    error={nudgeError}
+                    result={nudgeResult}
+                    acknowledgeCosts={acknowledgeCosts}
+                    onMessageChange={setNudgeMessage}
+                    onAcknowledgeCostsChange={setAcknowledgeCosts}
+                    onClose={closeNudgeModal}
+                    onSend={sendNudge}
+                />
+            )}
 
             <style>{VENDOR_DASHBOARD_CSS}</style>
         </div>
@@ -420,6 +547,10 @@ const VENDOR_DASHBOARD_CSS = `
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
+.vendor-dash-insight-heading {
+  flex: 1;
+  min-width: 0;
+}
 .vendor-dash-insight-icon {
   width: 2.75rem;
   height: 2.75rem;
@@ -443,6 +574,20 @@ const VENDOR_DASHBOARD_CSS = `
   font-size: 0.78rem;
   color: var(--text-dim);
   font-weight: 500;
+}
+.vendor-dash-nudge-btn {
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-radius: 10px;
+  padding: 0.45rem 0.65rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.vendor-dash-nudge-btn:hover {
+  background: rgba(255,255,255,0.12);
 }
 .vendor-dash-insight-list {
   list-style: none;
@@ -680,6 +825,172 @@ const VENDOR_DASHBOARD_CSS = `
   margin-left: 0.45rem;
   color: var(--text-dim);
 }
+.vendor-dash-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+}
+.vendor-dash-nudge-modal {
+  width: min(720px, 100%);
+  max-height: min(90vh, 820px);
+  overflow: auto;
+  border-radius: 18px;
+  padding: 1.5rem;
+  background: #12121a;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 28px 80px rgba(0,0,0,0.45);
+}
+.vendor-dash-modal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.vendor-dash-modal-title {
+  margin: 0;
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.vendor-dash-modal-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+.vendor-dash-modal-close {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  cursor: pointer;
+}
+.vendor-dash-nudge-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.vendor-dash-nudge-summary > div {
+  padding: 0.8rem;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.vendor-dash-nudge-summary span,
+.vendor-dash-nudge-label,
+.vendor-dash-nudge-preview span,
+.vendor-dash-nudge-sample span {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.vendor-dash-nudge-summary strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #fff;
+  font-size: 1.35rem;
+}
+.vendor-dash-nudge-textarea {
+  width: 100%;
+  min-height: 8.5rem;
+  margin-top: 0.5rem;
+  padding: 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  resize: vertical;
+  outline: none;
+}
+.vendor-dash-nudge-help {
+  margin: 0.45rem 0 1rem;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+.vendor-dash-nudge-preview,
+.vendor-dash-nudge-sample {
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.vendor-dash-nudge-preview p {
+  margin: 0.45rem 0 0;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.5;
+}
+.vendor-dash-nudge-sample ul {
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+.vendor-dash-nudge-sample li {
+  color: rgba(255,255,255,0.9);
+  font-size: 0.85rem;
+}
+.vendor-dash-nudge-sample small {
+  color: var(--text-dim);
+  margin-left: 0.35rem;
+}
+.vendor-dash-cost-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  color: rgba(255,255,255,0.88);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.vendor-dash-nudge-warning,
+.vendor-dash-nudge-error,
+.vendor-dash-nudge-success,
+.vendor-dash-modal-state {
+  padding: 0.85rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.vendor-dash-nudge-warning {
+  color: #fde68a;
+  background: rgba(234,179,8,0.12);
+  border: 1px solid rgba(234,179,8,0.28);
+}
+.vendor-dash-nudge-error {
+  color: #fecaca;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.28);
+}
+.vendor-dash-nudge-success {
+  color: #bbf7d0;
+  background: rgba(34,197,94,0.12);
+  border: 1px solid rgba(34,197,94,0.28);
+}
+.vendor-dash-modal-state {
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.vendor-dash-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
 `;
 
 type InsightColumnProps =
@@ -690,6 +1001,7 @@ type InsightColumnProps =
           emoji: string;
           emptyText: string;
           customers: DashboardMetrics['customer_insights']['top_customers_30d'];
+          onNudge?: never;
       }
     | {
           variant: 'risk';
@@ -698,6 +1010,7 @@ type InsightColumnProps =
           emoji: string;
           emptyText: string;
           atRisk: DashboardMetrics['customer_insights']['at_risk_customers_30d'];
+          onNudge: () => void;
       }
     | {
           variant: 'near';
@@ -706,6 +1019,7 @@ type InsightColumnProps =
           emoji: string;
           emptyText: string;
           nearReward: DashboardMetrics['customer_insights']['near_reward_customers'];
+          onNudge: () => void;
       };
 
 const PeakActivityPanel: React.FC<{
@@ -907,12 +1221,173 @@ const CustomerInsightColumn: React.FC<InsightColumnProps> = (props) => {
                 <div className="vendor-dash-insight-icon" aria-hidden>
                     {props.emoji}
                 </div>
-                <div>
+                <div className="vendor-dash-insight-heading">
                     <h3 className="vendor-dash-insight-title">{props.title}</h3>
                     <p className="vendor-dash-insight-sub">{props.subtitle}</p>
                 </div>
+                {props.onNudge && (
+                    <button type="button" className="vendor-dash-nudge-btn" onClick={props.onNudge}>
+                        Send nudge
+                    </button>
+                )}
             </div>
             {body}
+        </div>
+    );
+};
+
+const nudgeAudienceLabel = (audience: NudgeAudience): string =>
+    audience === 'NEAR_REWARD' ? 'Almost there customers' : 'Needs attention customers';
+
+const NudgeModal: React.FC<{
+    audience: NudgeAudience;
+    preview: NudgePreview | null;
+    message: string;
+    loading: boolean;
+    sending: boolean;
+    error: string;
+    result: NudgeSendResult | null;
+    acknowledgeCosts: boolean;
+    onMessageChange: (value: string) => void;
+    onAcknowledgeCostsChange: (value: boolean) => void;
+    onClose: () => void;
+    onSend: () => void;
+}> = ({
+    audience,
+    preview,
+    message,
+    loading,
+    sending,
+    error,
+    result,
+    acknowledgeCosts,
+    onMessageChange,
+    onAcknowledgeCostsChange,
+    onClose,
+    onSend
+}) => {
+    const canSend = Boolean(
+        preview &&
+        preview.provider_configured &&
+        preview.recipient_count > 0 &&
+        preview.recipient_count <= preview.max_recipients_per_send &&
+        acknowledgeCosts &&
+        !sending &&
+        !result
+    );
+
+    return (
+        <div className="vendor-dash-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nudge-modal-title">
+            <div className="vendor-dash-nudge-modal">
+                <div className="vendor-dash-modal-head">
+                    <div>
+                        <h2 id="nudge-modal-title" className="vendor-dash-modal-title">Send manual nudge</h2>
+                        <p className="vendor-dash-modal-subtitle">{nudgeAudienceLabel(audience)}</p>
+                    </div>
+                    <button type="button" className="vendor-dash-modal-close" onClick={onClose} disabled={sending}>
+                        x
+                    </button>
+                </div>
+
+                {loading ? (
+                    <div className="vendor-dash-modal-state">Loading nudge preview...</div>
+                ) : preview ? (
+                    <>
+                        <div className="vendor-dash-nudge-summary">
+                            <div>
+                                <span>Recipients</span>
+                                <strong>{preview.recipient_count}</strong>
+                            </div>
+                            <div>
+                                <span>No consent</span>
+                                <strong>{preview.excluded_no_consent_count}</strong>
+                            </div>
+                            <div>
+                                <span>Invalid phone</span>
+                                <strong>{preview.excluded_invalid_phone_count}</strong>
+                            </div>
+                            <div>
+                                <span>Est. segments</span>
+                                <strong>{preview.estimated_segments}</strong>
+                            </div>
+                        </div>
+
+                        {!preview.provider_configured && (
+                            <div className="vendor-dash-nudge-warning">
+                                SMS provider is not configured. Sending is disabled.
+                            </div>
+                        )}
+                        {preview.recipient_count > preview.max_recipients_per_send && (
+                            <div className="vendor-dash-nudge-warning">
+                                This audience exceeds the manual send limit of {preview.max_recipients_per_send} recipients.
+                            </div>
+                        )}
+
+                        <label className="vendor-dash-nudge-label" htmlFor="nudge-message">
+                            Message
+                        </label>
+                        <textarea
+                            id="nudge-message"
+                            className="vendor-dash-nudge-textarea"
+                            value={message}
+                            onChange={(e) => onMessageChange(e.target.value)}
+                            maxLength={320}
+                            disabled={sending || Boolean(result)}
+                        />
+                        <div className="vendor-dash-nudge-help">
+                            {message.length}/320 characters. Supported placeholders: {'{name}'}, {'{vendor}'}, {'{reward}'}, {'{stamps_remaining}'}.
+                        </div>
+
+                        <div className="vendor-dash-nudge-preview">
+                            <span>Preview</span>
+                            <p>{message === preview.message_template ? preview.message_preview : 'Edited message will be rendered per customer when sent.'}</p>
+                        </div>
+
+                        {preview.sample_recipients.length > 0 && (
+                            <div className="vendor-dash-nudge-sample">
+                                <span>Sample recipients</span>
+                                <ul>
+                                    {preview.sample_recipients.map((recipient) => (
+                                        <li key={recipient.member_id}>
+                                            {recipient.name} <small>{recipient.phone_tail}</small>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        <label className="vendor-dash-cost-ack">
+                            <input
+                                type="checkbox"
+                                checked={acknowledgeCosts}
+                                onChange={(e) => onAcknowledgeCostsChange(e.target.checked)}
+                                disabled={sending || Boolean(result)}
+                            />
+                            <span>I understand this will send paid SMS messages to opted-in customers.</span>
+                        </label>
+
+                        {error && <div className="vendor-dash-nudge-error">{error}</div>}
+                        {result && (
+                            <div className={result.failed_count > 0 ? 'vendor-dash-nudge-warning' : 'vendor-dash-nudge-success'}>
+                                Sent {result.sent_count} of {result.requested_count} nudges. Estimated segments: {result.estimated_segments}.
+                            </div>
+                        )}
+
+                        <div className="vendor-dash-modal-actions">
+                            <button type="button" className="btn-ghost" onClick={onClose} disabled={sending}>
+                                {result ? 'Close' : 'Cancel'}
+                            </button>
+                            {!result && (
+                                <button type="button" className="btn-premium" onClick={onSend} disabled={!canSend}>
+                                    {sending ? 'Sending...' : `Send ${preview.recipient_count} nudge${preview.recipient_count === 1 ? '' : 's'}`}
+                                </button>
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    <div className="vendor-dash-modal-state">Preview unavailable.</div>
+                )}
+            </div>
         </div>
     );
 };

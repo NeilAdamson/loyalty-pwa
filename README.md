@@ -72,15 +72,11 @@ Use this together with API logs to quickly distinguish credential issues from ro
 ### OTP / SMS not sending
 
 - Check `http://localhost:8000/health` and confirm:
-  - `"otp_provider": "smsflow"` (or `"twilio"`) and
+  - `"otp_provider": "smsflow"` and
   - `"otp_configured": true`.
-- For **SMSFlow** (default provider):
-  - Set `OTP_PROVIDER=smsflow` in `.env`.
-  - Configure `SMSFLOW_CLIENT_ID`, `SMSFLOW_CLIENT_SECRET`, and optional `SMSFLOW_SENDER_ID`.
-  - The API uses the Portal Integration flow: it first calls `/api/integration/authentication` with Basic Auth (ClientID/ClientSecret), then sends OTPs via `/api/integration/BulkMessages`.
-- For **Twilio**:
-  - Set `OTP_PROVIDER=twilio` and configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` or API key/secret, and `TWILIO_FROM_NUMBER`.
-- If a provider is misconfigured, OTPs are not sent externally but the API logs the OTP code to assist local testing.
+- Configure `SMSFLOW_CLIENT_ID`, `SMSFLOW_CLIENT_SECRET`, and optional `SMSFLOW_SENDER_ID`.
+- The API uses the Portal Integration flow: it first calls `/api/integration/authentication` with Basic Auth (ClientID/ClientSecret), then sends OTPs via `/api/integration/BulkMessages`.
+- If SMSFlow is misconfigured, OTPs are not sent externally but the API logs the OTP code to assist local testing.
 
 ### Docker-Only Rule
 Do not try to run `pnpm install` or `pnpm dev` on your host machine.

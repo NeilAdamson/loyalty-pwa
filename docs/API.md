@@ -4,11 +4,9 @@ Base URL: `https://loyaltyladies.com/api` (Production) or `http://localhost:8000
 
 ## Health
 **GET /health** (no auth)  
-Returns: `{ "status": "ok", "timestamp": "...", "otp_provider": "twilio"|"smsflow", "otp_configured": true|false, "twilio_configured": true|false? }`.  
-Default provider is `smsflow`. Set `OTP_PROVIDER=twilio` to use Twilio. Configure the chosen provider:  
-- **SMSFlow** (portal integration): `SMSFLOW_CLIENT_ID`, `SMSFLOW_CLIENT_SECRET`, optional `SMSFLOW_SENDER_ID`  
-- **Twilio**: `TWILIO_*` credentials as per Twilio docs  
-If no provider is fully configured, OTP is logged only (check API container logs for the code).
+Returns: `{ "status": "ok", "timestamp": "...", "otp_provider": "smsflow", "otp_configured": true|false }`.  
+OTP delivery uses SMSFlow only. Configure `SMSFLOW_CLIENT_ID`, `SMSFLOW_CLIENT_SECRET`, and optional `SMSFLOW_SENDER_ID`.  
+If SMSFlow is not fully configured, OTP is logged only for local testing (check API container logs for the code).
 
 ## Error Handling
 Standard Error Envelope:
@@ -54,8 +52,9 @@ Body: `{ "phone": "+1234567890" }`
 
 **2. Verify OTP**
 `POST /v/:vendorSlug/auth/member/otp/verify`
-Body: `{ "phone": "+1234567890", "code": "123456" }`
+Body: `{ "phone": "+1234567890", "code": "123456", "consent_marketing": false }`
 Returns: `{ "token": "JWT", "member": { ... } }`
+If `consent_marketing` is `true`, the member is opted in to manually triggered reward reminders/offers for that vendor.
 
 ### Staff Auth
 **1. Staff Login**
@@ -143,6 +142,24 @@ Headers: `Authorization: Bearer <VendorAdminToken>`
 
 ### Vendor Branding (Protected: Vendor Admin)
 All branding endpoints are under `/api/v1/v/:slug/admin/branding` and require Bearer token authentication.
+
+### Branding Image Uploads (Protected: Platform Admin or Vendor Admin)
+**Upload branding image**
+`POST /api/v1/uploads`
+
+Auth:
+- Platform admin HttpOnly cookie, or
+- Vendor admin Bearer token with `role: "ADMIN"`
+
+Accepts multipart form data with a single `file` field. Server-side limits:
+- Maximum size: 5 MB
+- Allowed types: JPEG, PNG, WebP, AVIF
+- The stored filename is server-generated; the original filename is not trusted.
+
+Returns:
+```json
+{ "url": "https://.../uploads/branding/{scope}/{file}" }
+```
 
 **Get Branding**
 `GET /api/v1/v/:slug/admin/branding`
@@ -242,6 +259,35 @@ Returns:
 Returns per-staff aggregates:
 - `stamps_issued`
 - `redemptions_processed`
+
+**Manual Nudge Preview**
+`GET /api/v1/v/:slug/admin/nudges/preview?audience=NEAR_REWARD`
+
+Supported audiences:
+- `NEAR_REWARD` — active cards 1-2 stamps from a reward
+- `AT_RISK_30D` — active members with no activity in the last 30 days
+
+Returns recipient counts, consent exclusions, invalid phone exclusions, a default message template, estimated SMS segments, and sample recipients. No messages are sent by this endpoint.
+
+**Manual Nudge Send**
+`POST /api/v1/v/:slug/admin/nudges/send`
+
+Body:
+```json
+{
+  "audience": "NEAR_REWARD",
+  "message": "Hi {name}, you are only {stamps_remaining} stamp(s) away from your {reward} at {vendor}. Reply STOP to opt out.",
+  "confirm": true,
+  "expected_recipient_count": 12
+}
+```
+
+Rules:
+- Sends only after explicit `confirm: true`.
+- Sends only to members with `consent_marketing = true`.
+- Rejects if the current recipient count differs from `expected_recipient_count`.
+- Manual sends are limited to 200 recipients per batch and 5 batches per vendor per UTC day.
+- Every send attempt is written to `admin_audit_log`.
 
 ### Platform Admin
 **Create Vendor**

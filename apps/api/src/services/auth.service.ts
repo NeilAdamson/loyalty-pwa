@@ -2,14 +2,15 @@ import { PrismaClient } from '@prisma/client'
 import { ERROR_CODES } from '../plugins/errors'
 import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
+import { requireSecret } from '../utils/config'
 
-/** OTP delivery: Twilio (SMS or WhatsApp) or SMSFlow (SMS). Default is SMS. */
+/** OTP delivery through SMSFlow. */
 export interface IOtpSender {
     sendOtp(to: string, code: string): Promise<void>
     isConfigured(): boolean
 }
 
-const OTP_PEPPER = process.env.OTP_PEPPER || ''
+const OTP_PEPPER = requireSecret('OTP_PEPPER')
 
 export class AuthService {
     constructor(
@@ -48,13 +49,13 @@ export class AuthService {
             }
         })
 
-        // 4. Send OTP (Twilio or SMSFlow)
+        // 4. Send OTP through SMSFlow
         await this.otpSender.sendOtp(phone, plainOtp);
 
         return { success: true, dev_otp: plainOtp }
     }
 
-    async verifyMemberOtp(vendorId: string, phone: string, code: string) {
+    async verifyMemberOtp(vendorId: string, phone: string, code: string, consentMarketing = false) {
         // 1. Find valid, unconsumed request
         // We get the LATEST unconsumed one
         const otpReq = await this.prisma.otpRequest.findFirst({
@@ -111,7 +112,13 @@ export class AuthService {
                     vendor_id: vendorId,
                     phone_e164: phone,
                     name: 'New Member', // Placeholder, user can update later
+                    consent_marketing: consentMarketing === true,
                 }
+            })
+        } else if (consentMarketing === true && member.consent_marketing !== true) {
+            member = await this.prisma.member.update({
+                where: { member_id: member.member_id },
+                data: { consent_marketing: true }
             })
         }
 
