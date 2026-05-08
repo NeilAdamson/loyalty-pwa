@@ -13,8 +13,9 @@ set -euo pipefail
 
 CMD="${1:-full}"
 
-# Navigate to project directory (using $HOME for flexibility)
-cd "$HOME/loyalty-pwa"
+# Navigate to the repository directory containing this script.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 require_env_file_keys() {
   if [ ! -f .env ]; then
