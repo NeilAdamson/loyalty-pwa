@@ -20,6 +20,19 @@ services:
     networks:
       - loyalty_net
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    expose:
+      - "6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - loyalty_net
+
   # Backend API
   api:
     build:
@@ -41,6 +54,7 @@ services:
       - SMSFLOW_SENDER_ID=${SMSFLOW_SENDER_ID:-Loyalty}
       - COOLDOWN_MINUTES_DEFAULT=30
       - VENDOR_COOLDOWN_INCREASE_ONLY=true
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - PORT=8000
       - HOST=0.0.0.0
       - CORS_ALLOWED_ORIGIN=https://punchcard.co.za,https://www.punchcard.co.za,https://loyaltyladies.com
@@ -49,6 +63,8 @@ services:
       - "8000"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:8000/health" ] # using wget as alpine base might not have curl in prod if minimal, but we added curl in base. switching to wget just in case or keep curl. api/Dockerfile has curl.

@@ -213,7 +213,8 @@ model Program {
   vendor_id          String   @db.Uuid
   version            Int
   is_active          Boolean
-  stamps_required    Int
+  stamps_required       Int
+  max_stamps_per_day Int @default(3)
   reward_title       String
   reward_description String
   terms_text         String

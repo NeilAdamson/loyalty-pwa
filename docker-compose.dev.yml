@@ -9,6 +9,7 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     environment:
+      - REDIS_URL=redis://redis:6379
       # Allow requests from local frontend
       - CORS_ALLOWED_ORIGIN=http://localhost:5173
       # Host/Port for internal binding
@@ -24,6 +25,21 @@ services:
     volumes:
       - ./apps/api:/app
       - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # Frontend Web (Dev Mode)
   web:
