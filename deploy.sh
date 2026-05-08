@@ -16,8 +16,30 @@ CMD="${1:-full}"
 # Navigate to project directory (using $HOME for flexibility)
 cd "$HOME/loyalty-pwa"
 
+require_env_file_keys() {
+  if [ ! -f .env ]; then
+    echo "[deploy] ERROR: .env file not found in $(pwd)"
+    exit 1
+  fi
+
+  local missing=0
+  for key in JWT_SECRET COOKIE_SECRET TOKEN_SIGNING_SECRET OTP_PEPPER SMSFLOW_CLIENT_ID SMSFLOW_CLIENT_SECRET; do
+    if ! grep -Eq "^${key}=.+" .env; then
+      echo "[deploy] ERROR: Missing required .env value: ${key}"
+      missing=1
+    fi
+  done
+
+  if [ "$missing" -ne 0 ]; then
+    echo "[deploy] Add the missing values to .env before deploying."
+    exit 1
+  fi
+}
+
 case "$CMD" in
   full)
+    require_env_file_keys
+
     echo "[deploy] Pulling latest code from main..."
     git pull origin main
 
@@ -32,11 +54,15 @@ case "$CMD" in
     ;;
 
   up)
+    require_env_file_keys
+
     echo "[deploy] docker compose up -d"
     docker compose up -d
     ;;
 
   rebuild)
+    require_env_file_keys
+
     echo "[deploy] docker compose up -d --build --remove-orphans"
     docker compose up -d --build --remove-orphans
     ;;
@@ -47,12 +73,16 @@ case "$CMD" in
     ;;
 
   restart)
+    require_env_file_keys
+
     echo "[deploy] docker compose down && docker compose up -d"
     docker compose down
     docker compose up -d
     ;;
 
   migrate)
+    require_env_file_keys
+
     echo "[deploy] Running database migrations (api pnpm db:deploy)..."
     docker compose run --rm api pnpm db:deploy
     ;;

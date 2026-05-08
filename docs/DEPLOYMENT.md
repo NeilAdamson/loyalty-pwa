@@ -147,5 +147,6 @@ After deployment:
 ## 8. Troubleshooting
 
 - **502 Bad Gateway**: Usually means the API container is crashing or starting up. Check logs: `docker compose logs api`.
+  - After the security hardening update, confirm `.env` contains non-empty values for `JWT_SECRET`, `COOKIE_SECRET`, `TOKEN_SIGNING_SECRET`, `OTP_PEPPER`, `SMSFLOW_CLIENT_ID`, and `SMSFLOW_CLIENT_SECRET`. Missing required secrets cause the API to fail startup.
 - **CORS Errors**: Ensure `CORS_ALLOWED_ORIGIN` in `.env` matches your browser URL exactly (no trailing slash).
 - **Database Connection**: Ensure `DB_HOST=db` in `.env`.
