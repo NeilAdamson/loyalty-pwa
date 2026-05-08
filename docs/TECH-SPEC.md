@@ -215,6 +215,7 @@ Unique: (vendor_id, phone_e164)
 - version INT NOT NULL
 - is_active BOOLEAN NOT NULL
 - stamps_required INT NOT NULL CHECK (stamps_required BETWEEN 2 AND 30)
+- max_stamps_per_day INT NOT NULL DEFAULT 3 (vendor-admin editable; caps stamps per card per UTC day)
 - reward_title TEXT NOT NULL
 - reward_description TEXT NOT NULL
 - terms_text TEXT NOT NULL

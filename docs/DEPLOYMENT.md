@@ -15,6 +15,7 @@ The production stack consists of:
 - **App (Web)**: Nginx container serving the built React/Vite assets (internal only).
 - **API**: Node.js Fastify API (internal only).
 - **Postgres**: Database (internal, persisted to volume).
+- **Redis**: Rate limiting and throttles for OTP, staff PIN login, and transaction velocity (internal only; default URL `redis://redis:6379` on the Compose network).
 
 Traffic flow:
 `Internet -> Caddy (443) -> /api/* -> Node API:8000`
@@ -47,6 +48,16 @@ DATABASE_URL=postgresql://loyalty_app:YOUR_STRONG_RANDOM_PASSWORD@db:5432/loyalt
 NODE_ENV=production
 PORT=8000
 API_HOST=0.0.0.0
+# Redis (must match your Compose service name or managed endpoint)
+REDIS_URL=redis://redis:6379
+
+# Optional — rate limit tuning (defaults match docs/TECH-SPEC.md §5.2)
+# RATE_LIMIT_OTP_PER_PHONE_HOUR=5
+# RATE_LIMIT_OTP_PER_IP_HOUR=20
+# RATE_LIMIT_STAFF_LOGIN_PER_MINUTE=10
+# RATE_LIMIT_STAFF_LOGIN_LOCKOUT_SECONDS=300
+# RATE_LIMIT_STAMP_PER_STAFF_HOUR=60
+# RATE_LIMIT_REDEEM_PER_STAFF_HOUR=20
 # The domain where the app is hosted
 CORS_ALLOWED_ORIGIN=https://punchcard.co.za
 
@@ -70,6 +81,8 @@ SMSFLOW_CLIENT_SECRET=your_client_secret_from_portal
 ```
 
 **Verifying OTP:** Call `GET /health`. The response includes `otp_provider: "smsflow"` and `otp_configured: true|false`. If `false`, set the SMSFlow env vars and restart the API. Check API logs for `[SMSFlowService] SMSFlow ENABLED` or `DISABLED`.
+
+**Verifying Redis:** The same `GET /health` response includes `redis_ok: true` when the API can reach Redis. A **503** indicates Redis is unreachable (rate limits cannot be enforced); ensure the `redis` service is running and `REDIS_URL` is correct.
 
 
 

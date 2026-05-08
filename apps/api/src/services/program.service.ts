@@ -3,6 +3,7 @@ import { ERROR_CODES } from '../plugins/errors'
 
 export type ProgramInput = {
     stamps_required: number
+    max_stamps_per_day: number
     reward_title: string
     reward_description: string
     terms_text: string
@@ -11,7 +12,7 @@ export type ProgramInput = {
 export class ProgramService {
     constructor(private prisma: PrismaClient) { }
 
-    async createDraft(vendorId: string, data: { stamps_required: number; reward_title: string; reward_description?: string; terms_text?: string }) {
+    async createDraft(vendorId: string, data: { stamps_required: number; max_stamps_per_day?: number; reward_title: string; reward_description?: string; terms_text?: string }) {
         // 1. Determine next version
         // We could use an aggregate, or just let DB handle it?
         // DB doesn't auto-increment version relative to vendor_id easily without logic.
@@ -28,6 +29,7 @@ export class ProgramService {
                 version: nextVersion,
                 is_active: false, // DRAFT
                 stamps_required: data.stamps_required,
+                max_stamps_per_day: data.max_stamps_per_day !== undefined ? data.max_stamps_per_day : 3,
                 reward_title: data.reward_title,
                 reward_description: data.reward_description || '',
                 terms_text: data.terms_text || ''
@@ -96,6 +98,7 @@ export class ProgramService {
 
         const unchanged = activeProgram
             && activeProgram.stamps_required === data.stamps_required
+            && activeProgram.max_stamps_per_day === data.max_stamps_per_day
             && activeProgram.reward_title === data.reward_title
             && activeProgram.reward_description === data.reward_description
             && activeProgram.terms_text === data.terms_text
@@ -122,6 +125,7 @@ export class ProgramService {
                     version: nextVersion,
                     is_active: true,
                     stamps_required: data.stamps_required,
+                    max_stamps_per_day: data.max_stamps_per_day,
                     reward_title: data.reward_title,
                     reward_description: data.reward_description,
                     terms_text: data.terms_text

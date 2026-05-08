@@ -2,11 +2,12 @@ import { FastifyPluginAsync } from 'fastify'
 import { VendorService } from '../../services/vendor.service'
 import { AuthService } from '../../services/auth.service'
 import { SMSFlowService } from '../../services/smsflow.service'
+import { getClientIp } from '../../utils/client-ip'
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
     const vendorService = new VendorService(fastify.prisma)
     const otpSender = new SMSFlowService()
-    const authService = new AuthService(fastify.prisma, otpSender)
+    const authService = new AuthService(fastify.prisma, otpSender, fastify.rateLimiter)
 
     // Member OTP Request
     fastify.post<{ Params: { vendorSlug: string }; Body: { phone: string } }>(
@@ -16,7 +17,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             const { phone } = request.body
 
             const vendor = await vendorService.resolveBySlug(vendorSlug)
-            await authService.requestMemberOtp(vendor.vendor_id, phone)
+            await authService.requestMemberOtp(vendor.vendor_id, phone, getClientIp(request))
 
             return reply.send({ success: true, message: 'OTP sent' })
         }
@@ -55,6 +56,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             const vendor = await vendorService.resolveBySlug(vendorSlug)
+            await fastify.rateLimiter.assertStaffLoginAllowed(getClientIp(request))
             const staff = await authService.verifyStaffByUsername(vendor.vendor_id, username.trim().toLowerCase(), pin)
 
             const token = fastify.jwt.sign({

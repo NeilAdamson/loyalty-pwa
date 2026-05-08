@@ -4,7 +4,8 @@ Base URL: `https://loyaltyladies.com/api` (Production) or `http://localhost:8000
 
 ## Health
 **GET /health** (no auth)  
-Returns: `{ "status": "ok", "timestamp": "...", "otp_provider": "smsflow", "otp_configured": true|false }`.  
+Returns: `{ "status": "ok"|"degraded", "timestamp": "...", "otp_provider": "smsflow", "otp_configured": true|false, "redis_ok": true|false }`.  
+Returns **503** when Redis is unreachable (`redis_ok: false`); rate limiting requires Redis.  
 OTP delivery uses SMSFlow only. Configure `SMSFLOW_CLIENT_ID`, `SMSFLOW_CLIENT_SECRET`, and optional `SMSFLOW_SENDER_ID`.  
 If SMSFlow is not fully configured, OTP is logged only for local testing (check API container logs for the code).
 
@@ -14,9 +15,11 @@ Standard Error Envelope:
 {
   "code": "ERROR_CODE",
   "message": "Human readable message",
-  "details": {} // Optional validation details
+  "retry_after_sec": 300,
+  "details": {}
 }
 ```
+`retry_after_sec` is included on some **429** responses (staff PIN lockout, OTP throttles). The same hint may appear as an HTTP **`Retry-After`** header (seconds).
 
 ### Common Error Codes
 | Code | Status | Description |

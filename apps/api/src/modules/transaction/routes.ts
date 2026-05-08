@@ -2,7 +2,7 @@ import { FastifyPluginAsync } from 'fastify'
 import { TransactionService } from '../../services/transaction.service'
 
 const transactionRoutes: FastifyPluginAsync = async (fastify) => {
-    const transactionService = new TransactionService(fastify.prisma)
+    const transactionService = new TransactionService(fastify.prisma, fastify.rateLimiter)
 
     // Helper to extract staff info
     // Staff Token: { vendor_id, staff_id, role }

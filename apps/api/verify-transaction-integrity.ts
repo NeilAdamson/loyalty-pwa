@@ -1,9 +1,13 @@
 import { randomUUID } from 'crypto'
+import Redis from 'ioredis'
 import { PrismaClient } from '@prisma/client'
 import { TransactionService } from './src/services/transaction.service'
+import { RedisRateLimiter } from './src/services/redis-rate-limiter.service'
 
 const prisma = new PrismaClient()
-const transactionService = new TransactionService(prisma)
+const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379'
+const redis = new Redis(redisUrl)
+const transactionService = new TransactionService(prisma, new RedisRateLimiter(redis))
 
 type Fixture = {
     vendorId: string
@@ -256,4 +260,7 @@ main()
         console.error(error)
         process.exit(1)
     })
-    .finally(() => prisma.$disconnect())
+    .finally(async () => {
+        await prisma.$disconnect()
+        await redis.quit()
+    })

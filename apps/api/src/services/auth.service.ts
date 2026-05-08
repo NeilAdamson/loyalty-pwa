@@ -3,6 +3,7 @@ import { ERROR_CODES } from '../plugins/errors'
 import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 import { requireSecret } from '../utils/config'
+import type { RedisRateLimiter } from './redis-rate-limiter.service'
 
 /** OTP delivery through SMSFlow. */
 export interface IOtpSender {
@@ -15,20 +16,16 @@ const OTP_PEPPER = requireSecret('OTP_PEPPER')
 export class AuthService {
     constructor(
         private prisma: PrismaClient,
-        private otpSender: IOtpSender
+        private otpSender: IOtpSender,
+        private rateLimiter: RedisRateLimiter
     ) { }
 
     // --- Member OTP ---
 
-    async requestMemberOtp(vendorId: string, phone: string) {
-        // 1. Rate Limit Check (Basic DB check for recent requests)
-        // For MVP/Milestone 2, we skip complex sliding window.
-        // Spec: "Rate limiting: enforce per (vendor_id, phone)"
+    async requestMemberOtp(vendorId: string, phone: string, clientIp: string) {
+        await this.rateLimiter.assertOtpRequestAllowed(vendorId, phone, clientIp)
 
-        const requestId = randomInt(1000, 9999);
-        console.log(`[AuthService.requestMemberOtp] req=${requestId} phone=${phone} vendor=${vendorId}`);
-
-        // 2. Generate OTP
+        // Generate OTP
         const plainOtp = randomInt(100000, 999999).toString();
         const hash = await bcrypt.hash(plainOtp + OTP_PEPPER, 10)
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes

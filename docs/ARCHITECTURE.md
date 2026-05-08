@@ -57,8 +57,7 @@ flowchart LR
 - Token replay table (`token_use`).
 
 ### 3.4 Rate limiting store
-- MVP option A: Postgres (simple) with time-window counters.
-- Preferred: Redis (recommended on VPS) for efficient rate limits + token replay cache.
+- **Redis** (Compose service `redis`, env `REDIS_URL`) backs OTP send throttles, staff PIN login IP limits, and stamp/redeem per-staff hourly counters; per-card daily stamp caps use Postgres counts plus `programs.max_stamps_per_day`.
 
 ### 3.5 OTP provider
 - OTP is implemented by sending a one-time code to the member's phone.

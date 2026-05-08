@@ -48,6 +48,7 @@ type MessageSender = {
 
 type ProgramRequestBody = {
     stamps_required?: unknown
+    max_stamps_per_day?: unknown
     reward_title?: unknown
     reward_description?: unknown
     terms_text?: unknown
@@ -97,8 +98,18 @@ const normalizeProgramInput = (body: ProgramRequestBody): ProgramInput => {
         throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'stamps_required must be a whole number between 2 and 30' }
     }
 
+    let maxStampsPerDay = 3
+    if (body.max_stamps_per_day !== undefined && body.max_stamps_per_day !== null && body.max_stamps_per_day !== '') {
+        const m = Number(body.max_stamps_per_day)
+        if (!Number.isInteger(m) || m < 1 || m > 50) {
+            throw { statusCode: 400, code: 'VALIDATION_ERROR', message: 'max_stamps_per_day must be a whole number between 1 and 50' }
+        }
+        maxStampsPerDay = m
+    }
+
     return {
         stamps_required: stampsRequired,
+        max_stamps_per_day: maxStampsPerDay,
         reward_title: normalizeRequiredText(body.reward_title, 'reward_title', 80),
         reward_description: normalizeRequiredText(body.reward_description, 'reward_description', 240),
         terms_text: normalizeRequiredText(body.terms_text, 'terms_text', 500)
@@ -1377,6 +1388,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                 version: program.version,
                 is_active: program.is_active,
                 stamps_required: program.stamps_required,
+                max_stamps_per_day: program.max_stamps_per_day,
                 reward_title: program.reward_title,
                 reward_description: program.reward_description,
                 terms_text: program.terms_text,
@@ -1438,6 +1450,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                 version: program.version,
                 is_active: program.is_active,
                 stamps_required: program.stamps_required,
+                max_stamps_per_day: program.max_stamps_per_day,
                 reward_title: program.reward_title,
                 reward_description: program.reward_description,
                 terms_text: program.terms_text,

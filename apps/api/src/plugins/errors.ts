@@ -32,6 +32,7 @@ export const ERROR_CODES = {
 type ApiError = FastifyError & {
     statusCode?: number
     code?: string
+    retryAfterSec?: number
 }
 
 // Map constraint names to Error Codes
@@ -65,9 +66,23 @@ export default fp(async (fastify) => {
         }
 
         if (status >= 500) console.error('Server error:', error)
-        return reply.status(status).send({
+
+        const retryAfterSec =
+            typeof (error as ApiError).retryAfterSec === 'number'
+                ? (error as ApiError).retryAfterSec
+                : undefined
+        if (typeof retryAfterSec === 'number' && retryAfterSec > 0) {
+            reply.header('Retry-After', String(Math.ceil(retryAfterSec)))
+        }
+
+        const payload: { code: string; message: string; retry_after_sec?: number } = {
             code: code ?? ERROR_CODES.INTERNAL_SERVER_ERROR,
-            message
-        })
+            message,
+        }
+        if (typeof retryAfterSec === 'number' && retryAfterSec > 0) {
+            payload.retry_after_sec = Math.ceil(retryAfterSec)
+        }
+
+        return reply.status(status).send(payload)
     })
 })

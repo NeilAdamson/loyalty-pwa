@@ -1,5 +1,6 @@
 import fastify from 'fastify';
 import prismaPlugin from './plugins/prisma'
+import redisPlugin from './plugins/redis'
 import corsPlugin from './plugins/cors'
 import errorsPlugin from './plugins/errors'
 import authPlugin from './plugins/auth'
@@ -11,7 +12,8 @@ import { randomUUID } from 'crypto';
 assertRequiredSecurityEnv();
 
 const server = fastify({
-    logger: true
+    logger: true,
+    trustProxy: true,
 });
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -149,6 +151,7 @@ server.register(require('@fastify/static'), {
 })
 
 server.register(prismaPlugin)
+server.register(redisPlugin)
 server.register(authPlugin)
 
 // Register Modules
@@ -271,13 +274,25 @@ import { SMSFlowService } from './services/smsflow.service';
 const healthCheckSender = new SMSFlowService();
 
 server.get('/health', async (request, reply) => {
-    return {
-        status: 'ok',
+    let redis_ok = false
+    try {
+        const pong = await server.redis.ping()
+        redis_ok = pong === 'PONG'
+    } catch {
+        redis_ok = false
+    }
+    const body = {
+        status: redis_ok ? 'ok' : 'degraded',
         timestamp: new Date().toISOString(),
         otp_provider: 'smsflow',
         otp_configured: healthCheckSender.isConfigured(),
-    };
-});
+        redis_ok,
+    }
+    if (!redis_ok) {
+        return reply.status(503).send(body)
+    }
+    return body
+})
 
 const start = async () => {
     try {
