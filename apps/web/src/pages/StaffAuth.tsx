@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
+import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/types';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import AuthShell from '../components/AuthShell';
 import AdminInput from '../components/admin/ui/AdminInput';
 import AdminButton from '../components/admin/ui/AdminButton';
 import { persistRecentVendorSlug } from '../utils/vendorPortalStorage';
+import { isPasskeyPlatformAvailable } from '../utils/passkeySupport';
 
 const StaffAuth: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -17,6 +20,22 @@ const StaffAuth: React.FC = () => {
     const [error, setError] = useState('');
     const [diagnostic, setDiagnostic] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [passkeyBusy, setPasskeyBusy] = useState(false);
+    const [passkeyAvailable, setPasskeyAvailable] = useState(false);
+    const [showPasskeyEnroll, setShowPasskeyEnroll] = useState(false);
+    const [pendingStaff, setPendingStaff] = useState<{ role: string } | null>(null);
+
+    useEffect(() => {
+        void isPasskeyPlatformAvailable().then(setPasskeyAvailable);
+    }, []);
+
+    const navigateAfterStaff = (staff: { role: string }) => {
+        if (staff.role === 'ADMIN') {
+            navigate(`/v/${slug}/admin/dashboard`);
+        } else {
+            navigate(`/v/${slug}/staff/scan`);
+        }
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,15 +47,17 @@ const StaffAuth: React.FC = () => {
             login(res.data.token);
             if (slug) persistRecentVendorSlug(slug);
 
-            if (res.data.staff.role === 'ADMIN') {
-                navigate(`/v/${slug}/admin/dashboard`);
+            if (passkeyAvailable) {
+                setPendingStaff(res.data.staff);
+                setShowPasskeyEnroll(true);
             } else {
-                navigate(`/v/${slug}/staff/scan`);
+                navigateAfterStaff(res.data.staff);
             }
-        } catch (err: any) {
-            const status = err?.response?.status;
-            const code = err?.response?.data?.code;
-            const message = err?.response?.data?.message || err?.message || 'Login Failed';
+        } catch (err: unknown) {
+            const anyErr = err as { response?: { status?: number; data?: { code?: string; message?: string } } };
+            const status = anyErr?.response?.status;
+            const code = anyErr?.response?.data?.code;
+            const message = anyErr?.response?.data?.message || (err instanceof Error ? err.message : 'Login Failed');
 
             setError(message);
             setDiagnostic(
@@ -46,7 +67,6 @@ const StaffAuth: React.FC = () => {
                     .join(' | ')
             );
 
-            // Compact structured log for fast support triage.
             console.warn('[StaffAuth] Login failed', {
                 status,
                 code,
@@ -59,11 +79,108 @@ const StaffAuth: React.FC = () => {
         }
     };
 
+    const skipPasskeyEnroll = () => {
+        setShowPasskeyEnroll(false);
+        if (pendingStaff) {
+            navigateAfterStaff(pendingStaff);
+            setPendingStaff(null);
+        }
+    };
+
+    const enrollStaffPasskey = async () => {
+        if (!slug) return;
+        setPasskeyBusy(true);
+        setError('');
+        try {
+            const opt = await api.post(`/api/v1/v/${slug}/auth/staff/passkey/register/options`);
+            const reg = await startRegistration(opt.data.optionsJSON);
+            await api.post(`/api/v1/v/${slug}/auth/staff/passkey/register/verify`, {
+                stateId: opt.data.stateId,
+                response: reg as RegistrationResponseJSON,
+            });
+            skipPasskeyEnroll();
+        } catch (err: unknown) {
+            const anyErr = err as { response?: { data?: { message?: string } } };
+            setError(anyErr?.response?.data?.message || 'Could not add passkey.');
+        } finally {
+            setPasskeyBusy(false);
+        }
+    };
+
+    const passkeySignIn = async () => {
+        if (!slug) return;
+        setPasskeyBusy(true);
+        setError('');
+        setDiagnostic('');
+        try {
+            const optRes = await api.post(`/api/v1/v/${slug}/auth/staff/passkey/auth/options`, {
+                username: username.trim() || undefined,
+            });
+            const as = await startAuthentication(optRes.data.optionsJSON);
+            const v = await api.post(`/api/v1/v/${slug}/auth/staff/passkey/auth/verify`, {
+                stateId: optRes.data.stateId,
+                response: as as AuthenticationResponseJSON,
+            });
+            login(v.data.token);
+            if (slug) persistRecentVendorSlug(slug);
+            navigateAfterStaff(v.data.staff);
+        } catch (err: unknown) {
+            const anyErr = err as { response?: { status?: number; data?: { code?: string; message?: string } } };
+            const status = anyErr?.response?.status;
+            const code = anyErr?.response?.data?.code;
+            const message = anyErr?.response?.data?.message || 'Passkey sign-in failed';
+            setError(message);
+            setDiagnostic([status ? `HTTP ${status}` : 'HTTP ?', code || 'NO_CODE', message].join(' | '));
+        } finally {
+            setPasskeyBusy(false);
+        }
+    };
+
     return (
         <AuthShell
             title="Staff Login"
             subtitle="Stampers scan stamps/redemptions here. Managers with an Admin login land on the vendor dashboard after sign-in."
         >
+            {showPasskeyEnroll && pendingStaff ? (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1000,
+                        background: 'rgba(15, 23, 42, 0.85)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 20,
+                    }}
+                >
+                    <div
+                        style={{
+                            maxWidth: 400,
+                            width: '100%',
+                            background: 'var(--surface, #1e293b)',
+                            borderRadius: 12,
+                            padding: 24,
+                            border: '1px solid var(--border, rgba(255,255,255,0.12))',
+                            color: 'var(--text, #f8fafc)',
+                        }}
+                    >
+                        <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>Faster login next time?</h2>
+                        <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--text-secondary, #94a3b8)', lineHeight: 1.5 }}>
+                            Add a passkey for this staff account on this device. You can still use your PIN anytime.
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <AdminButton type="button" variant="primary" isLoading={passkeyBusy} fullWidth onClick={() => void enrollStaffPasskey()}>
+                                Add passkey
+                            </AdminButton>
+                            <AdminButton type="button" variant="secondary" disabled={passkeyBusy} fullWidth onClick={skipPasskeyEnroll}>
+                                Not now
+                            </AdminButton>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
             {error && (
                 <div style={{
                     padding: '12px',
@@ -92,6 +209,23 @@ const StaffAuth: React.FC = () => {
                     {diagnostic}
                 </div>
             )}
+
+            {passkeyAvailable ? (
+                <div style={{ marginBottom: 16 }}>
+                    <AdminButton
+                        type="button"
+                        variant="secondary"
+                        fullWidth
+                        isLoading={passkeyBusy}
+                        onClick={() => void passkeySignIn()}
+                    >
+                        Sign in with passkey
+                    </AdminButton>
+                    <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8, textAlign: 'center' }}>
+                        Enter your username first for a targeted passkey, or leave it blank to pick from saved passkeys.
+                    </p>
+                </div>
+            ) : null}
 
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <AdminInput

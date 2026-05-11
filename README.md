@@ -74,6 +74,12 @@ If you see errors related to missing tables or invalid credentials immediately a
 If a staff/stamper login fails on `/v/{vendorSlug}/staff`, the UI now shows a compact diagnostic line with the backend HTTP status, error code, and message (for example `HTTP 401 | STAFF_PIN_INVALID | Invalid credentials`).  
 Use this together with API logs to quickly distinguish credential issues from route/vendor mismatches.
 
+### Passkeys (WebAuthn)
+
+- The API requires **`WEBAUTHN_RP_ID`**, **`WEBAUTHN_RP_NAME`**, and **`WEBAUTHN_ORIGIN`** (see `.env.example` and `docker-compose.dev.yml` for local defaults).
+- Local dev: use **`WEBAUTHN_RP_ID=localhost`** with origins `http://localhost:5173` (and optionally `http://127.0.0.1:5173`). Production: set RP ID to your real public hostname (see `docs/SECURITY.md`).
+- Members can add a passkey after SMS login; staff can add one after PIN login. SMS / PIN remain available for recovery.
+
 ### OTP / SMS not sending
 
 - Check `http://localhost:8000/health` and confirm:

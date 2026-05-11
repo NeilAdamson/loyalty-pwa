@@ -1,8 +1,10 @@
 import { FastifyPluginAsync } from 'fastify'
 import { CardService } from '../../services/card.service' // Check path validity
 import { randomUUID } from 'crypto'
+import { WebAuthnService } from '../../services/webauthn.service'
 
 const memberRoutes: FastifyPluginAsync = async (fastify) => {
+    const webAuthn = new WebAuthnService(fastify.prisma, fastify.redis, fastify.rateLimiter)
 
     // Update Profile (Name)
     // PATCH /me/profile
@@ -38,15 +40,9 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
             onRequest: [fastify.authenticate]
         },
         async (request, reply) => {
-            const { vendor_id, member_id, role } = request.user
+            const { vendor_id, member_id, role: memberRole } = request.user
 
-            // Role check: Only MEMBERS (or maybe staff testing? but mostly members)
-            // Auth service issues role: 'MEMBER' for OTP login.
-            // But let's be permissive or strict? 'role' is optional in JWT payload type def currently
-            // but we set it in `auth.service`.
-            // Let's assume having `member_id` is sufficient.
-
-            if (!member_id || !vendor_id) {
+            if (!member_id || !vendor_id || memberRole !== 'MEMBER') {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Access denied' })
             }
 
@@ -60,7 +56,11 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
             // Fetch Vendor Branding for the card display
             const vendor = await fastify.prisma.vendor.findUnique({
                 where: { vendor_id },
-                include: { branding: true }
+                select: {
+                    trading_name: true,
+                    vendor_slug: true,
+                    branding: true,
+                },
             })
 
             // Generate Rotating Token
@@ -88,9 +88,36 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
                 expires_in_seconds: 30,
                 vendor: {
                     trading_name: vendor?.trading_name,
+                    vendor_slug: vendor?.vendor_slug,
                     branding: vendor?.branding
                 }
             }
+        }
+    )
+
+    fastify.get(
+        '/me/passkeys',
+        { onRequest: [fastify.authenticate] },
+        async (request, reply) => {
+            const { vendor_id, member_id, role: memberRole } = request.user
+            if (!member_id || !vendor_id || memberRole !== 'MEMBER') {
+                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Access denied' })
+            }
+            const passkeys = await webAuthn.listMemberPasskeys(vendor_id, member_id)
+            return { success: true, passkeys }
+        }
+    )
+
+    fastify.delete<{ Params: { credentialId: string } }>(
+        '/me/passkeys/:credentialId',
+        { onRequest: [fastify.authenticate] },
+        async (request, reply) => {
+            const { vendor_id, member_id, role: memberRole } = request.user
+            if (!member_id || !vendor_id || memberRole !== 'MEMBER') {
+                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Access denied' })
+            }
+            await webAuthn.revokeMemberPasskey(vendor_id, member_id, request.params.credentialId)
+            return reply.send({ success: true })
         }
     )
 

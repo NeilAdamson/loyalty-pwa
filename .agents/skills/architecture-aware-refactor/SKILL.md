@@ -14,7 +14,7 @@ Read these when present:
 - docs/architecture.md
 - README.md
 - docs/PRD.md
-- docs/security.md
+- docs/SECURITY.md
 
 ## Workflow
 1. Understand the current architecture and identify which boundaries must remain intact.

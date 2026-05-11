@@ -20,6 +20,10 @@ services:
       - COOKIE_SECRET=dev_cookie_secret_12345_local_only
       - TOKEN_SIGNING_SECRET=dev_token_secret_12345_local_only
       - OTP_PEPPER=dev_otp_pepper_12345_local_only
+      # WebAuthn / passkeys (local dev: rpID must be "localhost" when using http://localhost:5173)
+      - WEBAUTHN_RP_ID=localhost
+      - WEBAUTHN_RP_NAME=Punchcard (Local)
+      - WEBAUTHN_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
     ports:
       - "8000:8000"
     volumes:

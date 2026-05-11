@@ -26,6 +26,10 @@ export function loadRateLimitOptions() {
         staffLoginMinuteWindowSec: parsePositiveInt('RATE_LIMIT_STAFF_LOGIN_WINDOW_SECONDS', 90),
         stampPerStaffHour: parsePositiveInt('RATE_LIMIT_STAMP_PER_STAFF_HOUR', 60),
         redeemPerStaffHour: parsePositiveInt('RATE_LIMIT_REDEEM_PER_STAFF_HOUR', 20),
+        passkeyOptionsPerMinute: parsePositiveInt('RATE_LIMIT_PASSKEY_OPTIONS_PER_MINUTE', 30),
+        passkeyVerifyPerMinute: parsePositiveInt('RATE_LIMIT_PASSKEY_VERIFY_PER_MINUTE', 15),
+        passkeyVerifyLockoutSec: parsePositiveInt('RATE_LIMIT_PASSKEY_VERIFY_LOCKOUT_SECONDS', 300),
+        passkeyVerifyWindowSec: parsePositiveInt('RATE_LIMIT_PASSKEY_VERIFY_WINDOW_SECONDS', 90),
     }
 }
 
@@ -53,10 +57,10 @@ export class RedisRateLimiter {
 
     constructor(private redis: Redis) { }
 
-    private throwRateLimited(message: string, retryAfterSec?: number): never {
+    private throwRateLimited(message: string, retryAfterSec?: number, code: string = ERROR_CODES.RATE_LIMITED): never {
         const err: RateLimitThrow = {
             statusCode: 429,
-            code: ERROR_CODES.RATE_LIMITED,
+            code,
             message,
             retryAfterSec,
         }
@@ -138,5 +142,47 @@ export class RedisRateLimiter {
         const hour = utcHourBucket()
         const key = `rl:redeem:staff:${staffId}:${hour}`
         await this.redis.decr(key)
+    }
+
+    /** Passkey / WebAuthn challenge options: per IP minute window (prevents enumeration). */
+    async assertPasskeyOptionsAllowed(clientIp: string): Promise<void> {
+        const minute = utcMinuteBucket()
+        const key = `rl:passkey_opt:ip:${clientIp}:${minute}`
+        const winTtl = 90
+        const v = await this.redis.incr(key)
+        if (v === 1) {
+            await this.redis.expire(key, winTtl)
+        }
+        if (v > this.opts.passkeyOptionsPerMinute) {
+            await this.redis.decr(key)
+            this.throwRateLimited('Too many passkey requests. Try again shortly.', undefined, ERROR_CODES.PASSKEY_RATE_LIMITED)
+        }
+    }
+
+    /** Passkey verify: per IP with lockout (mirrors staff PIN login pattern). */
+    async assertPasskeyVerifyAllowed(clientIp: string): Promise<void> {
+        const lockKey = `rl:passkey_verify:lock:${clientIp}`
+        const ttlLock = await this.redis.ttl(lockKey)
+        if (ttlLock > 0) {
+            this.throwRateLimited('Too many passkey attempts. Please wait before trying again.', ttlLock, ERROR_CODES.PASSKEY_RATE_LIMITED)
+        }
+
+        const minute = utcMinuteBucket()
+        const windowKey = `rl:passkey_verify:win:${clientIp}:${minute}`
+        const winTtl = this.opts.passkeyVerifyWindowSec
+
+        const v = await this.redis.incr(windowKey)
+        if (v === 1) {
+            await this.redis.expire(windowKey, winTtl)
+        }
+        if (v > this.opts.passkeyVerifyPerMinute) {
+            await this.redis.decr(windowKey)
+            await this.redis.set(lockKey, '1', 'EX', this.opts.passkeyVerifyLockoutSec)
+            this.throwRateLimited(
+                'Too many passkey attempts. Please wait before trying again.',
+                this.opts.passkeyVerifyLockoutSec,
+                ERROR_CODES.PASSKEY_RATE_LIMITED
+            )
+        }
     }
 }

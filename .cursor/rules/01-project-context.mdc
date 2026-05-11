@@ -10,7 +10,7 @@ Read these files when present:
 - docs/architecture.md
 - docs/PRD.md
 - docs/deployment.md
-- docs/security.md
+- docs/SECURITY.md
 
 Context rules:
 - Use docs/architecture.md to understand boundaries, components, runtime, integrations, and deployment assumptions.

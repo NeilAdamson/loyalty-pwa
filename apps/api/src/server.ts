@@ -5,11 +5,13 @@ import corsPlugin from './plugins/cors'
 import errorsPlugin from './plugins/errors'
 import authPlugin from './plugins/auth'
 import { assertRequiredSecurityEnv, requireSecret } from './utils/config'
+import { loadWebAuthnConfig } from './utils/webauthn-config'
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 
 assertRequiredSecurityEnv();
+loadWebAuthnConfig();
 
 const server = fastify({
     logger: true,

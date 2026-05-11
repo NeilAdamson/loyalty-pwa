@@ -322,11 +322,22 @@ Primary key: (vendor_id, token_jti)
   - max 10/min per IP; on exceed, 429 for 5 minutes.
 - SMS OTP requests:
   - max 5/hour per phone; max 20/hour per IP.
+- Passkey / WebAuthn (challenge + verify):
+  - options: max 30/min per IP (env: `RATE_LIMIT_PASSKEY_OPTIONS_PER_MINUTE`, default 30)
+  - verify: max 15/min per IP with 5-minute lockout on abuse (env: `RATE_LIMIT_PASSKEY_VERIFY_PER_MINUTE`, `RATE_LIMIT_PASSKEY_VERIFY_LOCKOUT_SECONDS`, `RATE_LIMIT_PASSKEY_VERIFY_WINDOW_SECONDS`)
+  - throttled responses use error code `PASSKEY_RATE_LIMITED`.
 - Stamp:
   - max 60/hour per staff_id.
   - max 3/day per card_id (vendor may increase).
 - Redeem:
   - max 20/hour per staff_id.
+
+### 5.2a WebAuthn (passkeys)
+- Members: optional enrollment after SMS OTP; optional login via `POST .../auth/member/passkey/*` (see `docs/API.md`).
+- Staff: optional enrollment after PIN login; optional login via `POST .../auth/staff/passkey/*`.
+- Credentials live in `webauthn_credentials` with exactly one of (`member_id`, `staff_id`) set; `vendor_id` is always set.
+- **Tenant binding**: WebAuthn `userHandle` encodes `(kind, vendor_id, actor_id)`; verification MUST reject vendor mismatch (`PASSKEY_VENDOR_MISMATCH`).
+- **RP ID**: `WEBAUTHN_RP_ID` must be the public hostname without port (e.g. `punchcard.co.za`); local dev typically uses `localhost` with origins `http://localhost:5173` (see `docs/SECURITY.md`).
 
 ### 5.3 Fraud flags
 Record fraud flags in transaction `flags` JSON when:
@@ -603,6 +614,13 @@ A scheduled job runs daily:
 - `COOKIE_SECRET`
 - `TOKEN_SIGNING_SECRET`
 - `OTP_PEPPER`
+- `WEBAUTHN_RP_ID` — WebAuthn Relying Party ID (hostname only, e.g. `localhost` or `punchcard.co.za`)
+- `WEBAUTHN_RP_NAME` — human-readable RP name shown in authenticator UI
+- `WEBAUTHN_ORIGIN` — comma-separated allowed full origins (scheme + host + port), e.g. `https://punchcard.co.za,http://localhost:5173`
+- `RATE_LIMIT_PASSKEY_OPTIONS_PER_MINUTE` (optional)
+- `RATE_LIMIT_PASSKEY_VERIFY_PER_MINUTE` (optional)
+- `RATE_LIMIT_PASSKEY_VERIFY_LOCKOUT_SECONDS` (optional)
+- `RATE_LIMIT_PASSKEY_VERIFY_WINDOW_SECONDS` (optional)
 - `SMSFLOW_CLIENT_ID`
 - `SMSFLOW_CLIENT_SECRET`
 - `SMSFLOW_SENDER_ID`
@@ -625,7 +643,7 @@ A scheduled job runs daily:
 ---
 
 ## 13. Test plan (minimum)
-- Unit: token signing/validation, cooldown checks, replay protection, program versioning.
-- Integration: SMS OTP request/verify, staff PIN login, stamp, redeem.
+- Unit: token signing/validation, cooldown checks, replay protection, program versioning, WebAuthn user-handle pack/unpack (`pnpm test` in `apps/api`).
+- Integration: SMS OTP request/verify, staff PIN login, passkey options/verify (where test harness supports WebAuthn), stamp, redeem.
 - E2E: member join → card → staff stamp → redeem → new card.
 - Load: 10 stamps/sec sustained for 5 minutes against single vendor.

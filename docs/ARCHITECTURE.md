@@ -1,8 +1,8 @@
 # Architecture — Multi-tenant Loyalty PWA (Afrihost Cloud/VPS, Node)
 
 ## 0. Document control
-- Version: 1.2
-- Date: 2026-05-05
+- Version: 1.3
+- Date: 2026-05-08
 - Hosting: Hetzner VPS
 - HTTPS: required (AutoSSL)
 
@@ -57,7 +57,7 @@ flowchart LR
 - Token replay table (`token_use`).
 
 ### 3.4 Rate limiting store
-- **Redis** (Compose service `redis`, env `REDIS_URL`) backs OTP send throttles, staff PIN login IP limits, and stamp/redeem per-staff hourly counters; per-card daily stamp caps use Postgres counts plus `programs.max_stamps_per_day`.
+- **Redis** (Compose service `redis`, env `REDIS_URL`) backs OTP send throttles, staff PIN login IP limits, passkey/WebAuthn challenge throttles, and stamp/redeem per-staff hourly counters; per-card daily stamp caps use Postgres counts plus `programs.max_stamps_per_day`.
 
 ### 3.5 OTP provider
 - OTP is implemented by sending a one-time code to the member's phone.
@@ -79,11 +79,12 @@ flowchart LR
 
 ### 5.1 Member auth
 - Passwordless: phone + OTP delivered via SMSFlow SMS.
+- Optional **WebAuthn passkeys** (fingerprint / device PIN) for repeat sign-in on supported browsers; OTP remains the bootstrap and recovery path. See `docs/SECURITY.md` and `docs/API.md`.
 - Session token: JWT (access token) stored as httpOnly cookie (preferred) OR in memory/local storage (fallback).
 - Session TTL: 30 days; refresh on activity.
 
 ### 5.2 Staff auth (username + PIN)
-- Staff portal is vendor-scoped. Staff enters username + PIN.
+- Staff portal is vendor-scoped. Staff enters username + PIN (or optional **WebAuthn passkey** where supported).
 - PIN is stored as a hash and must be unique per staff account within a vendor.
 - Session token: JWT, TTL 12 hours, idle timeout 30 minutes.
 - Staff with `role: "ADMIN"` can access vendor admin endpoints as a legacy manager path; new owner/manager accounts should use vendor-admin email/password auth.

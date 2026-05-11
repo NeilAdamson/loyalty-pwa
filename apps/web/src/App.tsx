@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { perfLog, startPerf } from './utils/perf';
-import { loadMemberCard, loadPlatformAdminApp, loadVendorAdminApp, loadVendorPublicApp } from './routes/routeLoaders';
+import { loadMemberCard, loadMemberSettings, loadPlatformAdminApp, loadVendorAdminApp, loadVendorPublicApp } from './routes/routeLoaders';
 import { ProtectedRoute } from './shared/ProtectedRoute';
 
 function lazyWithTiming<T extends ComponentType<Record<string, never>>>(
@@ -23,6 +23,7 @@ const VendorPublicApp = lazyWithTiming('VendorPublicApp', loadVendorPublicApp);
 const VendorAdminApp = lazyWithTiming('VendorAdminApp', loadVendorAdminApp);
 const PlatformAdminApp = lazyWithTiming('PlatformAdminApp', loadPlatformAdminApp);
 const MemberCard = lazyWithTiming('MemberCard', loadMemberCard);
+const MemberSettings = lazyWithTiming('MemberSettings', loadMemberSettings);
 
 const AdminLogin = lazyWithTiming('AdminLogin', () => import('./pages/admin/AdminLogin'));
 const AdminForgotPassword = lazyWithTiming('AdminForgotPassword', () => import('./pages/admin/AdminForgotPassword'));
@@ -66,6 +67,14 @@ const router = createBrowserRouter([
         element: withSuspense(
             <ProtectedRoute allowedRoles={['MEMBER']}>
                 <MemberCard />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: "/me/settings",
+        element: withSuspense(
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+                <MemberSettings />
             </ProtectedRoute>
         ),
     },

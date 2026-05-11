@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { startAuthentication } from '@simplewebauthn/browser';
+import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import AuthShell from '../components/AuthShell';
 import AdminInput from '../components/admin/ui/AdminInput';
 import AdminButton from '../components/admin/ui/AdminButton';
+import { isPasskeyPlatformAvailable } from '../utils/passkeySupport';
+
+const PASSKEY_PROMPT_KEY = 'punchcard_prompt_passkey';
 
 const getApiErrorMessage = (err: unknown, fallback: string): string => {
     if (axios.isAxiosError<{ message?: string }>(err)) {
@@ -25,9 +30,52 @@ const MemberAuth: React.FC = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [marketingConsent, setMarketingConsent] = useState(false);
+    const [passkeyAvailable, setPasskeyAvailable] = useState(false);
 
     // Strict lock to prevent double-fire
     const isSubmittingRef = React.useRef(false);
+    const passkeyAbortRef = React.useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        void isPasskeyPlatformAvailable().then(setPasskeyAvailable);
+    }, []);
+
+    useEffect(() => {
+        if (step !== 'PHONE' || !slug || !passkeyAvailable) return;
+
+        const ac = new AbortController();
+        passkeyAbortRef.current = ac;
+
+        const run = async () => {
+            try {
+                const optRes = await api.post(
+                    `/api/v1/v/${slug}/auth/member/passkey/auth/options`,
+                    {},
+                    { signal: ac.signal }
+                );
+                const as = await startAuthentication(optRes.data.optionsJSON, true);
+                if (ac.signal.aborted) return;
+                const v = await api.post(
+                    `/api/v1/v/${slug}/auth/member/passkey/auth/verify`,
+                    {
+                        stateId: optRes.data.stateId,
+                        response: as as AuthenticationResponseJSON,
+                    },
+                    { signal: ac.signal }
+                );
+                login(v.data.token);
+                navigate('/me/card');
+            } catch {
+                // No passkey / user dismissed / network — fall back to SMS silently
+            }
+        };
+
+        void run();
+        return () => {
+            ac.abort();
+            passkeyAbortRef.current = null;
+        };
+    }, [step, slug, passkeyAvailable, login, navigate]);
 
     // Derived phone for API
     const phone = `+27${phoneParts.network.replace(/^0/, '')}${phoneParts.number}`;
@@ -88,6 +136,7 @@ const MemberAuth: React.FC = () => {
                 consent_marketing: marketingConsent
             });
             login(res.data.token); // Updates context
+            sessionStorage.setItem(PASSKEY_PROMPT_KEY, '1');
             navigate('/me/card'); // Redirect to protected route
         } catch (err: unknown) {
             setError(getApiErrorMessage(err, 'Invalid Code'));
@@ -116,7 +165,30 @@ const MemberAuth: React.FC = () => {
             )}
 
             {step === 'PHONE' ? (
-                <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+
+                    {passkeyAvailable ? (
+                        <input
+                            type="text"
+                            name="username"
+                            autoComplete="username webauthn"
+                            value={phone}
+                            readOnly
+                            tabIndex={-1}
+                            aria-hidden="true"
+                            style={{
+                                position: 'absolute',
+                                width: 1,
+                                height: 1,
+                                padding: 0,
+                                margin: -1,
+                                overflow: 'hidden',
+                                clip: 'rect(0,0,0,0)',
+                                whiteSpace: 'nowrap',
+                                border: 0,
+                            }}
+                        />
+                    ) : null}
 
                     {/* SA Phone Input Enforcement */}
                     <div>

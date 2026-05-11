@@ -6,7 +6,7 @@ Read these files when present:
 - README.md
 - docs/PRD.md
 - docs/architecture.md
-- docs/security.md
+- docs/SECURITY.md
 - docs/deployment.md
 - docs/tech-spec.md
 

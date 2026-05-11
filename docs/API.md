@@ -1,6 +1,6 @@
 # API Documentation
 
-Base URL: `https://loyaltyladies.com/api` (Production) or `http://localhost:8000` (Local). All tenant and transaction endpoints are under `/api/v1` (e.g. `/api/v1/tx/stamp`). Note: The Tech Spec examples use `/api/v1/staff/stamp` and `/api/v1/staff/redeem`; the implementation uses `/api/v1/tx/stamp` and `/api/v1/tx/redeem` as the single source of truth.
+Base URL: production matches your deployment (see `docs/DEPLOYMENT.md`; the public web app is served at **`https://punchcard.co.za`**). Local development: **`http://localhost:8000`**. All tenant and transaction endpoints are under `/api/v1` (e.g. `/api/v1/tx/stamp`). Note: The Tech Spec examples use `/api/v1/staff/stamp` and `/api/v1/staff/redeem`; the implementation uses `/api/v1/tx/stamp` and `/api/v1/tx/redeem` as the single source of truth.
 
 ## Health
 **GET /health** (no auth)  
@@ -37,6 +37,10 @@ Standard Error Envelope:
 | `CARD_FULL` | 400 | Card is full, ready to redeem |
 | `CARD_NOT_ELIGIBLE` | 400 | Card not eligible for action (e.g. not enough stamps) |
 | `RATE_LIMITED` | 429 | Request rate limit exceeded (e.g. stamping too fast) |
+| `PASSKEY_INVALID` | 400 | WebAuthn registration or assertion could not be verified |
+| `PASSKEY_VENDOR_MISMATCH` | 403 | Passkey user handle does not match the store in the URL |
+| `PASSKEY_RATE_LIMITED` | 429 | Too many passkey options/verify attempts from this IP |
+| `PASSKEY_NOT_SUPPORTED` | — | Reserved for clients; not returned by API today |
 
 ## Authentication
 
@@ -59,12 +63,31 @@ Body: `{ "phone": "+1234567890", "code": "123456", "consent_marketing": false }`
 Returns: `{ "token": "JWT", "member": { ... } }`
 If `consent_marketing` is `true`, the member is opted in to manually triggered reward reminders/offers for that vendor.
 
+**3. Member passkeys (WebAuthn)** — optional; augments SMS OTP (first visit still uses OTP).
+
+- `POST /api/v1/v/:vendorSlug/auth/member/passkey/register/options` (Bearer **member** JWT) → `{ stateId, optionsJSON }`
+- `POST /api/v1/v/:vendorSlug/auth/member/passkey/register/verify` (Bearer member JWT) — Body: `{ stateId, response }` (WebAuthn `RegistrationResponseJSON`)
+- `POST /api/v1/v/:vendorSlug/auth/member/passkey/auth/options` (public) — Body: `{ phone?: "+27..." }` — omit `phone` for discoverable/conditional UI; include `phone` to target credentials for that member number.
+- `POST /api/v1/v/:vendorSlug/auth/member/passkey/auth/verify` (public) — Body: `{ stateId, response }` → `{ success, token, member }` (same JWT claims as OTP verify).
+
+**4. Member passkey self-service** (Bearer member JWT)
+
+- `GET /api/v1/me/passkeys` → `{ success, passkeys: [{ webauthn_credential_id, device_label, created_at, last_used_at, transports }] }`
+- `DELETE /api/v1/me/passkeys/:credentialId` → `{ success: true }` (soft revoke)
+
 ### Staff Auth
 **1. Staff Login**
 `POST /v/:vendorSlug/auth/staff/login`
 Body: `{ "username": "alice", "pin": "1234" }`
 Returns: `{ "token": "JWT", "staff": { ... } }`
 - `staff.role` is `STAMPER` for scanner-only access, or `ADMIN` for vendor-admin access.
+
+**2. Staff passkeys (WebAuthn)** — optional; augments username + PIN.
+
+- `POST /api/v1/v/:vendorSlug/auth/staff/passkey/register/options` (Bearer **staff** JWT after PIN login) → `{ stateId, optionsJSON }`
+- `POST /api/v1/v/:vendorSlug/auth/staff/passkey/register/verify` (Bearer staff JWT) — Body: `{ stateId, response }`
+- `POST /api/v1/v/:vendorSlug/auth/staff/passkey/auth/options` (public) — Body: `{ username?: "alice" }` — omit `username` for discoverable UI; include to target that staff user’s credentials.
+- `POST /api/v1/v/:vendorSlug/auth/staff/passkey/auth/verify` (public) — Body: `{ stateId, response }` → `{ success, token, staff }`
 
 ### Vendor Admin Auth
 Vendor owners/managers authenticate with email + password. Legacy staff users with `role: "ADMIN"` may still access vendor-admin endpoints after staff PIN login.
@@ -128,10 +151,13 @@ Returns:
   "expires_in_seconds": 30,
   "vendor": {
       "trading_name": "...",
+      "vendor_slug": "demo-cafe",
       "branding": { ... }
   }
 }
 ```
+
+`vendor_slug` is included so the member app can call tenant-scoped routes (e.g. passkey enrollment) without embedding the slug in the member JWT.
 
 ## Transactions (Protected: Staff)
 

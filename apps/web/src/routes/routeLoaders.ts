@@ -14,6 +14,10 @@ export function loadMemberCard() {
     return import('../pages/MemberCard');
 }
 
+export function loadMemberSettings() {
+    return import('../pages/MemberSettings');
+}
+
 export function loadStaffDashboard() {
     return import('../pages/StaffDashboard');
 }

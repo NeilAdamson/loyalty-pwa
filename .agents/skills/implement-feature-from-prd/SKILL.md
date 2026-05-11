@@ -15,7 +15,7 @@ Read these when present before coding:
 - docs/architecture.md
 - README.md
 - docs/deployment.md
-- docs/security.md
+- docs/SECURITY.md
 
 ## Workflow
 1. Understand the requested feature and determine the likely acceptance expectations from the PRD.

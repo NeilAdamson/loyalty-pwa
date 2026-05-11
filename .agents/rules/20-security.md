@@ -10,5 +10,5 @@ Security requirements:
 - Preserve authentication, authorization, validation, and secure defaults.
 
 When changing auth, networking, uploads, file access, secrets, or external integrations:
-- Check docs/security.md if present.
+- Check docs/SECURITY.md if present.
 - Prefer the safer implementation when functionally equivalent options exist.

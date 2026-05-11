@@ -1,14 +1,47 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import CardPreview from '../components/CardPreview';
+import PasskeyEnrollPrompt from '../components/PasskeyEnrollPrompt';
+
+const PASSKEY_PROMPT_KEY = 'punchcard_prompt_passkey';
+
+type MemberCardApiResponse = {
+    card?: {
+        stamps_count?: number
+        status?: string
+        program?: { stamps_required?: number; reward_title?: string; [key: string]: unknown }
+        [key: string]: unknown
+    }
+    member?: { name?: string; [key: string]: unknown }
+    vendor?: {
+        trading_name?: string
+        vendor_slug?: string
+        branding?: {
+            primary_color?: string
+            secondary_color?: string
+            accent_color?: string
+            background_color?: string
+            logo_url?: string
+            wordmark_url?: string
+            [key: string]: unknown
+        }
+        [key: string]: unknown
+    }
+    token?: string
+    expires_in_seconds?: number
+    [key: string]: unknown
+};
 
 const MemberCard: React.FC = () => {
+    const navigate = useNavigate();
     const { logout } = useAuth();
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<MemberCardApiResponse | null>(null);
     const [timeLeft, setTimeLeft] = useState(0);
+    const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
 
 
     const [nameInput, setNameInput] = useState('');
@@ -19,6 +52,11 @@ const MemberCard: React.FC = () => {
             const res = await api.get('/api/v1/me/card');
             setData(res.data);
             setTimeLeft(res.data.expires_in_seconds || 30);
+
+            const slug = res.data?.vendor?.vendor_slug as string | undefined;
+            if (slug && sessionStorage.getItem(PASSKEY_PROMPT_KEY) === '1') {
+                setShowPasskeyPrompt(true);
+            }
 
             // Check default name
             if (res.data.member?.name === 'Member' || res.data.member?.name === 'New Member' || !res.data.member?.name) {
@@ -35,7 +73,14 @@ const MemberCard: React.FC = () => {
             await api.patch('/api/v1/me/profile', { name: nameInput });
             // Optimistic update or refetch
             const startName = nameInput;
-            setData((prev: any) => ({ ...prev, member: { ...prev.member, name: startName } }));
+            setData((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          member: { ...(prev.member ?? {}), name: startName },
+                      }
+                    : prev
+            );
             setIsEditingName(false);
         } catch (e) {
             alert('Failed to save name');
@@ -59,7 +104,8 @@ const MemberCard: React.FC = () => {
     // Confetti effect when card becomes full
     useEffect(() => {
         const required = data?.card?.program?.stamps_required || 10;
-        if (data?.card?.stamps_count >= required && data?.card?.status === 'ACTIVE') {
+        const stampCount = data?.card?.stamps_count ?? 0;
+        if (stampCount >= required && data?.card?.status === 'ACTIVE') {
             confetti({
                 particleCount: 150,
                 spread: 70,
@@ -72,6 +118,7 @@ const MemberCard: React.FC = () => {
                 ]
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- confetti only on card fullness; branding colors intentionally excluded from deps
     }, [data?.card?.stamps_count, data?.card?.status, data?.card?.program?.stamps_required]);
 
     useEffect(() => {
@@ -89,14 +136,22 @@ const MemberCard: React.FC = () => {
         }
     }, [data]);
 
-    if (!data) return <div style={{ padding: 20 }}>Loading Card...</div>;
+    if (!data?.card || !data.token) return <div style={{ padding: 20 }}>Loading Card...</div>;
 
     const { card, token, vendor } = data;
     const branding = vendor?.branding || {};
-    const stamps = card.stamps_count;
+    const stamps = card.stamps_count ?? 0;
     // Fix: Validating against program requirements, with fallback
     const required = card.program?.stamps_required || 10;
     const isFull = stamps >= required;
+
+    const previewProgram =
+        card.program != null
+            ? {
+                  stamps_required: card.program.stamps_required ?? 10,
+                  reward_title: card.program.reward_title ?? 'Reward',
+              }
+            : undefined;
 
 
     // Modern Mesh Gradient Background
@@ -119,8 +174,19 @@ const MemberCard: React.FC = () => {
         overflow: 'hidden'
     };
 
+    const dismissPasskeyPrompt = () => {
+        sessionStorage.removeItem(PASSKEY_PROMPT_KEY);
+        setShowPasskeyPrompt(false);
+    };
+
     return (
         <div style={pageStyle}>
+            {showPasskeyPrompt && data?.vendor?.vendor_slug ? (
+                <PasskeyEnrollPrompt
+                    vendorSlug={data.vendor.vendor_slug as string}
+                    onDone={dismissPasskeyPrompt}
+                />
+            ) : null}
             <style>
                 {`
                 @keyframes mesh { 
@@ -191,23 +257,42 @@ const MemberCard: React.FC = () => {
                     )}
                 </div>
 
-                <button
-                    onClick={logout}
-                    style={{
-                        background: 'rgba(255,255,255,0.1)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        padding: '10px 18px',
-                        borderRadius: '30px',
-                        color: '#fff',
-                        fontSize: '0.85rem',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        backdropFilter: 'blur(8px)'
-                    }}
-                >
-                    Sign Out
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/me/settings')}
+                        style={{
+                            background: 'rgba(255,255,255,0.08)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            padding: '10px 14px',
+                            borderRadius: '30px',
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            backdropFilter: 'blur(8px)',
+                        }}
+                    >
+                        Account
+                    </button>
+                    <button
+                        onClick={logout}
+                        style={{
+                            background: 'rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            padding: '10px 18px',
+                            borderRadius: '30px',
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            backdropFilter: 'blur(8px)'
+                        }}
+                    >
+                        Sign Out
+                    </button>
+                </div>
             </header>
 
             {/* Personalization Section */}
@@ -266,7 +351,7 @@ const MemberCard: React.FC = () => {
                 <div>
                     <CardPreview
                         branding={branding}
-                        program={card.program}
+                        program={previewProgram}
                         stampsCount={stamps}
                     />
                 </div>
@@ -293,7 +378,7 @@ const MemberCard: React.FC = () => {
                     boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.1)',
                     marginBottom: '20px'
                 }}>
-                    <QRCodeSVG value={token} size={180} />
+                    <QRCodeSVG value={token as string} size={180} />
                 </div>
 
                 {isFull ? (

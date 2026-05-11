@@ -158,6 +158,12 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 - Member verifies OTP.
 - Member identity uniqueness: (vendor_id, phone).
 
+**FR-C2b Member passkeys (WebAuthn)**
+- After a successful SMS OTP session, the member MAY enroll a **passkey** (platform authenticator: fingerprint / device PIN) scoped to that **vendor**.
+- On supported browsers/devices, the member MAY sign in with a passkey instead of requesting SMS OTP.
+- SMS OTP MUST remain available for first-time signup, new devices, and recovery.
+- Passkeys MUST NOT authenticate a member across vendors (strict `vendor_id` binding in verification).
+
 **FR-C3 Card display**
 - Member can view:
   - progress (stamps_count / stamps_required)
@@ -175,11 +181,11 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
   - single-use for stamp/redeem (replay protected)
 
 ### EPIC D — Staff stamping and redemption
-**FR-D1 Staff login (PIN-only)**
+**FR-D1 Staff login (username + PIN; optional passkey)**
 - Staff portal is vendor-scoped (via vendor_slug).
-- Staff enters PIN only.
-- System resolves staff account by (vendor_id, pin) where staff status=ENABLED.
-- If PIN invalid: error and rate limit.
+- Staff enters **username + PIN** (or optional **WebAuthn passkey** on supported devices).
+- System resolves staff account by (vendor_id, username) and verifies PIN (or passkey assertion).
+- If credentials invalid: error and rate limit.
 
 **FR-D2 Stamp**
 - Staff scans member rotating token.
@@ -293,7 +299,8 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 ## 14. Acceptance test checklist (summary)
 - Vendor created with ≥ 1 branch.
 - Member joins via SMS OTP.
-- Staff PIN login works.
+- Member can enroll and use a passkey for repeat login on a supported device (SMS OTP still works).
+- Staff PIN login works; staff can enroll and use a passkey where supported (PIN still works).
 - Stamp increments once; repeated token fails.
 - Cooldown enforced.
 - Redeem closes card and creates new empty card.

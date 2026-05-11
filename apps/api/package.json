@@ -20,7 +20,8 @@
         "verify:error-mapping": "tsx verify-error-mapping.ts",
         "verify:member-card": "tsx verify-member-card.ts",
         "verify:tx-integrity": "tsx verify-transaction-integrity.ts",
-        "verify:tx": "tsx verify-tx.ts"
+        "verify:tx": "tsx verify-tx.ts",
+        "test": "vitest run"
     },
     "dependencies": {
         "@fastify/cookie": "^9.3.1",
@@ -29,6 +30,8 @@
         "@fastify/multipart": "^8.3.0",
         "@fastify/static": "^7.0.4",
         "@prisma/client": "^5.10.2",
+        "@simplewebauthn/server": "^10.0.1",
+        "@simplewebauthn/types": "^10.0.0",
         "ioredis": "^5.4.2",
         "@types/bcryptjs": "^3.0.0",
         "bcryptjs": "^3.0.3",
@@ -46,7 +49,8 @@
         "@typescript-eslint/eslint-plugin": "^7.0.0",
         "@typescript-eslint/parser": "^7.0.0",
         "eslint": "^8.56.0",
-        "typescript": "^5.3.3"
+        "typescript": "^5.3.3",
+        "vitest": "^2.1.9"
     },
     "prisma": {
         "seed": "tsx prisma/seed.ts"

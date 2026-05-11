@@ -52,6 +52,7 @@ model Vendor {
   tokens_used     TokenUse[]
   otp_requests    OtpRequest[]
   audit_logs      AdminAuditLog[]
+  webauthn_credentials WebAuthnCredential[]
 
   @@map("vendors")
 }
@@ -180,6 +181,7 @@ model StaffUser {
   branch               Branch   @relation(fields: [branch_id], references: [branch_id])
   stamp_txs            StampTransaction[]
   redeem_txs           RedemptionTransaction[]
+  webauthn_credentials WebAuthnCredential[]
 
   @@unique([vendor_id, username])
   @@map("staff_users")
@@ -202,6 +204,7 @@ model Member {
   vendor            Vendor   @relation(fields: [vendor_id], references: [vendor_id])
   branch_joined     Branch?  @relation(fields: [branch_joined_id], references: [branch_id])
   cards             CardInstance[]
+  webauthn_credentials WebAuthnCredential[]
 
   @@unique([vendor_id, phone_e164])
   @@map("members")
@@ -327,6 +330,33 @@ model OtpRequest {
   vendor      Vendor   @relation(fields: [vendor_id], references: [vendor_id])
 
   @@map("otp_requests")
+}
+
+// WebAuthn / passkey credentials (member or staff; exactly one of member_id / staff_id)
+model WebAuthnCredential {
+  webauthn_credential_id String    @id @default(uuid()) @db.Uuid
+  vendor_id              String    @db.Uuid
+  member_id              String?   @db.Uuid
+  staff_id               String?   @db.Uuid
+  credential_id           Bytes     @unique
+  public_key              Bytes
+  counter                 BigInt    @default(0)
+  transports              String[]
+  aaguid                  String?
+  device_label            String?
+  backup_eligible         Boolean   @default(false)
+  backup_state            Boolean   @default(false)
+  created_at              DateTime  @default(now()) @db.Timestamptz
+  last_used_at            DateTime? @db.Timestamptz
+  revoked_at              DateTime? @db.Timestamptz
+
+  vendor Vendor    @relation(fields: [vendor_id], references: [vendor_id], onDelete: Cascade)
+  member Member?   @relation(fields: [member_id], references: [member_id], onDelete: Cascade)
+  staff  StaffUser? @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade)
+
+  @@index([vendor_id, member_id])
+  @@index([vendor_id, staff_id])
+  @@map("webauthn_credentials")
 }
 
 // 3.12 admin_audit_log
