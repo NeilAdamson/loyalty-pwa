@@ -58,10 +58,13 @@ services:
       - ./apps/web:/app
       - /app/node_modules
 
-  # Disable Caddy for local dev to access services directly
-  # (Optional: you can keep it if you want to test routing, but mapped ports above allow direct access)
+  # Optional reverse proxy for local HTTPS / host routing tests:
+  #   docker compose -f docker-compose.dev.yml --profile with-caddy up caddy
   caddy:
-    restart: no
+    image: caddy:alpine
+    profiles:
+      - with-caddy
+    restart: "no"
 
   # DB Management (Dev Mode Only)
   pgadmin:

@@ -25,6 +25,8 @@ Set these environment variables on the API (see `docs/TECH-SPEC.md` §12 and `.e
 | `WEBAUTHN_RP_NAME` | Display name in the authenticator UI. |
 | `WEBAUTHN_ORIGIN` | Comma-separated list of allowed **full origins** (scheme + host + port) for assertions/attestation. Must include every URL users use to open the PWA (e.g. `https://punchcard.co.za` and `https://www.punchcard.co.za` if both exist). |
 
+If any of these variables are **unset or invalid**, the API process still boots and non-passkey authentication continues to work; passkey-only HTTP handlers respond with **503** and `PASSKEY_NOT_SUPPORTED` until configuration is fixed.
+
 **Critical**: Changing `WEBAUTHN_RP_ID` or removing an origin from `WEBAUTHN_ORIGIN` after go-live will break existing passkeys. Plan RP ID with your **final** production hostname.
 
 ### 2.3 Multi-tenant binding (single RP, many vendors)

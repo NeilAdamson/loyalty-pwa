@@ -617,6 +617,7 @@ A scheduled job runs daily:
 - `WEBAUTHN_RP_ID` — WebAuthn Relying Party ID (hostname only, e.g. `localhost` or `punchcard.co.za`)
 - `WEBAUTHN_RP_NAME` — human-readable RP name shown in authenticator UI
 - `WEBAUTHN_ORIGIN` — comma-separated allowed full origins (scheme + host + port), e.g. `https://punchcard.co.za,http://localhost:5173`
+- If any of the three `WEBAUTHN_*` variables above are missing or invalid, passkey HTTP routes return **503** (`PASSKEY_NOT_SUPPORTED`); the API still serves other auth flows (admin, vendor admin, member OTP, staff PIN).
 - `RATE_LIMIT_PASSKEY_OPTIONS_PER_MINUTE` (optional)
 - `RATE_LIMIT_PASSKEY_VERIFY_PER_MINUTE` (optional)
 - `RATE_LIMIT_PASSKEY_VERIFY_LOCKOUT_SECONDS` (optional)

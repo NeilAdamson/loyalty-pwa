@@ -76,7 +76,7 @@ Use this together with API logs to quickly distinguish credential issues from ro
 
 ### Passkeys (WebAuthn)
 
-- The API requires **`WEBAUTHN_RP_ID`**, **`WEBAUTHN_RP_NAME`**, and **`WEBAUTHN_ORIGIN`** (see `.env.example` and `docker-compose.dev.yml` for local defaults).
+- **Passkey routes** require **`WEBAUTHN_RP_ID`**, **`WEBAUTHN_RP_NAME`**, and **`WEBAUTHN_ORIGIN`** on the API (see `.env.example` and `docker-compose.dev.yml`). If these are missing or invalid, those endpoints respond with **503** and code `PASSKEY_NOT_SUPPORTED`; the rest of the API (admin cookie login, vendor admin JWT, member OTP, staff PIN, and so on) still starts normally.
 - Local dev: use **`WEBAUTHN_RP_ID=localhost`** with origins `http://localhost:5173` (and optionally `http://127.0.0.1:5173`). Production: set RP ID to your real public hostname (see `docs/SECURITY.md`).
 - Members can add a passkey after SMS login; staff can add one after PIN login. SMS / PIN remain available for recovery.
 

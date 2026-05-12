@@ -45,22 +45,54 @@ function b64urlToBuffer(s: string): Buffer {
 }
 
 export class WebAuthnService {
-    private cfg: WebAuthnConfig
+    /** Set after first successful `loadWebAuthnConfig()` */
+    private webAuthnCfg: WebAuthnConfig | null = null
+    /** True if env was missing or invalid — do not retry load every request */
+    private webAuthnCfgRejected = false
 
     constructor(
         private prisma: PrismaClient,
         private redis: Redis,
         private rateLimiter: RedisRateLimiter
-    ) {
-        this.cfg = loadWebAuthnConfig()
+    ) {}
+
+    /**
+     * WebAuthn env is validated only when passkey routes run, so admin/vendor OTP flows
+     * keep working if production has not yet set WEBAUTHN_* variables.
+     */
+    private requireWebAuthnConfig(): WebAuthnConfig {
+        if (this.webAuthnCfg) {
+            return this.webAuthnCfg
+        }
+        if (this.webAuthnCfgRejected) {
+            throw {
+                statusCode: 503,
+                code: ERROR_CODES.PASSKEY_NOT_SUPPORTED,
+                message:
+                    'Passkey sign-in is not configured on this server. Set WEBAUTHN_RP_ID, WEBAUTHN_RP_NAME, and WEBAUTHN_ORIGIN on the API.',
+            }
+        }
+        try {
+            this.webAuthnCfg = loadWebAuthnConfig()
+            return this.webAuthnCfg
+        } catch {
+            this.webAuthnCfgRejected = true
+            throw {
+                statusCode: 503,
+                code: ERROR_CODES.PASSKEY_NOT_SUPPORTED,
+                message:
+                    'Passkey sign-in is not configured on this server. Set WEBAUTHN_RP_ID, WEBAUTHN_RP_NAME, and WEBAUTHN_ORIGIN on the API.',
+            }
+        }
     }
 
     private assertOrigin(originHeader: string | undefined): string {
+        const cfg = this.requireWebAuthnConfig()
         const origin = originHeader?.trim()
         if (!origin) {
             throwPasskeyInvalid('Missing Origin header')
         }
-        if (!this.cfg.origins.includes(origin)) {
+        if (!cfg.origins.includes(origin)) {
             throwPasskeyInvalid('Origin not allowed for WebAuthn')
         }
         return origin
@@ -97,10 +129,11 @@ export class WebAuthnService {
         this.assertOrigin(input.origin)
         await this.rateLimiter.assertPasskeyOptionsAllowed(input.clientIp)
 
+        const cfg = this.requireWebAuthnConfig()
         const userHandle = packWebAuthnUserHandle('member', input.vendorId, input.memberId)
         const options = await generateRegistrationOptions({
-            rpName: this.cfg.rpName,
-            rpID: this.cfg.rpID,
+            rpName: cfg.rpName,
+            rpID: cfg.rpID,
             userID: userHandle,
             userName: input.phoneE164,
             userDisplayName: input.displayName || 'Member',
@@ -141,7 +174,7 @@ export class WebAuthnService {
             response: input.body,
             expectedChallenge: state.challenge,
             expectedOrigin: origin,
-            expectedRPID: this.cfg.rpID,
+            expectedRPID: this.requireWebAuthnConfig().rpID,
             requireUserVerification: true,
         })
 
@@ -182,10 +215,11 @@ export class WebAuthnService {
         this.assertOrigin(input.origin)
         await this.rateLimiter.assertPasskeyOptionsAllowed(input.clientIp)
 
+        const cfg = this.requireWebAuthnConfig()
         const userHandle = packWebAuthnUserHandle('staff', input.vendorId, input.staffId)
         const options = await generateRegistrationOptions({
-            rpName: this.cfg.rpName,
-            rpID: this.cfg.rpID,
+            rpName: cfg.rpName,
+            rpID: cfg.rpID,
             userID: userHandle,
             userName: `${input.vendorId}:${input.username}`,
             userDisplayName: input.displayName || input.username,
@@ -226,7 +260,7 @@ export class WebAuthnService {
             response: input.body,
             expectedChallenge: state.challenge,
             expectedOrigin: origin,
-            expectedRPID: this.cfg.rpID,
+            expectedRPID: this.requireWebAuthnConfig().rpID,
             requireUserVerification: true,
         })
 
@@ -298,8 +332,9 @@ export class WebAuthnService {
             }))
         }
 
+        const cfg = this.requireWebAuthnConfig()
         const options = await generateAuthenticationOptions({
-            rpID: this.cfg.rpID,
+            rpID: cfg.rpID,
             userVerification: 'required',
             allowCredentials: allowCredentials && allowCredentials.length > 0 ? allowCredentials : undefined,
         })
@@ -357,7 +392,7 @@ export class WebAuthnService {
             response: input.body,
             expectedChallenge: state.challenge,
             expectedOrigin: origin,
-            expectedRPID: this.cfg.rpID,
+            expectedRPID: this.requireWebAuthnConfig().rpID,
             authenticator: {
                 credentialID: bufferToB64url(Buffer.from(dbCred.credential_id)),
                 credentialPublicKey: new Uint8Array(dbCred.public_key),
@@ -424,8 +459,9 @@ export class WebAuthnService {
             }))
         }
 
+        const cfg = this.requireWebAuthnConfig()
         const options = await generateAuthenticationOptions({
-            rpID: this.cfg.rpID,
+            rpID: cfg.rpID,
             userVerification: 'required',
             allowCredentials: allowCredentials && allowCredentials.length > 0 ? allowCredentials : undefined,
         })
@@ -483,7 +519,7 @@ export class WebAuthnService {
             response: input.body,
             expectedChallenge: state.challenge,
             expectedOrigin: origin,
-            expectedRPID: this.cfg.rpID,
+            expectedRPID: this.requireWebAuthnConfig().rpID,
             authenticator: {
                 credentialID: bufferToB64url(Buffer.from(dbCred.credential_id)),
                 credentialPublicKey: new Uint8Array(dbCred.public_key),

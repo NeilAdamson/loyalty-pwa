@@ -5,13 +5,11 @@ import corsPlugin from './plugins/cors'
 import errorsPlugin from './plugins/errors'
 import authPlugin from './plugins/auth'
 import { assertRequiredSecurityEnv, requireSecret } from './utils/config'
-import { loadWebAuthnConfig } from './utils/webauthn-config'
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 
 assertRequiredSecurityEnv();
-loadWebAuthnConfig();
 
 const server = fastify({
     logger: true,
@@ -252,19 +250,6 @@ server.register(async function (fastify) {
     });
 }, { prefix: '/api/v1' });
 
-
-// Current routes are registered at root level of server? 
-// Wait, `server.register(authRoutes)` etc are at root?
-// In previous view of server.ts:
-// server.register(authRoutes) -> this usually has a prefix inside the module or it's root.
-// Let's check authRoutes definition to be consistent. 
-// Actually, looking at server.ts again:
-// server.get('/health') ...
-// server.register(authRoutes)
-// If I use `prefix: '/api/v1/admin/auth'`, it should work.
-// But wait, the previous `server.ts` dump showed: `server.register(authRoutes)`. 
-// I should probably follow that pattern OR put it under /api/v1 if I want to clean up.
-// For now, I'll stick to the requested path.
 server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix: '/api/v1/admin/auth' })
 server.register(require('./modules/admin/vendor.routes').adminVendorRoutes, { prefix: '/api/v1/admin/vendors' })
 server.register(require('./modules/admin/member.routes').adminMemberRoutes, { prefix: '/api/v1/admin/members' })

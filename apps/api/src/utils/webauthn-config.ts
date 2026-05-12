@@ -7,7 +7,7 @@ export type WebAuthnConfig = {
     origins: string[]
 }
 
-/** Validates WebAuthn-related env at process startup. */
+/** Validates WebAuthn-related env when passkey features run (not at global process startup). */
 export function loadWebAuthnConfig(): WebAuthnConfig {
     const rpID = requireEnv('WEBAUTHN_RP_ID').trim()
     const rpName = requireEnv('WEBAUTHN_RP_NAME').trim()
