@@ -17,7 +17,8 @@ const AdminButton: React.FC<AdminButtonProps> = ({
     ...props
 }) => {
     const baseStyles: React.CSSProperties = {
-        padding: '10px 16px',
+        padding: '12px 20px',
+        minHeight: '44px',
         borderRadius: 'var(--radius)',
         border: 'none',
         fontSize: '14px',

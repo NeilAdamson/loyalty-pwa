@@ -714,6 +714,8 @@ const VENDOR_DASHBOARD_CSS = `
 }
 .vendor-dash-table-wrap {
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   border-radius: var(--radius-md);
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.02);

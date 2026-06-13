@@ -108,7 +108,7 @@ const VendorAdminLayout: React.FC = () => {
                         </>
                     )}
                 </div>
-                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="menu-btn">
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="menu-btn" aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}>
                     ☰
                 </button>
             </header>
@@ -420,6 +420,12 @@ const VendorAdminLayout: React.FC = () => {
                     color: var(--text-main);
                     font-size: 1.5rem;
                     cursor: pointer;
+                    min-width: 44px;
+                    min-height: 44px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    -webkit-tap-highlight-color: transparent;
                 }
 
                 @media (max-width: 768px) {
@@ -432,7 +438,7 @@ const VendorAdminLayout: React.FC = () => {
                     .admin-main {
                         margin-left: 0;
                         width: 100%;
-                        padding-top: 80px; /* Header height + padding */
+                        padding: 80px 1rem 1.5rem 1rem;
                     }
                     .admin-header {
                         display: flex;
@@ -446,6 +452,28 @@ const VendorAdminLayout: React.FC = () => {
                         background: rgba(0, 0, 0, 0.5);
                         z-index: 45;
                         backdrop-filter: blur(3px);
+                    }
+
+                    /* Touch-friendly nav items */
+                    .nav-item {
+                        min-height: 48px;
+                        padding: 0.85rem 1rem;
+                        -webkit-tap-highlight-color: transparent;
+                    }
+
+                    /* Taller logout button for thumbs */
+                    .logout-btn {
+                        min-height: 48px;
+                        padding: 0.85rem;
+                        font-size: 0.9rem;
+                        -webkit-tap-highlight-color: transparent;
+                    }
+
+                    /* Session bar compact on mobile */
+                    .vendor-admin-session-bar {
+                        font-size: 0.8rem;
+                        padding: 0.5rem 0.75rem;
+                        gap: 0.25rem 0.4rem;
                     }
                 }
             `}</style>

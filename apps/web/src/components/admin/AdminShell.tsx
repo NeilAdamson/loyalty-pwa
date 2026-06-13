@@ -59,7 +59,7 @@ const AdminShell: React.FC = () => {
 
     return (
         <div className="adminShell">
-            {/* Sidebar */}
+            {/* Desktop Sidebar — hidden on mobile via CSS */}
             <aside className="adminSidebar">
                 {/* Brand */}
                 <div style={{ marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -98,7 +98,7 @@ const AdminShell: React.FC = () => {
                                 textDecoration: 'none',
                                 color: isActive ? 'var(--text)' : 'var(--text-secondary)',
                                 background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                borderLeft: isActive ? '3px solid var(--primary)' : '3px solid transparent', // Active indicator
+                                borderLeft: isActive ? '3px solid var(--primary)' : '3px solid transparent',
                                 fontWeight: isActive ? 500 : 400,
                                 fontSize: '14px',
                                 transition: 'all 0.2s ease'
@@ -163,6 +163,45 @@ const AdminShell: React.FC = () => {
 
                 </div>
             </aside>
+
+            {/* ── Mobile Top Header ── */}
+            <header className="adminMobileHeader" aria-label="Admin navigation">
+                <div className="adminMobileHeaderBrand">
+                    <div className="adminMobileHeaderBrandIcon">
+                        <Icons.Shield />
+                    </div>
+                    <span className="adminMobileHeaderTitle">Loyalty Admin</span>
+                </div>
+                <div className="adminMobileHeaderUser">
+                    <div className="adminMobileHeaderAvatar" aria-hidden>
+                        {admin?.name?.charAt(0).toUpperCase() || 'A'}
+                    </div>
+                    <button
+                        className="adminMobileHeaderLogout"
+                        onClick={handleLogout}
+                        aria-label="Sign out"
+                    >
+                        <Icons.LogOut />
+                        <span>Sign Out</span>
+                    </button>
+                </div>
+            </header>
+
+            {/* ── Bottom Tab Bar (mobile only) ── */}
+            <nav className="adminBottomBar" aria-label="Main navigation">
+                {navItems.map((item) => (
+                    <NavLink
+                        key={item.path}
+                        to={item.path}
+                        end={item.end}
+                        className={({ isActive }) => `bottomTab${isActive ? ' active' : ''}`}
+                        onClick={() => beginRouteTransition(item.path, location.pathname)}
+                    >
+                        {item.icon}
+                        <span>{item.label === 'Admin Users' ? 'Admins' : item.label}</span>
+                    </NavLink>
+                ))}
+            </nav>
 
             {/* Main Content */}
             <main className="adminContent">

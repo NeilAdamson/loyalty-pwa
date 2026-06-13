@@ -215,8 +215,18 @@ const VendorStaff: React.FC = () => {
 
             {/* Add/Edit Staff Modal */}
             {isAddModalOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="glass-panel w-full max-w-lg p-6 transform transition-all scale-100">
+                <div className="admin-modal-backdrop" style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.8)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 50,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '16px'
+                }}>
+                    <div className="admin-modal-dialog glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '24px' }}>
                         <div className="flex justify-between items-start mb-4">
                             <div>
                                 <h2 className="text-xl font-bold text-white">{editingStaff ? 'Edit Staff Member' : 'Add Staff Member'}</h2>

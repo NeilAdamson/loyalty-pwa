@@ -116,7 +116,7 @@ export default function AdminVendorCreate() {
     };
 
     return (
-        <div style={{ maxWidth: '600px' }}>
+        <div style={{ maxWidth: '600px', width: '100%' }}>
             <AdminPageHeader
                 title="Onboard New Vendor"
                 description="Create a new vendor account. This will generate a trial subscription."
@@ -183,7 +183,7 @@ export default function AdminVendorCreate() {
                     />
 
                     <h3 style={{ fontSize: '16px', marginTop: '10px', marginBottom: '8px' }}>Contact Person</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="admin-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                         <AdminInput
                             label="Name"
                             type="text"
@@ -215,7 +215,7 @@ export default function AdminVendorCreate() {
                     />
 
                     <h3 style={{ fontSize: '16px', marginTop: '20px', marginBottom: '8px' }}>Location</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="admin-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                         <AdminInput
                             label="Branch (Region)"
                             type="text"
@@ -241,7 +241,7 @@ export default function AdminVendorCreate() {
                         error={fieldErrors.billing_email}
                         required
                     />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="admin-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                         <AdminInput
                             label="Monthly Billing Amount (R)"
                             type="number"

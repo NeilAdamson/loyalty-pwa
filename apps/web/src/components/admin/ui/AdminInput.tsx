@@ -35,7 +35,8 @@ const AdminInput: React.FC<AdminInputProps> = ({
                 <select
                     required={required}
                     style={{
-                        padding: '10px 12px',
+                        padding: '12px 14px',
+                        minHeight: '44px',
                         borderRadius: 'var(--radius)',
                         background: 'var(--bg)',
                         border: error ? '1px solid var(--danger)' : '1px solid var(--border)',
@@ -59,7 +60,8 @@ const AdminInput: React.FC<AdminInputProps> = ({
                     type={type}
                     required={required}
                     style={{
-                        padding: '10px 12px',
+                        padding: '12px 14px',
+                        minHeight: '44px',
                         borderRadius: 'var(--radius)',
                         background: 'var(--bg)',
                         border: error ? '1px solid var(--danger)' : '1px solid var(--border)',

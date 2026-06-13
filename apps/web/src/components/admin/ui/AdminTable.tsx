@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 
 interface Column<T> {
     header: string;
@@ -24,6 +24,18 @@ function AdminTable<T>({
     onRowClick,
     keyField
 }: AdminTableProps<T>) {
+    const wrapRef = useRef<HTMLDivElement>(null);
+    const [isScrollable, setIsScrollable] = useState(false);
+
+    useEffect(() => {
+        const el = wrapRef.current;
+        if (!el) return;
+        const check = () => setIsScrollable(el.scrollWidth > el.clientWidth + 1);
+        check();
+        const observer = new ResizeObserver(check);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [data]);
 
     if (isLoading) {
         return (
@@ -59,7 +71,7 @@ function AdminTable<T>({
     }
 
     return (
-        <div className="tableWrap">
+        <div className={`tableWrap${isScrollable ? ' scrollable' : ''}`} ref={wrapRef}>
             <table className="table">
                 <thead>
                     <tr>

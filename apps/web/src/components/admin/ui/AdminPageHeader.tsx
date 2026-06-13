@@ -24,7 +24,7 @@ const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({
                     )}
                 </div>
                 {actions && (
-                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <div className="pageHeaderActions" style={{ display: 'flex', gap: 'var(--space-2)' }}>
                         {actions}
                     </div>
                 )}
@@ -34,6 +34,19 @@ const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({
                     {children}
                 </div>
             )}
+            <style>{`
+                @media (max-width: 640px) {
+                    .flex-between {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 12px;
+                    }
+                    .pageHeaderActions {
+                        width: 100%;
+                        flex-wrap: wrap;
+                    }
+                }
+            `}</style>
         </div>
     );
 };
