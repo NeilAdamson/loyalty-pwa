@@ -132,15 +132,4 @@ export class AdminStaffService {
             data: update as any
         })
     }
-
-    async delete(vendorId: string, staffId: string) {
-        const staff = await this.prisma.staffUser.findFirst({
-            where: { staff_id: staffId, vendor_id: vendorId }
-        })
-        if (!staff) throw { statusCode: 404, message: 'Staff member not found' }
-        await this.prisma.staffUser.delete({
-            where: { staff_id: staffId }
-        })
-        return { success: true }
-    }
 }

@@ -90,4 +90,28 @@ describe('AdminStaffService branch validation', () => {
         })
         expect(prisma.staffUser.update).toHaveBeenCalled()
     })
+
+    it('disables staff via status update', async () => {
+        const prisma = createMockPrisma()
+        prisma.staffUser.findFirst.mockResolvedValue({
+            staff_id: 'staff-1',
+            vendor_id: 'vendor-a',
+            name: 'Alice',
+        })
+        prisma.staffUser.update.mockResolvedValue({
+            staff_id: 'staff-1',
+            status: 'DISABLED',
+        })
+
+        const svc = new AdminStaffService(prisma as unknown as PrismaClient)
+
+        await expect(
+            svc.update('vendor-a', 'staff-1', { status: 'DISABLED' })
+        ).resolves.toMatchObject({ status: 'DISABLED' })
+
+        expect(prisma.staffUser.update).toHaveBeenCalledWith({
+            where: { staff_id: 'staff-1' },
+            data: { status: 'DISABLED' },
+        })
+    })
 })

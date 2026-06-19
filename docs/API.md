@@ -458,6 +458,5 @@ Admin users have username-based email addresses restricted to the `@punchcard.co
 ### Vendor Staff (Platform Admin)
 - **List staff**: `GET /api/v1/admin/vendors/:id/staff`
 - **Create staff**: `POST /api/v1/admin/vendors/:id/staff` — Body: `{ name, username, pin, role?, branch_id? }`
-- **Update staff**: `PATCH /api/v1/admin/vendors/:id/staff/:staffId` — Body: `{ name?, username?, pin?, role?, branch_id?, status? }`. Leave `pin` blank to keep current PIN.
+- **Update staff**: `PATCH /api/v1/admin/vendors/:id/staff/:staffId` — Body: `{ name?, username?, pin?, role?, branch_id?, status? }`. Leave `pin` blank to keep current PIN. Set `status` to `DISABLED` or `ENABLED` to revoke or restore staff login access; staff records are retained for append-only stamp/redemption audit history.
 - **Reset PIN**: `PATCH /api/v1/admin/vendors/:id/staff/:staffId/pin` — Body: `{ pin }`
-- **Delete staff**: `DELETE /api/v1/admin/vendors/:id/staff/:staffId`

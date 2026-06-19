@@ -121,17 +121,21 @@ export default function AdminVendorDetail() {
         }
     }
 
-    const handleDeleteStaff = async (s: any) => {
-        if (!window.confirm(`Delete staff member "${s.name}"? They will no longer be able to log in.`)) return;
+    const handleToggleStaffStatus = async (s: any) => {
+        const nextStatus = s.status === 'ENABLED' ? 'DISABLED' : 'ENABLED';
+        const action = nextStatus === 'DISABLED' ? 'Disable' : 'Enable';
+        if (!window.confirm(`${action} staff member "${s.name}"?`)) return;
         setSaving(true);
         try {
-            await api.delete(`/api/v1/admin/vendors/${id}/staff/${s.staff_id}`);
-            alert('Staff deleted');
-            if (editingStaffId === s.staff_id) closeEditStaff();
+            await api.patch(`/api/v1/admin/vendors/${id}/staff/${s.staff_id}`, { status: nextStatus });
+            alert(`Staff ${action.toLowerCase()}d`);
+            if (editingStaffId === s.staff_id) {
+                setEditStaffForm((prev) => ({ ...prev, status: nextStatus }));
+            }
             fetchStaff();
         } catch (e: any) {
             console.error(e);
-            alert(e.response?.data?.message || 'Failed to delete staff');
+            alert(e.response?.data?.message || `Failed to ${action.toLowerCase()} staff`);
         } finally {
             setSaving(false);
         }
@@ -760,8 +764,13 @@ export default function AdminVendorDetail() {
                                                     <AdminButton type="button" variant="secondary" onClick={() => openEditStaff(s)} style={{ padding: '6px 12px', fontSize: '13px' }}>
                                                         Edit
                                                     </AdminButton>
-                                                    <AdminButton type="button" variant="danger" onClick={() => handleDeleteStaff(s)} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                                                        Delete
+                                                    <AdminButton
+                                                        type="button"
+                                                        variant={s.status === 'ENABLED' ? 'danger' : 'secondary'}
+                                                        onClick={() => handleToggleStaffStatus(s)}
+                                                        style={{ padding: '6px 12px', fontSize: '13px' }}
+                                                    >
+                                                        {s.status === 'ENABLED' ? 'Disable' : 'Enable'}
                                                     </AdminButton>
                                                 </div>
                                             </td>

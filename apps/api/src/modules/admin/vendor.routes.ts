@@ -143,19 +143,6 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
         return { success: true, message: 'PIN updated' }
     })
 
-    // Delete Staff
-    fastify.delete('/:id/staff/:staffId', { preHandler: [verifyAdmin] }, async (request, reply) => {
-        try {
-            const { id, staffId } = request.params as any
-            await adminStaffService.delete(id, staffId)
-            return { success: true, message: 'Staff deleted' }
-        } catch (err: any) {
-            const status = err.statusCode || 500
-            const message = err.message || 'Failed to delete staff'
-            return reply.code(status).send({ message })
-        }
-    })
-
     // Update Vendor (Suspension etc) — generic PATCH /:id after staff routes
     fastify.patch('/:id', { preHandler: [verifyAdmin] }, async (request, reply) => {
         try {
