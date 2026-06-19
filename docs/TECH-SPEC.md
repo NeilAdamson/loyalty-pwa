@@ -640,6 +640,7 @@ A scheduled job runs daily:
 - `SMTP_PASSWORD`
 - `SMTP_SECURE` (true for SSL/TLS)
 - `SMTP_FROM` (sender email address)
+- `VENDOR_REGISTRATION_NOTIFY_EMAIL` (optional; internal alert when self-service vendor registration completes; defaults to `neil@punchcard.co.za`)
 
 ---
 

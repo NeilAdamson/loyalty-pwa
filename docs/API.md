@@ -121,7 +121,7 @@ Body:
   "password": "minimum8chars"
 }
 ```
-Creates the vendor, owner admin account, default branch, default branding, and default loyalty program. Returns `{ token, vendor_admin, vendor }`.
+Creates the vendor, owner admin account, default branch, default branding, and default loyalty program. Returns `{ token, vendor_admin, vendor }`. Sends an internal notification email (default recipient: `neil@punchcard.co.za`; override with `VENDOR_REGISTRATION_NOTIFY_EMAIL`) with vendor and owner details.
 
 **Vendor admin login**
 `POST /api/v1/vendor/auth/login`

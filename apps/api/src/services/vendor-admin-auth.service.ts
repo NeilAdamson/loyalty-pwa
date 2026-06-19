@@ -325,6 +325,20 @@ export class VendorAdminAuthService {
             return { vendor, vendorAdmin }
         })
 
+        void this.emailService.sendNewVendorRegistrationNotification({
+            trading_name: result.vendor.trading_name,
+            legal_name: result.vendor.legal_name,
+            vendor_slug: result.vendor.vendor_slug,
+            owner_first_name: result.vendorAdmin.first_name,
+            owner_last_name: result.vendorAdmin.last_name,
+            owner_email: result.vendorAdmin.email,
+            contact_phone: result.vendor.contact_phone,
+            vendor_status: result.vendor.status,
+            registered_at: new Date()
+        }).catch((error) => {
+            console.error('[VendorAdminAuthService] Failed to send new vendor registration notification:', error)
+        })
+
         return result
     }
 
