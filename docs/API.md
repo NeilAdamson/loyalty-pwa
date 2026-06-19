@@ -275,8 +275,10 @@ Accepts multipart form data with a single `file` field. Server-side limits:
 
 Returns:
 ```json
-{ "url": "https://.../uploads/branding/{scope}/{file}" }
+{ "url": "https://{PUBLIC_ORIGIN}/uploads/branding/{scope}/{file}" }
 ```
+
+`PUBLIC_ORIGIN` is the public site origin (scheme + host, no `/api` path). Caddy proxies `/uploads/*` to the API; see `docs/DEPLOYMENT.md`.
 
 **Get Branding**
 `GET /api/v1/v/:slug/admin/branding`

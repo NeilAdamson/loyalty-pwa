@@ -245,7 +245,8 @@ server.register(async function (fastify) {
         });
 
         const publicPath = relativePath.replace(/\\/g, '/');
-        const fileUrl = `${process.env.API_BASE_URL || 'http://localhost:8000'}/uploads/${publicPath}`;
+        const publicOrigin = (process.env.PUBLIC_ORIGIN || 'http://localhost:8000').replace(/\/$/, '');
+        const fileUrl = `${publicOrigin}/uploads/${publicPath}`;
         return { url: fileUrl };
     });
 }, { prefix: '/api/v1' });

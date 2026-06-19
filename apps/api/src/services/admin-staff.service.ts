@@ -4,6 +4,15 @@ import bcrypt from 'bcryptjs'
 export class AdminStaffService {
     constructor(private prisma: PrismaClient) { }
 
+    private async assertBranchBelongsToVendor(vendorId: string, branchId: string): Promise<void> {
+        const branch = await this.prisma.branch.findFirst({
+            where: { branch_id: branchId, vendor_id: vendorId },
+        })
+        if (!branch) {
+            throw { statusCode: 400, message: 'Branch not found for this vendor' }
+        }
+    }
+
     async listByVendor(vendorId: string) {
         return this.prisma.staffUser.findMany({
             where: { vendor_id: vendorId },
@@ -40,6 +49,8 @@ export class AdminStaffService {
             if (!defaultBranch) throw { statusCode: 400, message: 'Vendor has no branches. Create a branch first.' }
             branchId = defaultBranch.branch_id
         }
+
+        await this.assertBranchBelongsToVendor(vendorId, branchId)
 
         const pinHash = await bcrypt.hash(data.pin, 10)
 
@@ -92,7 +103,10 @@ export class AdminStaffService {
         if (data.name !== undefined) update.name = String(data.name).trim()
         if (data.role !== undefined) update.role = data.role
         if (data.status !== undefined) update.status = data.status
-        if (data.branch_id !== undefined) update.branch_id = data.branch_id
+        if (data.branch_id !== undefined) {
+            await this.assertBranchBelongsToVendor(vendorId, data.branch_id)
+            update.branch_id = data.branch_id
+        }
 
         if (data.username !== undefined) {
             const uname = String(data.username).toLowerCase().trim().replace(/[^a-z0-9_-]/g, '') || this.slugifyUsername(staff.name)

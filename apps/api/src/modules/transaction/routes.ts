@@ -51,6 +51,9 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             if (!staff || staff.status !== 'ENABLED') {
                 return reply.status(403).send({ code: 'STAFF_DISABLED', message: 'Staff disabled' })
             }
+            if (staff.vendor_id !== vendor_id) {
+                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff does not belong to this vendor' })
+            }
 
             if (!vendor_id) return reply.status(401).send();
             // Perform Stamp
@@ -85,6 +88,9 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             const staff = await fastify.prisma.staffUser.findUnique({ where: { staff_id } })
             if (!staff || staff.status !== 'ENABLED') {
                 return reply.status(403).send({ code: 'STAFF_DISABLED', message: 'Staff disabled' })
+            }
+            if (staff.vendor_id !== vendor_id) {
+                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff does not belong to this vendor' })
             }
 
             if (!vendor_id) return reply.status(401).send();

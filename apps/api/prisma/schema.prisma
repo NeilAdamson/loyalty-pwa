@@ -160,6 +160,7 @@ model Branch {
   stamp_txs    StampTransaction[]
   redeem_txs   RedemptionTransaction[]
 
+  @@unique([vendor_id, branch_id])
   @@map("branches")
 }
 
@@ -184,6 +185,7 @@ model StaffUser {
   webauthn_credentials WebAuthnCredential[]
 
   @@unique([vendor_id, username])
+  @@unique([vendor_id, staff_id])
   @@map("staff_users")
 }
 
@@ -207,6 +209,7 @@ model Member {
   webauthn_credentials WebAuthnCredential[]
 
   @@unique([vendor_id, phone_e164])
+  @@unique([vendor_id, member_id])
   @@map("members")
 }
 
@@ -230,6 +233,7 @@ model Program {
   // Partial unique index handled in migration or DB.
 
   @@unique([vendor_id, version])
+  @@unique([vendor_id, program_id])
   @@map("programs")
 }
 
@@ -254,6 +258,7 @@ model CardInstance {
   // Constraint: one active card per (vendor_id, member_id).
   // Partial unique index handled in migration.
 
+  @@unique([vendor_id, card_id])
   @@map("card_instances")
 }
 

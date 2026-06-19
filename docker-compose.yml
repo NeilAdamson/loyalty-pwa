@@ -64,7 +64,9 @@ services:
       - PORT=8000
       - HOST=0.0.0.0
       - CORS_ALLOWED_ORIGIN=https://punchcard.co.za,https://www.punchcard.co.za,https://loyaltyladies.com
-      - API_BASE_URL=https://punchcard.co.za/api
+      - PUBLIC_ORIGIN=${PUBLIC_ORIGIN:-https://punchcard.co.za}
+    volumes:
+      - api_uploads:/app/uploads
     expose:
       - "8000"
     depends_on:
@@ -116,6 +118,7 @@ services:
 
 volumes:
   db_data:
+  api_uploads:
   caddy_data:
   caddy_config:
 

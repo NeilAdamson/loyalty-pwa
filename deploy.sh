@@ -4,12 +4,12 @@ set -euo pipefail
 # Simple deploy helper for the loyalty-pwa stack.
 # Usage:
 #   ./deploy.sh                 # same as "./deploy.sh full"
-#   ./deploy.sh full            # git pull + build/up + migrate + image prune
-#   ./deploy.sh up              # docker compose up -d (no pull, no build)
-#   ./deploy.sh rebuild         # docker compose up -d --build --remove-orphans (no pull, no migrate)
+#   ./deploy.sh full            # git pull + build/up + migrate + verify + image prune
+#   ./deploy.sh up              # docker compose up -d (no pull, no build; verifies migrations)
+#   ./deploy.sh rebuild         # docker compose up -d --build --remove-orphans (no migrate; verifies)
 #   ./deploy.sh down            # docker compose down
-#   ./deploy.sh restart         # docker compose down && docker compose up -d
-#   ./deploy.sh migrate         # run api migrations only
+#   ./deploy.sh restart         # docker compose down && docker compose up -d (verifies migrations)
+#   ./deploy.sh migrate         # run api migrations + verify only
 
 CMD="${1:-full}"
 
@@ -37,6 +37,46 @@ require_env_file_keys() {
   fi
 }
 
+# Run a one-off command in the api container (migrations, prisma status, etc.).
+api_compose_run() {
+  docker compose run --rm \
+    -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    api "$@"
+}
+
+run_db_deploy() {
+  echo "[deploy] Running database migrations (api pnpm db:deploy)..."
+  api_compose_run pnpm db:deploy
+}
+
+# Exit non-zero when pending or failed migrations remain. /health does not check schema.
+verify_migration_status() {
+  echo "[deploy] Verifying database migration status..."
+  local output=""
+  local prisma_status=0
+
+  if ! output="$(api_compose_run pnpm prisma migrate status 2>&1)"; then
+    prisma_status=1
+  fi
+
+  echo "$output"
+
+  if [ "$prisma_status" -ne 0 ] || ! echo "$output" | grep -q "Database schema is up to date!"; then
+    echo ""
+    echo "[deploy] *** DATABASE MIGRATION CHECK FAILED ***"
+    echo "[deploy] Pending or failed migrations detected. The API may be healthy while the"
+    echo "[deploy] database is behind schema.prisma — endpoints using newer columns can fail."
+    echo "[deploy]"
+    echo "[deploy] Next steps:"
+    echo "[deploy]   1. Inspect: docker compose run --rm api pnpm prisma migrate status"
+    echo "[deploy]   2. Apply:  ./deploy.sh migrate"
+    echo "[deploy]   3. If a migration failed (P3018/P3009), see docs/DATABASE-SETUP.md and db_migration_fix.md"
+    return 1
+  fi
+
+  echo "[deploy] Database migrations: OK (schema up to date)"
+}
+
 case "$CMD" in
   full)
     require_env_file_keys
@@ -47,8 +87,8 @@ case "$CMD" in
     echo "[deploy] Building and starting services (detached, with --build)..."
     docker compose up -d --build --remove-orphans
 
-    echo "[deploy] Running database migrations (api pnpm db:deploy)..."
-    docker compose run --rm api pnpm db:deploy
+    run_db_deploy
+    verify_migration_status
 
     echo "[deploy] Pruning unused Docker images..."
     docker image prune -f
@@ -59,13 +99,16 @@ case "$CMD" in
 
     echo "[deploy] docker compose up -d"
     docker compose up -d
+    verify_migration_status
     ;;
 
   rebuild)
     require_env_file_keys
 
     echo "[deploy] docker compose up -d --build --remove-orphans"
+    echo "[deploy] NOTE: rebuild does not run migrations — use './deploy.sh full' or './deploy.sh migrate' after schema changes."
     docker compose up -d --build --remove-orphans
+    verify_migration_status
     ;;
 
   down)
@@ -77,15 +120,17 @@ case "$CMD" in
     require_env_file_keys
 
     echo "[deploy] docker compose down && docker compose up -d"
+    echo "[deploy] NOTE: restart does not run migrations — use './deploy.sh migrate' if schema changed."
     docker compose down
     docker compose up -d
+    verify_migration_status
     ;;
 
   migrate)
     require_env_file_keys
 
-    echo "[deploy] Running database migrations (api pnpm db:deploy)..."
-    docker compose run --rm api pnpm db:deploy
+    run_db_deploy
+    verify_migration_status
     ;;
 
   *)
@@ -93,4 +138,3 @@ case "$CMD" in
     exit 1
     ;;
 esac
-
