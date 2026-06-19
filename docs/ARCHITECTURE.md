@@ -106,7 +106,7 @@ flowchart LR
 ## 6. Fraud-resistant rotating token
 - Member card screen displays rotating token refreshed every 30 seconds.
 - Token properties:
-  - server-signed (HMAC)
+  - server-signed (HMAC) with `TOKEN_SIGNING_SECRET` (separate from session `JWT_SECRET`)
   - includes `vendor_id`, `card_id`, `member_id`, `jti`, `exp`
   - token is single-use for stamping OR redeeming
 - Replay protection:

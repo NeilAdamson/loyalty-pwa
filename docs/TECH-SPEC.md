@@ -385,6 +385,8 @@ Record fraud flags in transaction `flags` JSON when:
 ### 7.3 Verify
 - Compare bcrypt against (submitted_code + pepper)
 - Max attempts: 5 per otp_id; then invalidate.
+- **Single-use:** each OTP may be consumed at most once. On successful verify the API sets `consumed_at` using a row lock (`SELECT … FOR UPDATE`) and a conditional `updateMany` (`consumed_at IS NULL`). Concurrent verify requests with the same code yield **at most one** success; other callers receive `OTP_INVALID`.
+- Member find/create runs in the same database transaction as OTP consumption so signup races do not issue duplicate JWTs.
 
 Failure modes:
 - If SMS delivery fails, return error `OTP_DELIVERY_FAILED`.

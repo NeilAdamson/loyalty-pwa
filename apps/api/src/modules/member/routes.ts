@@ -66,7 +66,7 @@ const memberRoutes: FastifyPluginAsync = async (fastify) => {
             // Generate Rotating Token
             // Payload: vendor_id, member_id, card_id, jti, exp
             const jti = randomUUID()
-            const token = await reply.jwtSign(
+            const token = await reply.rotatingTokenSign(
                 {
                     vendor_id,
                     member_id,

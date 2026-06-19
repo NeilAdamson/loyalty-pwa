@@ -40,6 +40,7 @@ The product serves all tenants on one site with paths like `/v/{vendor_slug}`. A
 ### 2.4 Challenges and replay
 
 - Registration/authentication **challenges** are stored in **Redis** with a short TTL (5 minutes) and consumed on verify (single-use).
+- **SMS OTP** codes are single-use: `verifyMemberOtp` locks the `otp_requests` row and atomically sets `consumed_at` so concurrent verify with the same code cannot issue multiple member JWTs (see `docs/TECH-SPEC.md` §7.3).
 - Authenticator **signature counters** are persisted per credential; the API rejects **counter regression** (cloned authenticator / replay indicator).
 
 ### 2.5 Rate limiting
@@ -52,7 +53,15 @@ Passkey **options** and **verify** endpoints are rate-limited per client IP via 
 - Staff always retain **username + PIN** as recovery.
 - Members may **revoke** passkeys from `GET/DELETE /api/v1/me/passkeys` (see `docs/API.md`).
 
-## 3. Related documents
+## 3. Rotating transaction tokens
+
+Member card QR codes use short-lived (30s), single-use rotating tokens for stamp and redeem flows (see `docs/TECH-SPEC.md` §6).
+
+- Rotating tokens are signed with **`TOKEN_SIGNING_SECRET`**, distinct from **`JWT_SECRET`** used for member, staff, and vendor-admin session Bearer tokens.
+- This separation prevents session JWTs from being accepted at `/tx/stamp` and `/tx/redeem`, and prevents rotating tokens from being used as session Bearer auth.
+- Replay protection: each token’s `jti` is recorded in `token_use` on first successful stamp or redeem; reuse returns `TOKEN_REPLAYED`.
+
+## 4. Related documents
 
 - `docs/API.md` — endpoint contracts and error codes (`PASSKEY_*`).
 - `docs/DEPLOYMENT.md` — production hostname, TLS, and reverse proxy.

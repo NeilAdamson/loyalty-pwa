@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify'
 import { TransactionService } from '../../services/transaction.service'
+import { verifyRotatingToken } from '../../utils/rotating-token'
 
 const transactionRoutes: FastifyPluginAsync = async (fastify) => {
     const transactionService = new TransactionService(fastify.prisma, fastify.rateLimiter)
@@ -35,9 +36,16 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff access required' })
             }
 
-            // Verify Rotating Token (Signature + Expiry)
-            // This throws if invalid
-            const payload = await fastify.jwt.verify<any>(rotatingToken)
+            let payload
+            try {
+                payload = await verifyRotatingToken(fastify, rotatingToken)
+            } catch (err: unknown) {
+                const candidate = err as { statusCode?: number; code?: string; message?: string }
+                return reply.status(candidate.statusCode ?? 401).send({
+                    code: candidate.code ?? 'INVALID_TOKEN',
+                    message: candidate.message ?? 'Invalid or expired rotating token',
+                })
+            }
 
             // Check cross-vendor replay? Payload has vendor_id.
             if (payload.vendor_id !== vendor_id) {
@@ -79,7 +87,16 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff access required' })
             }
 
-            const payload = await fastify.jwt.verify<any>(rotatingToken)
+            let payload
+            try {
+                payload = await verifyRotatingToken(fastify, rotatingToken)
+            } catch (err: unknown) {
+                const candidate = err as { statusCode?: number; code?: string; message?: string }
+                return reply.status(candidate.statusCode ?? 401).send({
+                    code: candidate.code ?? 'INVALID_TOKEN',
+                    message: candidate.message ?? 'Invalid or expired rotating token',
+                })
+            }
 
             if (payload.vendor_id !== vendor_id) {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Token belongs to another vendor' })

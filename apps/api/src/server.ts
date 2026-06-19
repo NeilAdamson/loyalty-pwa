@@ -4,6 +4,7 @@ import redisPlugin from './plugins/redis'
 import corsPlugin from './plugins/cors'
 import errorsPlugin from './plugins/errors'
 import authPlugin from './plugins/auth'
+import rotatingTokenPlugin from './plugins/rotating-token'
 import { assertRequiredSecurityEnv, requireSecret } from './utils/config'
 import fs from 'fs';
 import path from 'path';
@@ -153,6 +154,7 @@ server.register(require('@fastify/static'), {
 server.register(prismaPlugin)
 server.register(redisPlugin)
 server.register(authPlugin)
+server.register(rotatingTokenPlugin)
 
 // Register Modules
 import authRoutes from './modules/auth/routes'
