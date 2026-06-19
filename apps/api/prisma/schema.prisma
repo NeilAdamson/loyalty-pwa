@@ -210,6 +210,8 @@ model Member {
 
   @@unique([vendor_id, phone_e164])
   @@unique([vendor_id, member_id])
+  @@index([vendor_id, last_active_at])
+  @@index([vendor_id, created_at])
   @@map("members")
 }
 
@@ -259,6 +261,7 @@ model CardInstance {
   // Partial unique index handled in migration.
 
   @@unique([vendor_id, card_id])
+  @@index([vendor_id, status, stamps_count])
   @@map("card_instances")
 }
 

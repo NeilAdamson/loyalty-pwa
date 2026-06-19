@@ -136,11 +136,13 @@ flowchart LR
 
 ### 9.1 Vendor analytics pipeline (MVP)
 - Vendor analytics is served by tenant-scoped vendor-admin endpoints under `/api/v1/v/:slug/admin/*`.
-- Calculations are computed from:
+- Calculations are computed on read by `VendorAnalyticsService` using tenant-scoped SQL aggregates (`COUNT`, `GROUP BY`, `LIMIT`) over:
   - `members` (growth/activity)
   - `card_instances` (completion and near-reward state)
   - `stamp_transactions` and `redemption_transactions` (usage, behavior, and staff throughput)
   - `vendors.average_visit_value` and `vendors.reward_cost` (estimated revenue/ROI)
+- Dashboard metrics avoid unbounded row scans; bounded lists (top customers, at-risk, near-reward) are limited in SQL.
+- Supporting indexes: `members(vendor_id, last_active_at)`, `members(vendor_id, created_at)`, `card_instances(vendor_id, status, stamps_count)`.
 - Reporting windows are normalized to:
   - current month
   - previous month
