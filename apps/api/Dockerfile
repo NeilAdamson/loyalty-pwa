@@ -8,17 +8,17 @@ RUN apk add --no-cache curl openssl
 
 FROM base AS dev
 WORKDIR /app
-COPY package.json .
+COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
 # Install dependencies (Prisma postinstall will generate client from schema)
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 # Regenerate Prisma client on every start so bind-mounted schema changes are picked up
 CMD ["sh", "-c", "pnpm db:generate && pnpm dev"]
 
 FROM base AS builder
 WORKDIR /app
-COPY package.json ./
-RUN pnpm install
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm db:generate
 RUN pnpm build
@@ -26,7 +26,7 @@ RUN pnpm prune --prod
 
 FROM base AS prod
 WORKDIR /app
-COPY package.json ./
+COPY package.json pnpm-lock.yaml ./
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
