@@ -257,6 +257,7 @@ server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix
 server.register(require('./modules/admin/vendor.routes').adminVendorRoutes, { prefix: '/api/v1/admin/vendors' })
 server.register(require('./modules/admin/member.routes').adminMemberRoutes, { prefix: '/api/v1/admin/members' })
 server.register(require('./modules/admin/users.routes').adminUserRoutes, { prefix: '/api/v1/admin/users' })
+server.register(require('./modules/admin/fraud.routes').adminFraudRoutes, { prefix: '/api/v1/admin' })
 
 import { SMSFlowService } from './services/smsflow.service';
 

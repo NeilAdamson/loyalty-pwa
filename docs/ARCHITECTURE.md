@@ -74,6 +74,7 @@ flowchart LR
 - Every query for tenant-scoped resources MUST filter by vendor_id.
 - Vendor-admin HTTP routes (`/api/v1/v/:slug/admin/*`) **must** enforce that the path `:slug` matches the authenticated vendor's `vendor_slug` (JWT carries `vendor_id` only; slug mismatch returns `403`). This is defense-in-depth on top of `vendor_id`-scoped queries.
 - Public `GET /api/v1/v/:vendorSlug/portal/status` uses the same slug resolution rules as staff login (`VendorService.resolveBySlug`: vendor exists and status is `ACTIVE` or `TRIAL`). Used by `/vendor/login` to validate a slug before redirecting to `/v/:slug/staff` without leaking tenant branding.
+- Public `GET /api/v1/v/:vendorSlug/public` uses the same `ACTIVE | TRIAL` resolution via `VendorService.getPublicProfile` (member landing branding, signup QR gate metadata). `SUSPENDED` vendors return `404 NOT_FOUND` on this endpoint to avoid exposing tenant state.
 
 ## 5. Identity and session model
 

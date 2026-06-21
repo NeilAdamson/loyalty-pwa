@@ -3,11 +3,13 @@ import Redis from 'ioredis'
 import { PrismaClient } from '@prisma/client'
 import { TransactionService } from './src/services/transaction.service'
 import { RedisRateLimiter } from './src/services/redis-rate-limiter.service'
+import { FraudEventService } from './src/services/fraud-event.service'
 
 const prisma = new PrismaClient()
 const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379'
 const redis = new Redis(redisUrl)
-const transactionService = new TransactionService(prisma, new RedisRateLimiter(redis))
+const fraudEvents = new FraudEventService(prisma, redis)
+const transactionService = new TransactionService(prisma, new RedisRateLimiter(redis), fraudEvents)
 
 type Fixture = {
     vendorId: string

@@ -219,7 +219,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
   - stamp: 60/hour per staff
   - redeem: 20/hour per staff
   - per card: max 3 stamps/day (vendor may increase)
-- Fraud flags recorded when thresholds exceeded.
+- Fraud flags recorded when thresholds exceeded (persisted to `admin_audit_log` as `FRAUD_*` actions; review at `/admin/fraud`).
 
 ### EPIC E — Analytics (MVP)
 **FR-E1 Vendor dashboard**
@@ -254,6 +254,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 ### Platform admin
 - Vendors list
 - Vendor detail + billing/suspension
+- Fraud flags review (`/admin/fraud`)
 - Audit export
 - Impersonation session control
 

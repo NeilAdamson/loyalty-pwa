@@ -6,11 +6,12 @@ import { SMSFlowService } from '../../services/smsflow.service'
 import { WebAuthnService } from '../../services/webauthn.service'
 import { SignupQrService } from '../../services/signup-qr.service'
 import { getClientIp } from '../../utils/client-ip'
+import { isRateLimitError } from '../../services/fraud-event.service'
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
     const vendorService = new VendorService(fastify.prisma)
     const otpSender = new SMSFlowService()
-    const authService = new AuthService(fastify.prisma, otpSender, fastify.rateLimiter)
+    const authService = new AuthService(fastify.prisma, otpSender, fastify.rateLimiter, fastify.fraudEvents)
     const signupQrService = new SignupQrService(fastify.prisma)
     const webAuthn = new WebAuthnService(fastify.prisma, fastify.redis, fastify.rateLimiter)
 
@@ -68,7 +69,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                 phone,
                 code,
                 consent_marketing === true,
-                signup.branchId
+                signup.branchId,
+                getClientIp(request)
             )
 
             // Issue Token
@@ -218,7 +220,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             const vendor = await vendorService.resolveBySlug(vendorSlug)
-            await fastify.rateLimiter.assertStaffLoginAllowed(getClientIp(request))
+            const clientIp = getClientIp(request)
+            try {
+                await fastify.rateLimiter.assertStaffLoginAllowed(clientIp)
+            } catch (err) {
+                if (isRateLimitError(err)) {
+                    await fastify.fraudEvents.recordStaffLoginLimit(vendor.vendor_id, clientIp)
+                }
+                throw err
+            }
             const staff = await authService.verifyStaffByUsername(vendor.vendor_id, username.trim().toLowerCase(), pin)
 
             const token = fastify.jwt.sign({

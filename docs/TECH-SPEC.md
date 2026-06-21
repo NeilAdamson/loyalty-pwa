@@ -340,10 +340,18 @@ Primary key: (vendor_id, token_jti)
 - **RP ID**: `WEBAUTHN_RP_ID` must be the public hostname without port (e.g. `punchcard.co.za`); local dev typically uses `localhost` with origins `http://localhost:5173` (see `docs/SECURITY.md`).
 
 ### 5.3 Fraud flags
-Record fraud flags in transaction `flags` JSON when:
-- stamps/hour per staff exceed threshold.
-- repeated denied cooldown attempts.
-- excessive member login attempts.
+Record fraud telemetry in `admin_audit_log` with `actor_type = SYSTEM` and action prefix `FRAUD_*` when:
+- stamps/hour per staff exceed threshold (`FRAUD_STAMP_HOURLY_LIMIT`)
+- redeems/hour per staff exceed threshold (`FRAUD_REDEEM_HOURLY_LIMIT`)
+- per-card daily stamp limit exceeded (`FRAUD_CARD_DAILY_LIMIT`)
+- repeated denied cooldown attempts (3+ denials within 15 minutes on the same card → `FRAUD_REPEATED_COOLDOWN_DENIAL`)
+- excessive member OTP request rate (`FRAUD_MEMBER_OTP_REQUEST_LIMIT`)
+- excessive member OTP verify attempts (`FRAUD_MEMBER_OTP_VERIFY_LIMIT`)
+- excessive staff login attempts (`FRAUD_STAFF_LOGIN_LIMIT`)
+
+Platform admins review these via `GET /api/v1/admin/fraud-events` and the `/admin/fraud` backoffice screen. Events are deduplicated to at most once per hour per entity/action (cooldown abuse uses a separate 15-minute counter).
+
+Successful stamp/redeem transactions persist `ip_address` on the transaction row. The optional transaction `flags` JSON column remains reserved for future per-transaction annotations.
 
 ---
 
@@ -483,7 +491,10 @@ Response:
     "status": "ACTIVE",
     "stamps_count": 3,
     "program": {
-        "stamps_required": 10
+        "stamps_required": 10,
+        "reward_title": "Free coffee",
+        "reward_description": "...",
+        "terms_text": "..."
     }
   },
   "member": {
@@ -492,12 +503,22 @@ Response:
   },
   "token": "...",
   "expires_in_seconds": 30,
+  "read_only": false,
   "vendor": {
     "trading_name": "ACME Car Wash",
+    "vendor_slug": "acme",
+    "status": "ACTIVE",
     "branding": { "logo_url": "...", "primary_color": "#...", "secondary_color": "#..." }
   }
 }
 ```
+
+**GET** `/api/v1/me/transactions?limit=20` — stamp/redeem history for the active card (newest first, max 20).
+
+Member web routes:
+- `/v/{vendor_slug}` — branded landing (program summary + Join CTA, FR-C1)
+- `/v/{vendor_slug}/login` — SMS OTP signup/login
+- `/me/card` — member card UI (FR-C3)
 
 ### 8.5 Staff login (username + PIN)
 **POST** `/api/v1/v/{vendor_slug}/auth/staff/login`
@@ -617,14 +638,13 @@ All admin actions MUST write `admin_audit_log`.
 ---
 
 ## 10. PWA requirements
-- Manifest:
-  - name, short_name, icons, display=standalone, start_url
-- Service worker:
-  - cache static assets
-  - network-first for API calls
+- Manifest: `apps/web/public/manifest.webmanifest` — name, short_name, display=standalone, start_url
+- Service worker: `apps/web/public/sw.js` — caches app shell assets; registered from `apps/web/src/main.tsx` in production builds
 - Offline behavior:
-  - member UI shell loads; card data indicates “Offline”
-  - staff actions disabled offline
+  - member UI shell loads from cache when offline
+  - last `/me/card` response cached in `localStorage` (`memberCardCache.ts`); member card shows an offline banner and read-only progress without a live rotating token
+  - staff actions disabled offline (no offline stamping)
+- Suspended vendor (FR-A2): `GET /me/card` and `GET /me/transactions` remain available read-only; rotating token is omitted when vendor status is not `ACTIVE`/`TRIAL`
 
 ---
 

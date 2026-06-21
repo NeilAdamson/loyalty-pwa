@@ -1,6 +1,7 @@
 import { FastifyPluginAsync, FastifyReply, FastifyInstance } from 'fastify'
 import { TransactionService } from '../../services/transaction.service'
 import { RotatingTokenPayload, verifyRotatingToken } from '../../utils/rotating-token'
+import { getClientIp } from '../../utils/client-ip'
 
 async function resolveRotatingTokenPayload(
     fastify: FastifyInstance,
@@ -20,7 +21,11 @@ async function resolveRotatingTokenPayload(
 }
 
 const transactionRoutes: FastifyPluginAsync = async (fastify) => {
-    const transactionService = new TransactionService(fastify.prisma, fastify.rateLimiter)
+    const transactionService = new TransactionService(
+        fastify.prisma,
+        fastify.rateLimiter,
+        fastify.fraudEvents
+    )
 
     // Helper to extract staff info
     // Staff Token: { vendor_id, staff_id, role }
@@ -73,8 +78,14 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             if (!vendor_id) return reply.status(401).send();
-            // Perform Stamp
-            const result = await transactionService.stamp(vendor_id, staff_id, staff.branch_id, payload)
+            const clientIp = getClientIp(request)
+            const result = await transactionService.stamp(
+                vendor_id,
+                staff_id,
+                staff.branch_id,
+                payload,
+                clientIp
+            )
             const stamps_required = result.program?.stamps_required ?? 10
             const is_full = result.stamps_count >= stamps_required
 
@@ -112,7 +123,14 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             if (!vendor_id) return reply.status(401).send();
-            const result = await transactionService.redeem(vendor_id, staff_id, staff.branch_id, payload)
+            const clientIp = getClientIp(request)
+            const result = await transactionService.redeem(
+                vendor_id,
+                staff_id,
+                staff.branch_id,
+                payload,
+                clientIp
+            )
 
             return { success: true, ...result }
         }

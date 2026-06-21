@@ -146,18 +146,50 @@ Headers: `Authorization: Bearer <MemberToken>`
 Returns:
 ```json
 {
-  "card": { "card_id": "...", "stamps_count": 0, "status": "ACTIVE", ... },
+  "card": {
+    "card_id": "...",
+    "stamps_count": 0,
+    "status": "ACTIVE",
+    "program": {
+      "stamps_required": 10,
+      "reward_title": "Free coffee",
+      "reward_description": "Get a free black coffee.",
+      "terms_text": "One redemption per full card."
+    }
+  },
   "token": "ROTATING_JWT_TOKEN",
   "expires_in_seconds": 30,
+  "read_only": false,
   "vendor": {
       "trading_name": "...",
       "vendor_slug": "demo-cafe",
+      "status": "ACTIVE",
       "branding": { ... }
   }
 }
 ```
 
+- `token` is `null` when the vendor is suspended (`read_only: true`); members may still view card progress and history.
+- `read_only: true` also applies when the vendor status is not `ACTIVE` or `TRIAL`.
+
 `vendor_slug` is included so the member app can call tenant-scoped routes (e.g. passkey enrollment) without embedding the slug in the member JWT.
+
+### Member transaction history
+**GET /me/transactions?limit=20**
+Headers: `Authorization: Bearer <MemberToken>`
+Query: `limit` optional, integer 1–20 (default 20).
+
+Returns stamp and redemption events for the member's **current active card**, merged and sorted newest first:
+```json
+{
+  "transactions": [
+    { "id": "...", "type": "STAMP", "at": "2026-06-21T10:15:00.000Z" },
+    { "id": "...", "type": "REDEEM", "at": "2026-06-20T18:02:00.000Z" }
+  ]
+}
+```
+
+Available when the vendor is suspended (read-only member access per FR-A2).
 
 ## Transactions (Protected: Staff)
 
@@ -200,6 +232,8 @@ Returns:
 
 **Get Public Profile** (Public)
 `GET /v/:vendorSlug/public`
+
+Returns branding, signup metadata, and active program summary for vendors with status `ACTIVE` or `TRIAL` (self-service registrations start as `TRIAL`). Returns `404 NOT_FOUND` for unknown slugs and for `SUSPENDED` vendors.
 
 ### Programs
 **Create Draft** (Protected: Vendor Admin)
@@ -451,7 +485,11 @@ Admin users have username-based email addresses restricted to the `@punchcard.co
   - Email is auto-generated as `{username}@punchcard.co.za`
   - Username must be alphanumeric with optional dots/hyphens (e.g., `judy`, `john.smith`)
 - **Get admin (for edit)**: `GET /api/v1/admin/users/:id` — Returns `{ admin }` (no password). 404 if not found.
-- **Update admin**: `PATCH /api/v1/admin/users/:id` — Body: `{ first_name?, last_name?, role?, status?, password? }`. 
+- **Update admin**: `PATCH /api/v1/admin/users/:id` — Body: `{ first_name?, last_name?, role?, status?, password? }`.
+
+### Fraud flags (platform admin)
+
+- **List fraud events**: `GET /api/v1/admin/fraud-events` — Cookie auth. Query: `page`, `limit` (max 100), optional `vendor_id`, optional `action` (one of the `FRAUD_*` constants). Returns `{ data: [{ audit_id, action, vendor_id, payload, created_at, vendor }], meta: { page, limit, total, pages } }`. Events are append-only rows in `admin_audit_log` written by the API when rate limits or repeated cooldown abuse thresholds are exceeded. 
   - `username` and `email` are immutable after creation
   - Leave `password` blank to keep current. Cannot disable own account (400).
 

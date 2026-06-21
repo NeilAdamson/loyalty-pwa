@@ -19,12 +19,43 @@ import {
 } from '../utils/signupContext';
 
 const PASSKEY_PROMPT_KEY = 'punchcard_prompt_passkey';
+const OTP_RESEND_COOLDOWN_SEC = 60;
+
+type ApiErrorBody = {
+    message?: string;
+    code?: string;
+    retry_after_sec?: number;
+};
 
 const getApiErrorMessage = (err: unknown, fallback: string): string => {
-    if (axios.isAxiosError<{ message?: string }>(err)) {
-        return err.response?.data?.message || fallback;
+    if (!axios.isAxiosError<ApiErrorBody>(err)) return fallback;
+
+    const code = err.response?.data?.code;
+    const retryAfter = err.response?.data?.retry_after_sec;
+    const retryHeader = err.response?.headers?.['retry-after'];
+    const retrySec = retryAfter ?? (retryHeader ? Number.parseInt(String(retryHeader), 10) : undefined);
+
+    if (code === 'OTP_INVALID') {
+        return 'That code is incorrect or has expired. Try again or request a new code.';
     }
-    return fallback;
+    if (code === 'OTP_EXPIRED') {
+        return 'That code has expired. Request a new code to continue.';
+    }
+    if (code === 'OTP_RATE_LIMITED') {
+        return retrySec
+            ? `Too many incorrect attempts. Wait ${retrySec} seconds, then try again.`
+            : 'Too many incorrect attempts. Wait a moment, then try again.';
+    }
+    if (code === 'RATE_LIMITED') {
+        return retrySec
+            ? `Too many SMS requests. Try again in ${retrySec} seconds.`
+            : 'Too many SMS requests. Please wait before requesting another code.';
+    }
+    if (code === 'SIGNUP_QR_INVALID') {
+        return 'This QR code is no longer valid. Ask staff for a new signup poster.';
+    }
+
+    return err.response?.data?.message || fallback;
 };
 
 const MemberAuth: React.FC = () => {
@@ -42,8 +73,9 @@ const MemberAuth: React.FC = () => {
     const [passkeyAvailable, setPasskeyAvailable] = useState(false);
     const [signupContext, setSignupContext] = useState<SignupContext | null>(null);
     const [signupGateChecked, setSignupGateChecked] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
+    const [resendMessage, setResendMessage] = useState('');
 
-    // Strict lock to prevent double-fire
     const isSubmittingRef = React.useRef(false);
     const passkeyAbortRef = React.useRef<AbortController | null>(null);
 
@@ -83,6 +115,14 @@ const MemberAuth: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        if (step !== 'OTP' || resendCooldown <= 0) return;
+        const timer = window.setInterval(() => {
+            setResendCooldown((value) => (value > 0 ? value - 1 : 0));
+        }, 1000);
+        return () => window.clearInterval(timer);
+    }, [step, resendCooldown]);
+
+    useEffect(() => {
         if (step !== 'PHONE' || !slug || !passkeyAvailable) return;
 
         const ac = new AbortController();
@@ -119,14 +159,11 @@ const MemberAuth: React.FC = () => {
         };
     }, [step, slug, passkeyAvailable, login, navigate]);
 
-    // Derived phone for API
     const phone = `+27${phoneParts.network.replace(/^0/, '')}${phoneParts.number}`;
 
     const handleNetworkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-        setPhoneParts(prev => ({ ...prev, network: val }));
-
-        // Auto-focus next if full (simple logic, ref improved later if needed)
+        setPhoneParts((prev) => ({ ...prev, network: val }));
         if (val.length === 3) {
             document.getElementById('sub-input')?.focus();
         }
@@ -134,15 +171,24 @@ const MemberAuth: React.FC = () => {
 
     const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.replace(/\D/g, '').slice(0, 7);
-        setPhoneParts(prev => ({ ...prev, number: val }));
+        setPhoneParts((prev) => ({ ...prev, number: val }));
+    };
+
+    const sendOtp = async () => {
+        await api.post(`/api/v1/v/${slug}/auth/member/otp/request`, {
+            phone,
+            ...buildSignupPayload(),
+        });
+        setStep('OTP');
+        setResendCooldown(OTP_RESEND_COOLDOWN_SEC);
+        setResendMessage('A new code was sent.');
     };
 
     const requestOtp = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (isSubmittingRef.current) return; // Block double clicks
+        if (isSubmittingRef.current) return;
 
-        // Validation
         if (phoneParts.network.length !== 3 || phoneParts.number.length !== 7) {
             setError('Please enter a valid SA mobile number (e.g. 082 123 4567)');
             return;
@@ -151,22 +197,31 @@ const MemberAuth: React.FC = () => {
         isSubmittingRef.current = true;
         setIsLoading(true);
         setError('');
+        setResendMessage('');
         try {
-            await api.post(`/api/v1/v/${slug}/auth/member/otp/request`, {
-                phone,
-                ...buildSignupPayload(),
-            });
-            setStep('OTP');
+            await sendOtp();
         } catch (err: unknown) {
             setError(getApiErrorMessage(err, 'Failed to send OTP'));
-            // Release lock immediately on error so they can retry
             isSubmittingRef.current = false;
         } finally {
             setIsLoading(false);
-            // Keep lock held for a moment to prevent accidental double-tap on success/transition
             setTimeout(() => {
                 isSubmittingRef.current = false;
             }, 1000);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        if (resendCooldown > 0 || isLoading) return;
+        setIsLoading(true);
+        setError('');
+        setResendMessage('');
+        try {
+            await sendOtp();
+        } catch (err: unknown) {
+            setError(getApiErrorMessage(err, 'Failed to resend OTP'));
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -174,6 +229,7 @@ const MemberAuth: React.FC = () => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
+        setResendMessage('');
         try {
             const res = await api.post(`/api/v1/v/${slug}/auth/member/otp/verify`, {
                 phone,
@@ -181,9 +237,9 @@ const MemberAuth: React.FC = () => {
                 consent_marketing: marketingConsent,
                 ...buildSignupPayload(),
             });
-            login(res.data.token); // Updates context
+            login(res.data.token);
             sessionStorage.setItem(PASSKEY_PROMPT_KEY, '1');
-            navigate('/me/card'); // Redirect to protected route
+            navigate('/me/card');
         } catch (err: unknown) {
             setError(getApiErrorMessage(err, 'Invalid Code'));
         } finally {
@@ -202,9 +258,9 @@ const MemberAuth: React.FC = () => {
     return (
         <AuthShell
             title="Welcome"
-            subtitle={step === 'PHONE' ? "Enter your mobile number to join or login" : `Enter the code sent to ${phone}`}
+            subtitle={step === 'PHONE' ? 'Enter your mobile number to join or login' : `Enter the code sent to ${phone}`}
         >
-            {error && (
+            {error ? (
                 <div style={{
                     padding: '12px',
                     background: 'rgba(239, 68, 68, 0.1)',
@@ -216,11 +272,24 @@ const MemberAuth: React.FC = () => {
                 }}>
                     {error}
                 </div>
-            )}
+            ) : null}
+
+            {resendMessage ? (
+                <div style={{
+                    padding: '12px',
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    border: '1px solid rgba(34, 197, 94, 0.2)',
+                    color: 'var(--text-primary)',
+                    borderRadius: 'var(--radius)',
+                    marginBottom: '20px',
+                    fontSize: '14px'
+                }}>
+                    {resendMessage}
+                </div>
+            ) : null}
 
             {step === 'PHONE' ? (
                 <form onSubmit={requestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
-
                     {passkeyAvailable ? (
                         <input
                             type="text"
@@ -244,10 +313,8 @@ const MemberAuth: React.FC = () => {
                         />
                     ) : null}
 
-                    {/* SA Phone Input Enforcement */}
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {/* Country Code (Fixed) */}
                             <div style={{
                                 background: 'var(--bg-secondary)',
                                 border: '1px solid var(--border)',
@@ -264,7 +331,6 @@ const MemberAuth: React.FC = () => {
                                 +27
                             </div>
 
-                            {/* Network Code (3 Digits) */}
                             <input
                                 type="tel"
                                 value={phoneParts.network}
@@ -287,7 +353,6 @@ const MemberAuth: React.FC = () => {
                                 required
                             />
 
-                            {/* Subscriber Number (7 Digits) */}
                             <input
                                 id="sub-input"
                                 type="tel"
@@ -331,7 +396,7 @@ const MemberAuth: React.FC = () => {
                         <input
                             type="checkbox"
                             checked={marketingConsent}
-                            onChange={e => setMarketingConsent(e.target.checked)}
+                            onChange={(e) => setMarketingConsent(e.target.checked)}
                             style={{ marginTop: '2px' }}
                         />
                         <span>
@@ -345,7 +410,7 @@ const MemberAuth: React.FC = () => {
                         label="Verification Code"
                         type="text"
                         value={code}
-                        onChange={e => setCode(e.target.value)}
+                        onChange={(e) => setCode(e.target.value)}
                         placeholder="123456"
                         required
                         autoFocus
@@ -353,10 +418,35 @@ const MemberAuth: React.FC = () => {
                     <AdminButton type="submit" variant="primary" isLoading={isLoading} fullWidth>
                         Verify & Login
                     </AdminButton>
-                    <div style={{ textAlign: 'center', marginTop: '10px' }}>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginTop: '4px' }}>
                         <button
                             type="button"
-                            onClick={() => setStep('PHONE')}
+                            onClick={handleResendOtp}
+                            disabled={resendCooldown > 0 || isLoading}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: resendCooldown > 0 ? 'var(--text-tertiary)' : 'var(--primary-color, #4f46e5)',
+                                cursor: resendCooldown > 0 || isLoading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                textDecoration: resendCooldown > 0 ? 'none' : 'underline',
+                            }}
+                        >
+                            {resendCooldown > 0
+                                ? `Resend code in ${resendCooldown}s`
+                                : "Didn't receive a code? Resend"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setStep('PHONE');
+                                setCode('');
+                                setError('');
+                                setResendMessage('');
+                                setResendCooldown(0);
+                            }}
                             style={{
                                 background: 'none',
                                 border: 'none',
@@ -366,7 +456,7 @@ const MemberAuth: React.FC = () => {
                                 textDecoration: 'underline'
                             }}
                         >
-                            Change Phone Number
+                            Change phone number
                         </button>
                     </div>
                 </form>

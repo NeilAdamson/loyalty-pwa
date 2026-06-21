@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 import { requireSecret } from '../utils/config'
 import type { RedisRateLimiter } from './redis-rate-limiter.service'
+import type { FraudEventService } from './fraud-event.service'
+import { isRateLimitError } from './fraud-event.service'
 
 type LockedOtpRow = {
     otp_id: string
@@ -37,13 +39,21 @@ export class AuthService {
     constructor(
         private prisma: PrismaClient,
         private otpSender: IOtpSender,
-        private rateLimiter: RedisRateLimiter
+        private rateLimiter: RedisRateLimiter,
+        private fraudEvents?: FraudEventService
     ) { }
 
     // --- Member OTP ---
 
     async requestMemberOtp(vendorId: string, phone: string, clientIp: string) {
-        await this.rateLimiter.assertOtpRequestAllowed(vendorId, phone, clientIp)
+        try {
+            await this.rateLimiter.assertOtpRequestAllowed(vendorId, phone, clientIp)
+        } catch (err) {
+            if (isRateLimitError(err)) {
+                await this.fraudEvents?.recordMemberOtpRequestLimit(vendorId, phone, clientIp)
+            }
+            throw err
+        }
 
         // Generate OTP
         const plainOtp = randomInt(100000, 999999).toString();
@@ -153,7 +163,8 @@ export class AuthService {
         phone: string,
         code: string,
         consentMarketing = false,
-        branchJoinedId?: string | null
+        branchJoinedId?: string | null,
+        clientIp?: string
     ) {
         const otpReq = await this.prisma.otpRequest.findFirst({
             where: {
@@ -178,15 +189,20 @@ export class AuthService {
             }
 
             if (locked.attempts >= 5) {
+                await this.fraudEvents?.recordMemberOtpVerifyLimit(vendorId, phone, clientIp)
                 throw appError(429, ERROR_CODES.OTP_RATE_LIMITED, 'Too many attempts')
             }
 
             const valid = await bcrypt.compare(code + getOtpPepper(), locked.otp_hash)
             if (!valid) {
+                const nextAttempts = locked.attempts + 1
                 await tx.otpRequest.update({
                     where: { otp_id: locked.otp_id },
                     data: { attempts: { increment: 1 } },
                 })
+                if (nextAttempts >= 5) {
+                    await this.fraudEvents?.recordMemberOtpVerifyLimit(vendorId, phone, clientIp)
+                }
                 throw appError(400, ERROR_CODES.OTP_INVALID, 'Invalid OTP')
             }
 

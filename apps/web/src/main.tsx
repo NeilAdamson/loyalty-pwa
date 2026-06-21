@@ -7,6 +7,14 @@ import { perfLog } from './utils/perf'
 
 perfLog('bootstrap', 'main.tsx evaluated')
 
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+        void navigator.serviceWorker.register('/sw.js').catch(() => {
+            // Service worker is optional; offline shell degrades gracefully
+        })
+    })
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 
 if (import.meta.env.DEV) {
