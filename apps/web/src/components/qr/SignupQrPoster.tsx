@@ -53,7 +53,9 @@ const SignupQrPoster = forwardRef<HTMLDivElement, SignupQrPosterProps>(function 
                         src={logoUrl}
                         alt={tradingName}
                         className="signup-qr-poster__logo"
-                        crossOrigin="anonymous"
+                        onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                        }}
                     />
                 ) : (
                     <h1 className="signup-qr-poster__title">{tradingName}</h1>
