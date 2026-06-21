@@ -2,7 +2,7 @@ import { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { SMSFlowService } from '../../services/smsflow.service'
 import { ProgramInput, ProgramService } from '../../services/program.service'
-import { getAnalyticsDateWindows, VendorAnalyticsService } from '../../services/vendor-analytics.service'
+import { getAnalyticsDateWindows, normalizeStaffActivityLimit, VendorAnalyticsService } from '../../services/vendor-analytics.service'
 const NUDGE_AUDIENCES = ['NEAR_REWARD', 'AT_RISK_30D'] as const
 const MAX_MANUAL_NUDGE_RECIPIENTS = 200
 const MAX_MANUAL_NUDGE_BATCHES_PER_DAY = 5
@@ -598,10 +598,11 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
             }
         })
 
-        subRequest.get('/insights/staff', async (request) => {
+        subRequest.get<{ Querystring: { limit?: string } }>('/insights/staff', async (request) => {
             const vendorId = request.user.vendor_id
             if (!vendorId) throw { code: 'UNAUTHORIZED', message: 'Vendor context missing' }
-            return vendorAnalyticsService.getStaffActivity(vendorId)
+            const limit = normalizeStaffActivityLimit(request.query.limit)
+            return vendorAnalyticsService.getStaffActivity(vendorId, limit)
         })
 
         // Activity Feed

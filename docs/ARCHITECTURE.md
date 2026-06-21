@@ -141,7 +141,8 @@ flowchart LR
   - `card_instances` (completion and near-reward state)
   - `stamp_transactions` and `redemption_transactions` (usage, behavior, and staff throughput)
   - `vendors.average_visit_value` and `vendors.reward_cost` (estimated revenue/ROI)
-- Dashboard metrics avoid unbounded row scans; bounded lists (top customers, at-risk, near-reward) are limited in SQL.
+- Dashboard metrics avoid unbounded row scans; bounded lists (top customers, at-risk, near-reward, staff roster) are limited in SQL.
+- Staff throughput uses grouped transaction counts joined to `staff_users`, capped at 100 rows per request (alphabetical); `/insights/staff` supports the same `limit` query param for future pagination.
 - Supporting indexes: `members(vendor_id, last_active_at)`, `members(vendor_id, created_at)`, `card_instances(vendor_id, status, stamps_count)`.
 - Reporting windows are normalized to:
   - current month

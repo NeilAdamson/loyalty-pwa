@@ -40,6 +40,8 @@ interface DashboardMetrics {
         near_reward_customers: Array<{ member_id: string; member_name: string; member_phone: string; stamps_remaining: number; stamps_count?: number; stamps_required?: number }>;
     };
     staff_activity: Array<{ staff_id: string; staff_name: string; stamps_issued: number; redemptions_processed: number }>;
+    staff_activity_total?: number;
+    staff_activity_truncated?: boolean;
 }
 
 interface ActivityItem {
@@ -296,7 +298,9 @@ const VendorDashboard: React.FC = () => {
                         <span aria-hidden>🧑‍💼</span> Staff activity
                     </h2>
                     <span className="vendor-dash-section-chip">
-                        {metrics?.staff_activity.length ?? 0} staff
+                        {metrics?.staff_activity_truncated
+                            ? `${metrics.staff_activity.length} of ${metrics.staff_activity_total ?? metrics.staff_activity.length} staff`
+                            : `${metrics?.staff_activity_total ?? metrics?.staff_activity.length ?? 0} staff`}
                     </span>
                 </div>
                 <div className="vendor-dash-table-wrap">

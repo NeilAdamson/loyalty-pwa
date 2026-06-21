@@ -68,6 +68,22 @@ export type StaffActivityRow = {
     redemptions_processed: number
 }
 
+export const STAFF_ACTIVITY_DEFAULT_LIMIT = 100
+export const STAFF_ACTIVITY_MAX_LIMIT = 100
+
+export type StaffActivityResult = {
+    staff: StaffActivityRow[]
+    total_staff: number
+    limit: number
+    truncated: boolean
+}
+
+export function normalizeStaffActivityLimit(value: unknown): number {
+    const parsed = typeof value === 'string' || typeof value === 'number' ? Number(value) : Number.NaN
+    if (!Number.isFinite(parsed) || parsed < 1) return STAFF_ACTIVITY_DEFAULT_LIMIT
+    return Math.min(Math.floor(parsed), STAFF_ACTIVITY_MAX_LIMIT)
+}
+
 export type VendorMetricsResponse = {
     reporting_periods: {
         current_month_start: string
@@ -100,6 +116,8 @@ export type VendorMetricsResponse = {
         near_reward_customers: NearRewardCustomerMetrics[]
     }
     staff_activity: StaffActivityRow[]
+    staff_activity_total: number
+    staff_activity_truncated: boolean
 }
 
 type MemberVisitCountsRow = {
@@ -135,6 +153,13 @@ type NearRewardMetricsRow = {
 
 type AverageRewardDaysRow = {
     avg_days: number | null
+}
+
+type StaffActivitySqlRow = {
+    staff_id: string
+    name: string
+    stamps_issued: number | bigint
+    redemptions_processed: number | bigint
 }
 
 const toNumber = (value: number | bigint | null | undefined): number => {
@@ -311,23 +336,50 @@ export class VendorAnalyticsService {
         return Number(Number(avgDays).toFixed(1))
     }
 
-    async getStaffActivity(vendorId: string): Promise<StaffActivityRow[]> {
-        const staff = await this.prisma.staffUser.findMany({
-            where: { vendor_id: vendorId },
-            select: {
-                staff_id: true,
-                name: true,
-                _count: { select: { stamp_txs: true, redeem_txs: true } }
-            },
-            orderBy: { name: 'asc' }
-        })
+    async getStaffActivity(
+        vendorId: string,
+        limit: number = STAFF_ACTIVITY_DEFAULT_LIMIT
+    ): Promise<StaffActivityResult> {
+        const boundedLimit = normalizeStaffActivityLimit(limit)
 
-        return staff.map((staffRow) => ({
-            staff_id: staffRow.staff_id,
-            staff_name: staffRow.name,
-            stamps_issued: staffRow._count.stamp_txs,
-            redemptions_processed: staffRow._count.redeem_txs
-        }))
+        const [rows, totalStaff] = await Promise.all([
+            this.prisma.$queryRaw<StaffActivitySqlRow[]>`
+                SELECT
+                    s.staff_id::text AS staff_id,
+                    s.name,
+                    COALESCE(st.stamps_issued, 0)::int AS stamps_issued,
+                    COALESCE(r.redemptions_processed, 0)::int AS redemptions_processed
+                FROM staff_users s
+                LEFT JOIN (
+                    SELECT staff_id, COUNT(*)::int AS stamps_issued
+                    FROM stamp_transactions
+                    WHERE vendor_id = ${vendorId}::uuid
+                    GROUP BY staff_id
+                ) st ON st.staff_id = s.staff_id
+                LEFT JOIN (
+                    SELECT staff_id, COUNT(*)::int AS redemptions_processed
+                    FROM redemption_transactions
+                    WHERE vendor_id = ${vendorId}::uuid
+                    GROUP BY staff_id
+                ) r ON r.staff_id = s.staff_id
+                WHERE s.vendor_id = ${vendorId}::uuid
+                ORDER BY s.name ASC
+                LIMIT ${boundedLimit}
+            `,
+            this.prisma.staffUser.count({ where: { vendor_id: vendorId } })
+        ])
+
+        return {
+            staff: rows.map((row) => ({
+                staff_id: row.staff_id,
+                staff_name: row.name,
+                stamps_issued: toNumber(row.stamps_issued),
+                redemptions_processed: toNumber(row.redemptions_processed)
+            })),
+            total_staff: totalStaff,
+            limit: boundedLimit,
+            truncated: totalStaff > boundedLimit
+        }
     }
 
     async getMetrics(vendorId: string): Promise<VendorMetricsResponse | null> {
@@ -355,7 +407,7 @@ export class VendorAnalyticsService {
             atRiskCustomers,
             nearRewardCustomers,
             behaviorInsights,
-            staffActivity,
+            staffActivityResult,
             averageTimeToRewardDays
         ] = await Promise.all([
             this.prisma.member.count({ where: { vendor_id: vendorId } }),
@@ -434,7 +486,9 @@ export class VendorAnalyticsService {
                 at_risk_customers_30d: atRiskCustomers,
                 near_reward_customers: nearRewardCustomers
             },
-            staff_activity: staffActivity
+            staff_activity: staffActivityResult.staff,
+            staff_activity_total: staffActivityResult.total_staff,
+            staff_activity_truncated: staffActivityResult.truncated
         }
     }
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PrismaClient } from '@prisma/client'
-import { DAY_NAMES, TIME_BUCKETS, VendorAnalyticsService } from './vendor-analytics.service'
+import { DAY_NAMES, normalizeStaffActivityLimit, STAFF_ACTIVITY_DEFAULT_LIMIT, TIME_BUCKETS, VendorAnalyticsService } from './vendor-analytics.service'
 
 function createMockPrisma() {
     return {
@@ -22,7 +22,7 @@ function createMockPrisma() {
             count: vi.fn(),
         },
         staffUser: {
-            findMany: vi.fn(),
+            count: vi.fn(),
         },
     }
 }
@@ -144,6 +144,42 @@ describe('VendorAnalyticsService', () => {
         ])
     })
 
+    it('clamps staff activity limit to the configured maximum', () => {
+        expect(normalizeStaffActivityLimit(undefined)).toBe(STAFF_ACTIVITY_DEFAULT_LIMIT)
+        expect(normalizeStaffActivityLimit('50')).toBe(50)
+        expect(normalizeStaffActivityLimit('500')).toBe(STAFF_ACTIVITY_DEFAULT_LIMIT)
+        expect(normalizeStaffActivityLimit('0')).toBe(STAFF_ACTIVITY_DEFAULT_LIMIT)
+    })
+
+    it('returns bounded staff activity from grouped transaction SQL', async () => {
+        const prisma = createMockPrisma()
+        prisma.$queryRaw.mockResolvedValue([
+            {
+                staff_id: 'staff-a',
+                name: 'Bob',
+                stamps_issued: 15,
+                redemptions_processed: 2,
+            },
+        ])
+        prisma.staffUser.count.mockResolvedValue(150)
+
+        const svc = new VendorAnalyticsService(prisma as unknown as PrismaClient)
+
+        await expect(svc.getStaffActivity('vendor-a', 100)).resolves.toEqual({
+            staff: [
+                {
+                    staff_id: 'staff-a',
+                    staff_name: 'Bob',
+                    stamps_issued: 15,
+                    redemptions_processed: 2,
+                },
+            ],
+            total_staff: 150,
+            limit: 100,
+            truncated: true,
+        })
+    })
+
     it('returns null from getMetrics when vendor is missing', async () => {
         const prisma = createMockPrisma()
         prisma.vendor.findUnique.mockResolvedValue(null)
@@ -193,17 +229,21 @@ describe('VendorAnalyticsService', () => {
             if (sql.includes('avg_days')) {
                 return [{ avg_days: 7.2 }]
             }
+            if (sql.includes('FROM staff_users s')) {
+                return [
+                    {
+                        staff_id: 'staff-a',
+                        name: 'Bob',
+                        stamps_issued: 15,
+                        redemptions_processed: 2,
+                    },
+                ]
+            }
             return []
         })
 
         prisma.member.findMany.mockResolvedValue([])
-        prisma.staffUser.findMany.mockResolvedValue([
-            {
-                staff_id: 'staff-a',
-                name: 'Bob',
-                _count: { stamp_txs: 15, redeem_txs: 2 },
-            },
-        ])
+        prisma.staffUser.count.mockResolvedValue(1)
 
         const svc = new VendorAnalyticsService(prisma as unknown as PrismaClient)
         const metrics = await svc.getMetrics('vendor-a')
@@ -226,5 +266,7 @@ describe('VendorAnalyticsService', () => {
                 redemptions_processed: 2,
             },
         ])
+        expect(metrics?.staff_activity_total).toBe(1)
+        expect(metrics?.staff_activity_truncated).toBe(false)
     })
 })

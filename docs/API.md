@@ -371,7 +371,7 @@ Returns:
 - Estimated value: `estimated_revenue_current_month`, `total_reward_cost_current_month`, `estimated_roi_ratio`, `estimated_roi_label`
 - Behavioral insights: `behavior_insights.stamps_by_day`, `behavior_insights.stamps_by_time_bucket`
 - Customer insights: `customer_insights.top_customers_30d`, `customer_insights.at_risk_customers_30d`, `customer_insights.near_reward_customers`
-- Staff insights: `staff_activity[]` with `stamps_issued` and `redemptions_processed`
+- Staff insights: `staff_activity[]` with `stamps_issued` and `redemptions_processed`, plus `staff_activity_total` and `staff_activity_truncated` when the roster exceeds the dashboard limit (100).
 
 **Behavior Insights**
 `GET /api/v1/v/:slug/admin/insights/behavior`
@@ -391,7 +391,15 @@ Returns:
 **Staff Insights**
 `GET /api/v1/v/:slug/admin/insights/staff`
 
-Returns per-staff aggregates:
+Optional query: `limit` (1–100, default 100).
+
+Returns:
+- `staff[]` — per-staff aggregates ordered by name
+- `total_staff` — full roster size for the vendor
+- `limit` — applied row cap
+- `truncated` — true when `total_staff` exceeds `limit`
+
+Each staff row includes:
 - `stamps_issued`
 - `redemptions_processed`
 
