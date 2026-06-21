@@ -91,7 +91,8 @@ export class AuthService {
         tx: TransactionClient,
         vendorId: string,
         phone: string,
-        consentMarketing: boolean
+        consentMarketing: boolean,
+        branchJoinedId?: string | null
     ) {
         let member = await tx.member.findUnique({
             where: {
@@ -119,6 +120,7 @@ export class AuthService {
                     phone_e164: phone,
                     name: 'New Member',
                     consent_marketing: consentMarketing,
+                    branch_joined_id: branchJoinedId ?? null,
                 },
             })
         } catch (error) {
@@ -146,7 +148,13 @@ export class AuthService {
         }
     }
 
-    async verifyMemberOtp(vendorId: string, phone: string, code: string, consentMarketing = false) {
+    async verifyMemberOtp(
+        vendorId: string,
+        phone: string,
+        code: string,
+        consentMarketing = false,
+        branchJoinedId?: string | null
+    ) {
         const otpReq = await this.prisma.otpRequest.findFirst({
             where: {
                 vendor_id: vendorId,
@@ -195,7 +203,13 @@ export class AuthService {
                 throw appError(400, ERROR_CODES.OTP_INVALID, 'Invalid or expired OTP')
             }
 
-            return this.findOrCreateMember(tx, vendorId, phone, consentMarketing === true)
+            return this.findOrCreateMember(
+                tx,
+                vendorId,
+                phone,
+                consentMarketing === true,
+                branchJoinedId
+            )
         })
     }
 

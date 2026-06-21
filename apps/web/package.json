@@ -17,6 +17,7 @@
         "html5-qrcode": "^2.3.8",
         "jwt-decode": "^4.0.0",
         "qrcode.react": "^4.2.0",
+        "html-to-image": "^1.11.11",
         "@simplewebauthn/browser": "^10.0.0",
         "@simplewebauthn/types": "^10.0.0",
         "react": "^18.2.0",

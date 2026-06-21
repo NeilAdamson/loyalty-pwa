@@ -90,7 +90,7 @@ const vendorRoutes: FastifyPluginAsync = async (fastify) => {
 
             const vendor = await fastify.prisma.vendor.findUnique({
                 where: { vendor_slug: vendorSlug },
-                include: { branding: true }
+                include: { branding: true },
             })
 
             if (!vendor || vendor.status !== 'ACTIVE') {
@@ -113,6 +113,10 @@ const vendorRoutes: FastifyPluginAsync = async (fastify) => {
                 legal_name: vendor.legal_name,
                 trading_name: vendor.trading_name,
                 status: vendor.status,
+                signup: {
+                    requires_signed_url: vendor.signup_secret_version >= 1,
+                    secret_version: vendor.signup_secret_version,
+                },
                 branding: vendor.branding ? {
                     logo_url: vendor.branding.logo_url,
                     primary_color: vendor.branding.primary_color,

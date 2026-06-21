@@ -370,6 +370,34 @@ Record fraud flags in transaction `flags` JSON when:
 
 ---
 
+## 6b. Signup QR token specification (FR-B5)
+
+Static printed signup QRs encode a **signed URL** for member join (distinct from §6 rotating stamp/redeem tokens).
+
+### 6b.1 URL shape
+```
+{PUBLIC_APP_URL}/v/{vendor_slug}/login?v={version}&s={sig}[&b={branch_id}]
+```
+
+- `sig` = first 32 chars of base64url(HMAC-SHA256(`signup_secret`, `{vendor_id}:{version}:{branch_id|''}`))
+- `b` optional: when present and valid, first-time member signup sets `members.branch_joined_id`
+
+### 6b.2 Vendor fields
+- `vendors.signup_secret` — random secret; never returned to clients
+- `vendors.signup_secret_version` — `0` = legacy unsigned URLs accepted; `>= 1` = signed URL required
+- `vendors.signup_secret_rotated_at` — last rotation timestamp
+
+### 6b.3 Validation (member OTP request/verify)
+- When `signup_secret_version >= 1`: require matching `v` and `s`; reject with `SIGNUP_QR_INVALID` if missing or wrong
+- When `signup_secret_version = 0`: unsigned `/v/{slug}/login` still accepted (migration path until vendor rotates)
+- Rotation increments version and replaces secret; prior printed QRs fail validation
+
+### 6b.4 Admin APIs
+- Vendor admin: `GET /api/v1/v/:slug/admin/qr/assets`, `POST /api/v1/v/:slug/admin/qr/rotate`
+- Platform admin: `GET /api/v1/admin/vendors/:id/qr/assets`
+
+---
+
 ## 7. SMS OTP specification
 
 ### 7.1 OTP generation
@@ -630,6 +658,7 @@ A scheduled job runs daily:
 - `STAMP_COOLDOWN_SECONDS=5`
 - `REDIS_URL` (recommended)
 - `CORS_ALLOWED_ORIGIN`
+- `PUBLIC_APP_URL` — public PWA origin used when building signup QR URLs (e.g. `http://localhost:5173`, `https://punchcard.co.za`)
 - `DB_HOST` (e.g. 'db', 'localhost')
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`

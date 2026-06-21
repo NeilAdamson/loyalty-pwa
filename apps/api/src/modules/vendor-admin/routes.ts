@@ -2,6 +2,7 @@ import { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { SMSFlowService } from '../../services/smsflow.service'
 import { ProgramInput, ProgramService } from '../../services/program.service'
+import { SignupQrService } from '../../services/signup-qr.service'
 import { getAnalyticsDateWindows, normalizeStaffActivityLimit, VendorAnalyticsService } from '../../services/vendor-analytics.service'
 const NUDGE_AUDIENCES = ['NEAR_REWARD', 'AT_RISK_30D'] as const
 const MAX_MANUAL_NUDGE_RECIPIENTS = 200
@@ -199,6 +200,7 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
     const messageSender = getMessageSender()
     const programService = new ProgramService(fastify.prisma)
     const vendorAnalyticsService = new VendorAnalyticsService(fastify.prisma)
+    const signupQrService = new SignupQrService(fastify.prisma)
 
     const ensureVendorAdmin = async (request: { user?: { vendor_id?: string, role?: string, vendor_admin_id?: string, staff_id?: string } }) => {
         const user = request.user
@@ -1187,6 +1189,180 @@ const vendorAdminRoutes: FastifyPluginAsync = async (fastify) => {
                     message
                 })
             }
+        })
+
+        // --- FR-B5: QR management ---
+        subRequest.get('/qr/assets', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+            try {
+                return await signupQrService.getAssets(vendorId)
+            } catch (err: unknown) {
+                const httpError = toHttpError(err, 'Failed to load QR assets')
+                return reply.status(httpError.statusCode).send({
+                    code: httpError.code,
+                    message: httpError.message,
+                })
+            }
+        })
+
+        subRequest.post<{ Body: { confirm?: boolean } }>('/qr/rotate', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+            if (request.body.confirm !== true) {
+                return reply.status(400).send({
+                    code: 'VALIDATION_ERROR',
+                    message: 'Confirmation is required to rotate the signup QR secret',
+                })
+            }
+            let actorId: string
+            try {
+                actorId = getVendorAdminActorId(request)
+            } catch {
+                return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor admin context missing' })
+            }
+
+            try {
+                const result = await signupQrService.rotateSecret(vendorId)
+                await fastify.prisma.adminAuditLog.create({
+                    data: {
+                        actor_type: 'VENDOR_ADMIN',
+                        actor_id: actorId,
+                        vendor_id: vendorId,
+                        action: 'SIGNUP_QR_SECRET_ROTATE',
+                        payload: {
+                            secret_version: result.secret_version,
+                            rotated_at: result.last_rotated_at,
+                        },
+                    },
+                })
+                const assets = await signupQrService.getAssets(vendorId)
+                return { ...result, assets }
+            } catch (err: unknown) {
+                const httpError = toHttpError(err, 'Failed to rotate signup QR secret')
+                return reply.status(httpError.statusCode).send({
+                    code: httpError.code,
+                    message: httpError.message,
+                })
+            }
+        })
+
+        // --- FR-B2: Branch management ---
+        subRequest.get('/branches', async (request) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) throw { statusCode: 401, code: 'UNAUTHORIZED', message: 'Vendor context missing' }
+            return fastify.prisma.branch.findMany({
+                where: { vendor_id: vendorId },
+                orderBy: { branch_id: 'asc' },
+            })
+        })
+
+        subRequest.post<{ Body: { name?: string; address_text?: string; city?: string; region?: string } }>(
+            '/branches',
+            async (request, reply) => {
+                const vendorId = request.user.vendor_id
+                if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+                let name: string
+                try {
+                    name = normalizeRequiredText(request.body.name, 'name', 120)
+                } catch (err: unknown) {
+                    const httpError = toHttpError(err, 'Invalid branch name')
+                    return reply.status(httpError.statusCode).send({
+                        code: httpError.code,
+                        message: httpError.message,
+                    })
+                }
+
+                const branch = await fastify.prisma.branch.create({
+                    data: {
+                        vendor_id: vendorId,
+                        name,
+                        address_text: typeof request.body.address_text === 'string' ? request.body.address_text.trim() || null : null,
+                        city: typeof request.body.city === 'string' ? request.body.city.trim() || null : null,
+                        region: typeof request.body.region === 'string' ? request.body.region.trim() || null : null,
+                        is_active: true,
+                    },
+                })
+                return branch
+            }
+        )
+
+        subRequest.put<{
+            Params: { id: string }
+            Body: { name?: string; address_text?: string; city?: string; region?: string; is_active?: boolean }
+        }>('/branches/:id', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+            const { id } = request.params
+
+            const branch = await fastify.prisma.branch.findFirst({
+                where: { branch_id: id, vendor_id: vendorId },
+            })
+            if (!branch) return reply.status(404).send({ code: 'NOT_FOUND', message: 'Branch not found' })
+
+            const data: {
+                name?: string
+                address_text?: string | null
+                city?: string | null
+                region?: string | null
+                is_active?: boolean
+            } = {}
+            if (request.body.name !== undefined) {
+                try {
+                    data.name = normalizeRequiredText(request.body.name, 'name', 120)
+                } catch (err: unknown) {
+                    const httpError = toHttpError(err, 'Invalid branch name')
+                    return reply.status(httpError.statusCode).send({
+                        code: httpError.code,
+                        message: httpError.message,
+                    })
+                }
+            }
+            if (request.body.address_text !== undefined) {
+                data.address_text = request.body.address_text?.trim() || null
+            }
+            if (request.body.city !== undefined) {
+                data.city = request.body.city?.trim() || null
+            }
+            if (request.body.region !== undefined) {
+                data.region = request.body.region?.trim() || null
+            }
+            if (request.body.is_active === true) {
+                data.is_active = true
+            }
+
+            const updated = await fastify.prisma.branch.update({
+                where: { branch_id: id },
+                data,
+            })
+            return updated
+        })
+
+        subRequest.post<{ Params: { id: string } }>('/branches/:id/disable', async (request, reply) => {
+            const vendorId = request.user.vendor_id
+            if (!vendorId) return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Vendor context missing' })
+            const { id } = request.params
+
+            const branch = await fastify.prisma.branch.findFirst({
+                where: { branch_id: id, vendor_id: vendorId },
+            })
+            if (!branch) return reply.status(404).send({ code: 'NOT_FOUND', message: 'Branch not found' })
+
+            const activeCount = await fastify.prisma.branch.count({
+                where: { vendor_id: vendorId, is_active: true },
+            })
+            if (branch.is_active && activeCount <= 1) {
+                return reply.status(400).send({
+                    code: 'VALIDATION_ERROR',
+                    message: 'At least one active branch is required',
+                })
+            }
+
+            const updated = await fastify.prisma.branch.update({
+                where: { branch_id: id },
+                data: { is_active: false },
+            })
+            return updated
         })
 
     }, { prefix: '/v/:slug/admin' })

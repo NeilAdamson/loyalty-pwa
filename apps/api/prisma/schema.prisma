@@ -37,6 +37,10 @@ model Vendor {
   onboarding_status       String    @default("INCOMPLETE") // 'INCOMPLETE','COMPLETE'
   onboarding_completed_at DateTime? @db.Timestamptz
 
+  signup_secret            String?
+  signup_secret_version    Int       @default(0)
+  signup_secret_rotated_at DateTime? @db.Timestamptz
+
   created_at      DateTime @default(now()) @db.Timestamptz
   updated_at      DateTime @updatedAt @db.Timestamptz
 

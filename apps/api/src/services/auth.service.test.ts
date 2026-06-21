@@ -238,4 +238,56 @@ describe('AuthService.verifyMemberOtp', () => {
             code: ERROR_CODES.OTP_INVALID,
         })
     })
+
+    it('sets branch_joined_id when creating a new member', async () => {
+        const prisma = createMockPrisma()
+        const otpHash = await bcrypt.hash('123456' + TEST_OTP_PEPPER, 4)
+        const newMember = {
+            member_id: 'member-new',
+            vendor_id: 'vendor-1',
+            phone_e164: '+27820000002',
+            consent_marketing: false,
+            branch_joined_id: 'branch-1',
+        }
+
+        prisma.otpRequest.findFirst.mockResolvedValue({
+            otp_id: 'otp-2',
+            otp_hash: otpHash,
+            attempts: 0,
+            expires_at: new Date(Date.now() + 60_000),
+            consumed_at: null,
+        })
+        prisma._tx.$queryRaw.mockResolvedValue([
+            {
+                otp_id: 'otp-2',
+                otp_hash: otpHash,
+                attempts: 0,
+                expires_at: new Date(Date.now() + 60_000),
+                consumed_at: null,
+            },
+        ])
+        prisma._tx.otpRequest.updateMany.mockResolvedValue({ count: 1 })
+        prisma._tx.member.findUnique.mockResolvedValue(null)
+        prisma._tx.member.create.mockResolvedValue(newMember)
+
+        const svc = new AuthService(
+            prisma as unknown as PrismaClient,
+            { sendOtp: vi.fn(), isConfigured: () => true },
+            { assertOtpRequestAllowed: vi.fn() } as never
+        )
+
+        await expect(
+            svc.verifyMemberOtp('vendor-1', '+27820000002', '123456', false, 'branch-1')
+        ).resolves.toEqual(newMember)
+
+        expect(prisma._tx.member.create).toHaveBeenCalledWith({
+            data: {
+                vendor_id: 'vendor-1',
+                phone_e164: '+27820000002',
+                name: 'New Member',
+                consent_marketing: false,
+                branch_joined_id: 'branch-1',
+            },
+        })
+    })
 })

@@ -61,7 +61,16 @@ Member card QR codes use short-lived (30s), single-use rotating tokens for stamp
 - This separation prevents session JWTs from being accepted at `/tx/stamp` and `/tx/redeem`, and prevents rotating tokens from being used as session Bearer auth.
 - Replay protection: each token’s `jti` is recorded in `token_use` on first successful stamp or redeem; reuse returns `TOKEN_REPLAYED`.
 
-## 4. Related documents
+## 4. Signup QR secrets (printed posters)
+
+Per-vendor signup QR URLs (FR-B5) use HMAC signatures with `vendors.signup_secret`:
+
+- The secret is stored in PostgreSQL and **must never** be returned in API responses or client bundles.
+- Vendor admins rotate via `POST /api/v1/v/:slug/admin/qr/rotate` (requires `{ confirm: true }`); each rotation writes `SIGNUP_QR_SECRET_ROTATE` to `admin_audit_log`.
+- After rotation (`signup_secret_version >= 1`), unsigned or old signed URLs are rejected at member OTP with `SIGNUP_QR_INVALID`.
+- Legacy vendors migrated with `signup_secret_version = 0` continue accepting plain `/v/{slug}/login` until the first rotation.
+
+## 5. Related documents
 
 - `docs/API.md` — endpoint contracts and error codes (`PASSKEY_*`).
 - `docs/DEPLOYMENT.md` — production hostname, TLS, and reverse proxy.

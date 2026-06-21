@@ -259,10 +259,10 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ### Vendor admin
 - Branding editor + preview
-- Branch management
+- Branch management (create/disable via QR page; first branch still editable in Settings)
 - Program editor + version history
 - Staff management (create, disable, PIN reset)
-- QR downloads
+- QR downloads (A5 print + PNG; vendor-wide and branch-specific signup posters; secret rotation)
 
 ### Staff
 - PIN login

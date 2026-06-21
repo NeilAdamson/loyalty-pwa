@@ -9,6 +9,9 @@ The database is implemented in PostgreSQL using Prisma ORM.
 *   **Vendor** (`vendors`): Root tenant.
     - `average_visit_value` (`DECIMAL(10,2)`, required): vendor-defined estimate of spend per stamp visit.
     - `reward_cost` (`DECIMAL(10,2)`, required): vendor-defined cost per redemption.
+    - `signup_secret` (`TEXT`, nullable): per-vendor HMAC secret for signed signup QR URLs; never exposed to clients.
+    - `signup_secret_version` (`INT`, default `0`): `0` = legacy unsigned signup URLs allowed; `>= 1` = signed URLs required.
+    - `signup_secret_rotated_at` (`TIMESTAMPTZ`, nullable): last signup QR secret rotation timestamp.
 *   **VendorBranding** (`vendor_branding`): Theming configuration.
 *   **Branch** (`branches`): Physical locations.
 

@@ -93,6 +93,7 @@ flowchart LR
 
 ### 5.3 Admin auth
 - **Vendor Admin / vendor owner**: Authenticates with email + password through `/vendor/admin/login`. Self-service registration at `/vendor/register` verifies the owner email with a short-lived registration code, then creates the vendor, owner account, default branch, default branding, and default program. When registration completes (`POST /api/v1/vendor/register/complete`), the API sends an internal notification email (default: `neil@punchcard.co.za`; override with `VENDOR_REGISTRATION_NOTIFY_EMAIL`) with vendor and owner details. Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
+- **Vendor QR assets (FR-B5)**: Vendor admins manage signup posters at `/v/{slug}/admin/qr`. The API builds signed signup URLs from `vendors.signup_secret` and serves branding/program payload via `GET .../qr/assets`. A5 print and PNG export are client-side; branch-specific QRs append `b={branch_id}` for join analytics (`members.branch_joined_id`).
 - **Legacy vendor manager staff**: Staff users with `role: "ADMIN"` can still access vendor-admin endpoints after username + PIN login.
 - **Platform Admin**: email+password authentication. Uses HttpOnly cookies (set via `/api/v1/admin/auth/login`). Cookies are used for all platform admin endpoints (`/api/v1/admin/*`).
   - Email addresses are restricted to `@punchcard.co.za` domain (auto-generated from username)

@@ -7,6 +7,7 @@ import VendorBranding from '../pages/admin/vendor/VendorBranding';
 import VendorProgram from '../pages/admin/vendor/VendorProgram';
 import VendorSettings from '../pages/admin/vendor/VendorSettings';
 import VendorOnboarding from '../pages/admin/vendor/VendorOnboarding';
+import VendorQr from '../pages/admin/vendor/VendorQr';
 
 export default function VendorAdminApp() {
     return (
@@ -19,6 +20,7 @@ export default function VendorAdminApp() {
                 <Route path="staff" element={<VendorStaff />} />
                 <Route path="program" element={<VendorProgram />} />
                 <Route path="branding" element={<VendorBranding />} />
+                <Route path="qr" element={<VendorQr />} />
                 <Route path="settings" element={<VendorSettings />} />
             </Route>
         </Routes>

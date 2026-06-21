@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { generateSignupSecret } from '../utils/signup-token'
 import crypto, { randomInt } from 'crypto'
 import { ERROR_CODES } from '../plugins/errors'
 import { EmailService } from './email.service'
@@ -257,6 +258,8 @@ export class VendorAdminAuthService {
                     contact_surname: registration.last_name,
                     contact_phone: contactPhone,
                     onboarding_status: 'INCOMPLETE',
+                    signup_secret: generateSignupSecret(),
+                    signup_secret_version: 1,
                     branding: {
                         create: {
                             primary_color: '#000000',

@@ -2,13 +2,21 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { startAuthentication } from '@simplewebauthn/browser';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import AuthShell from '../components/AuthShell';
 import AdminInput from '../components/admin/ui/AdminInput';
 import AdminButton from '../components/admin/ui/AdminButton';
 import { isPasskeyPlatformAvailable } from '../utils/passkeySupport';
+import {
+    hasSignedSignupToken,
+    loadSignupContext,
+    parseSignupContextFromSearch,
+    saveSignupContext,
+    signupContextFromQuery,
+    type SignupContext,
+} from '../utils/signupContext';
 
 const PASSKEY_PROMPT_KEY = 'punchcard_prompt_passkey';
 
@@ -22,6 +30,7 @@ const getApiErrorMessage = (err: unknown, fallback: string): string => {
 const MemberAuth: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { login } = useAuth();
 
     const [phoneParts, setPhoneParts] = useState({ network: '', number: '' });
@@ -31,10 +40,43 @@ const MemberAuth: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [marketingConsent, setMarketingConsent] = useState(false);
     const [passkeyAvailable, setPasskeyAvailable] = useState(false);
+    const [signupContext, setSignupContext] = useState<SignupContext | null>(null);
+    const [signupGateChecked, setSignupGateChecked] = useState(false);
 
     // Strict lock to prevent double-fire
     const isSubmittingRef = React.useRef(false);
     const passkeyAbortRef = React.useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        if (!slug) return;
+
+        const fromUrl = parseSignupContextFromSearch(location.search);
+        const stored = loadSignupContext(slug);
+        const merged: SignupContext = {
+            ...stored,
+            ...signupContextFromQuery(fromUrl),
+        };
+
+        if (Object.keys(signupContextFromQuery(fromUrl)).length > 0) {
+            saveSignupContext(slug, merged);
+        }
+
+        setSignupContext(merged);
+
+        void api.get(`/api/v1/v/${slug}/public`)
+            .then((res) => {
+                const requiresSigned = res.data?.signup?.requires_signed_url === true;
+                if (requiresSigned && !hasSignedSignupToken(merged)) {
+                    setError('This QR code is no longer valid. Ask staff for a new signup poster.');
+                }
+            })
+            .catch(() => {
+                setError('Unable to load store details. Please try again.');
+            })
+            .finally(() => setSignupGateChecked(true));
+    }, [slug, location.search]);
+
+    const buildSignupPayload = () => signupContextFromQuery(signupContext ?? {});
 
     useEffect(() => {
         void isPasskeyPlatformAvailable().then(setPasskeyAvailable);
@@ -110,7 +152,10 @@ const MemberAuth: React.FC = () => {
         setIsLoading(true);
         setError('');
         try {
-            await api.post(`/api/v1/v/${slug}/auth/member/otp/request`, { phone });
+            await api.post(`/api/v1/v/${slug}/auth/member/otp/request`, {
+                phone,
+                ...buildSignupPayload(),
+            });
             setStep('OTP');
         } catch (err: unknown) {
             setError(getApiErrorMessage(err, 'Failed to send OTP'));
@@ -133,7 +178,8 @@ const MemberAuth: React.FC = () => {
             const res = await api.post(`/api/v1/v/${slug}/auth/member/otp/verify`, {
                 phone,
                 code,
-                consent_marketing: marketingConsent
+                consent_marketing: marketingConsent,
+                ...buildSignupPayload(),
             });
             login(res.data.token); // Updates context
             sessionStorage.setItem(PASSKEY_PROMPT_KEY, '1');
@@ -144,6 +190,14 @@ const MemberAuth: React.FC = () => {
             setIsLoading(false);
         }
     };
+
+    if (!signupGateChecked) {
+        return (
+            <AuthShell title="Welcome" subtitle="Loading...">
+                <div style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>Loading...</div>
+            </AuthShell>
+        );
+    }
 
     return (
         <AuthShell
