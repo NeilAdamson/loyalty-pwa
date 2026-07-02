@@ -52,13 +52,21 @@ services:
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - SMSFLOW_SENDER_ID=${SMSFLOW_SENDER_ID:-Loyalty}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-465}
+      - SMTP_SECURE=${SMTP_SECURE:-true}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM=${SMTP_FROM}
       - COOLDOWN_MINUTES_DEFAULT=30
       - VENDOR_COOLDOWN_INCREASE_ONLY=true
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - PORT=8000
       - HOST=0.0.0.0
       - CORS_ALLOWED_ORIGIN=https://punchcard.co.za,https://www.punchcard.co.za,https://loyaltyladies.com
-      - API_BASE_URL=https://punchcard.co.za/api
+      - PUBLIC_ORIGIN=${PUBLIC_ORIGIN:-https://punchcard.co.za}
+    volumes:
+      - api_uploads:/app/uploads
     expose:
       - "8000"
     depends_on:
@@ -110,6 +118,7 @@ services:
 
 volumes:
   db_data:
+  api_uploads:
   caddy_data:
   caddy_config:
 

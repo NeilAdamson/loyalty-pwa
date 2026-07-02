@@ -4,6 +4,7 @@ import redisPlugin from './plugins/redis'
 import corsPlugin from './plugins/cors'
 import errorsPlugin from './plugins/errors'
 import authPlugin from './plugins/auth'
+import rotatingTokenPlugin from './plugins/rotating-token'
 import { assertRequiredSecurityEnv, requireSecret } from './utils/config'
 import fs from 'fs';
 import path from 'path';
@@ -153,6 +154,7 @@ server.register(require('@fastify/static'), {
 server.register(prismaPlugin)
 server.register(redisPlugin)
 server.register(authPlugin)
+server.register(rotatingTokenPlugin)
 
 // Register Modules
 import authRoutes from './modules/auth/routes'
@@ -245,7 +247,8 @@ server.register(async function (fastify) {
         });
 
         const publicPath = relativePath.replace(/\\/g, '/');
-        const fileUrl = `${process.env.API_BASE_URL || 'http://localhost:8000'}/uploads/${publicPath}`;
+        const publicOrigin = (process.env.PUBLIC_ORIGIN || 'http://localhost:8000').replace(/\/$/, '');
+        const fileUrl = `${publicOrigin}/uploads/${publicPath}`;
         return { url: fileUrl };
     });
 }, { prefix: '/api/v1' });
@@ -254,6 +257,7 @@ server.register(require('./modules/admin/auth.routes').adminAuthRoutes, { prefix
 server.register(require('./modules/admin/vendor.routes').adminVendorRoutes, { prefix: '/api/v1/admin/vendors' })
 server.register(require('./modules/admin/member.routes').adminMemberRoutes, { prefix: '/api/v1/admin/members' })
 server.register(require('./modules/admin/users.routes').adminUserRoutes, { prefix: '/api/v1/admin/users' })
+server.register(require('./modules/admin/fraud.routes').adminFraudRoutes, { prefix: '/api/v1/admin' })
 
 import { SMSFlowService } from './services/smsflow.service';
 

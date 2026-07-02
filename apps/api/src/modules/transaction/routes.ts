@@ -1,8 +1,31 @@
-import { FastifyPluginAsync } from 'fastify'
+import { FastifyPluginAsync, FastifyReply, FastifyInstance } from 'fastify'
 import { TransactionService } from '../../services/transaction.service'
+import { RotatingTokenPayload, verifyRotatingToken } from '../../utils/rotating-token'
+import { getClientIp } from '../../utils/client-ip'
+
+async function resolveRotatingTokenPayload(
+    fastify: FastifyInstance,
+    rotatingToken: string,
+    reply: FastifyReply
+): Promise<RotatingTokenPayload | undefined> {
+    try {
+        return await verifyRotatingToken(fastify, rotatingToken)
+    } catch (err: unknown) {
+        const candidate = err as { statusCode?: number; code?: string; message?: string }
+        reply.status(candidate.statusCode ?? 401).send({
+            code: candidate.code ?? 'INVALID_TOKEN',
+            message: candidate.message ?? 'Invalid or expired rotating token',
+        })
+        return undefined
+    }
+}
 
 const transactionRoutes: FastifyPluginAsync = async (fastify) => {
-    const transactionService = new TransactionService(fastify.prisma, fastify.rateLimiter)
+    const transactionService = new TransactionService(
+        fastify.prisma,
+        fastify.rateLimiter,
+        fastify.fraudEvents
+    )
 
     // Helper to extract staff info
     // Staff Token: { vendor_id, staff_id, role }
@@ -35,9 +58,8 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff access required' })
             }
 
-            // Verify Rotating Token (Signature + Expiry)
-            // This throws if invalid
-            const payload = await fastify.jwt.verify<any>(rotatingToken)
+            const payload = await resolveRotatingTokenPayload(fastify, rotatingToken, reply)
+            if (!payload) return reply
 
             // Check cross-vendor replay? Payload has vendor_id.
             if (payload.vendor_id !== vendor_id) {
@@ -51,10 +73,19 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             if (!staff || staff.status !== 'ENABLED') {
                 return reply.status(403).send({ code: 'STAFF_DISABLED', message: 'Staff disabled' })
             }
+            if (staff.vendor_id !== vendor_id) {
+                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff does not belong to this vendor' })
+            }
 
             if (!vendor_id) return reply.status(401).send();
-            // Perform Stamp
-            const result = await transactionService.stamp(vendor_id, staff_id, staff.branch_id, payload)
+            const clientIp = getClientIp(request)
+            const result = await transactionService.stamp(
+                vendor_id,
+                staff_id,
+                staff.branch_id,
+                payload,
+                clientIp
+            )
             const stamps_required = result.program?.stamps_required ?? 10
             const is_full = result.stamps_count >= stamps_required
 
@@ -76,7 +107,8 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff access required' })
             }
 
-            const payload = await fastify.jwt.verify<any>(rotatingToken)
+            const payload = await resolveRotatingTokenPayload(fastify, rotatingToken, reply)
+            if (!payload) return reply
 
             if (payload.vendor_id !== vendor_id) {
                 return reply.status(403).send({ code: 'FORBIDDEN', message: 'Token belongs to another vendor' })
@@ -86,9 +118,19 @@ const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             if (!staff || staff.status !== 'ENABLED') {
                 return reply.status(403).send({ code: 'STAFF_DISABLED', message: 'Staff disabled' })
             }
+            if (staff.vendor_id !== vendor_id) {
+                return reply.status(403).send({ code: 'FORBIDDEN', message: 'Staff does not belong to this vendor' })
+            }
 
             if (!vendor_id) return reply.status(401).send();
-            const result = await transactionService.redeem(vendor_id, staff_id, staff.branch_id, payload)
+            const clientIp = getClientIp(request)
+            const result = await transactionService.redeem(
+                vendor_id,
+                staff_id,
+                staff.branch_id,
+                payload,
+                clientIp
+            )
 
             return { success: true, ...result }
         }

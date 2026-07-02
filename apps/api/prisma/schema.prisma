@@ -37,6 +37,10 @@ model Vendor {
   onboarding_status       String    @default("INCOMPLETE") // 'INCOMPLETE','COMPLETE'
   onboarding_completed_at DateTime? @db.Timestamptz
 
+  signup_secret            String?
+  signup_secret_version    Int       @default(0)
+  signup_secret_rotated_at DateTime? @db.Timestamptz
+
   created_at      DateTime @default(now()) @db.Timestamptz
   updated_at      DateTime @updatedAt @db.Timestamptz
 
@@ -160,6 +164,7 @@ model Branch {
   stamp_txs    StampTransaction[]
   redeem_txs   RedemptionTransaction[]
 
+  @@unique([vendor_id, branch_id])
   @@map("branches")
 }
 
@@ -184,6 +189,7 @@ model StaffUser {
   webauthn_credentials WebAuthnCredential[]
 
   @@unique([vendor_id, username])
+  @@unique([vendor_id, staff_id])
   @@map("staff_users")
 }
 
@@ -207,6 +213,9 @@ model Member {
   webauthn_credentials WebAuthnCredential[]
 
   @@unique([vendor_id, phone_e164])
+  @@unique([vendor_id, member_id])
+  @@index([vendor_id, last_active_at])
+  @@index([vendor_id, created_at])
   @@map("members")
 }
 
@@ -230,6 +239,7 @@ model Program {
   // Partial unique index handled in migration or DB.
 
   @@unique([vendor_id, version])
+  @@unique([vendor_id, program_id])
   @@map("programs")
 }
 
@@ -254,6 +264,8 @@ model CardInstance {
   // Constraint: one active card per (vendor_id, member_id).
   // Partial unique index handled in migration.
 
+  @@unique([vendor_id, card_id])
+  @@index([vendor_id, status, stamps_count])
   @@map("card_instances")
 }
 

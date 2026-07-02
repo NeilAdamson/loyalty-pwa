@@ -1,12 +1,14 @@
 import { FastifyInstance } from 'fastify'
 import { AdminVendorService } from '../../services/admin-vendor.service'
 import { AdminStaffService } from '../../services/admin-staff.service'
+import { SignupQrService } from '../../services/signup-qr.service'
 import { PrismaClient } from '@prisma/client'
 import { verifyAdmin } from './middleware'
 
 export async function adminVendorRoutes(fastify: FastifyInstance) {
     const prisma = new PrismaClient()
     const adminVendorService = new AdminVendorService(prisma)
+    const signupQrService = new SignupQrService(prisma)
 
     // List
     fastify.get('/', { preHandler: [verifyAdmin] }, async (request) => {
@@ -92,6 +94,20 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
         return adminVendorService.get(id)
     })
 
+    // QR assets for platform admin
+    fastify.get('/:id/qr/assets', { preHandler: [verifyAdmin] }, async (request, reply) => {
+        try {
+            const { id } = request.params as { id: string }
+            return await signupQrService.getAssets(id)
+        } catch (err: unknown) {
+            const e = err as { statusCode?: number; code?: string; message?: string }
+            return reply.code(e.statusCode ?? 500).send({
+                code: e.code ?? 'INTERNAL_SERVER_ERROR',
+                message: e.message ?? 'Failed to load QR assets',
+            })
+        }
+    })
+
     // Staff routes (must be before generic PATCH/DELETE /:id so /:id/staff/:staffId matches)
     const adminStaffService = new AdminStaffService(prisma)
     // List Staff
@@ -141,19 +157,6 @@ export async function adminVendorRoutes(fastify: FastifyInstance) {
         const { pin } = request.body as any
         await adminStaffService.resetPin(id, staffId, pin)
         return { success: true, message: 'PIN updated' }
-    })
-
-    // Delete Staff
-    fastify.delete('/:id/staff/:staffId', { preHandler: [verifyAdmin] }, async (request, reply) => {
-        try {
-            const { id, staffId } = request.params as any
-            await adminStaffService.delete(id, staffId)
-            return { success: true, message: 'Staff deleted' }
-        } catch (err: any) {
-            const status = err.statusCode || 500
-            const message = err.message || 'Failed to delete staff'
-            return reply.code(status).send({ message })
-        }
     })
 
     // Update Vendor (Suspension etc) — generic PATCH /:id after staff routes

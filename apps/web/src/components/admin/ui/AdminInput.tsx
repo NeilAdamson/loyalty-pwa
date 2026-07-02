@@ -49,7 +49,8 @@ const AdminInput: React.FC<AdminInputProps> = ({
                     aria-invalid={error ? true : undefined}
                     aria-describedby={describedBy}
                     style={{
-                        padding: '10px 12px',
+                        padding: '12px 14px',
+                        minHeight: '44px',
                         borderRadius: 'var(--radius)',
                         background: 'var(--bg)',
                         border: error ? '1px solid var(--danger)' : '1px solid var(--border)',
@@ -76,7 +77,8 @@ const AdminInput: React.FC<AdminInputProps> = ({
                     aria-invalid={error ? true : undefined}
                     aria-describedby={describedBy}
                     style={{
-                        padding: '10px 12px',
+                        padding: '12px 14px',
+                        minHeight: '44px',
                         borderRadius: 'var(--radius)',
                         background: 'var(--bg)',
                         border: error ? '1px solid var(--danger)' : '1px solid var(--border)',

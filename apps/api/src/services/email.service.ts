@@ -2,6 +2,24 @@ import nodemailer from 'nodemailer'
 import type { Transporter } from 'nodemailer'
 
 const ADMIN_EMAIL_DOMAIN = 'punchcard.co.za'
+const DEFAULT_VENDOR_REGISTRATION_NOTIFY_EMAIL = 'neil@punchcard.co.za'
+
+export type NewVendorRegistrationDetails = {
+    trading_name: string
+    legal_name: string
+    vendor_slug: string
+    owner_first_name: string
+    owner_last_name: string
+    owner_email: string
+    contact_phone: string | null
+    vendor_status: string
+    registered_at: Date
+}
+
+function getVendorRegistrationNotifyEmail(): string {
+    const configured = process.env.VENDOR_REGISTRATION_NOTIFY_EMAIL?.trim()
+    return configured || DEFAULT_VENDOR_REGISTRATION_NOTIFY_EMAIL
+}
 
 function escapeHtml(value: string): string {
     return value
@@ -193,6 +211,86 @@ This code expires in 15 minutes. If you did not request this, you can ignore thi
             return true
         } catch (error) {
             console.error('[EmailService] Failed to send vendor registration code:', error)
+            return false
+        }
+    }
+
+    async sendNewVendorRegistrationNotification(details: NewVendorRegistrationDetails): Promise<boolean> {
+        const notifyEmail = getVendorRegistrationNotifyEmail()
+        const ownerName = `${details.owner_first_name} ${details.owner_last_name}`.trim()
+        const registeredAt = details.registered_at.toISOString()
+        const portalBase = process.env.CORS_ALLOWED_ORIGIN || 'http://localhost:5173'
+        const adminUrl = `${portalBase}/v/${details.vendor_slug}/admin/onboarding`
+
+        const subject = `New vendor registered: ${details.trading_name}`
+        const safeTradingName = escapeHtml(details.trading_name)
+        const safeLegalName = escapeHtml(details.legal_name)
+        const safeSlug = escapeHtml(details.vendor_slug)
+        const safeOwnerName = escapeHtml(ownerName)
+        const safeOwnerEmail = escapeHtml(details.owner_email)
+        const safeContactPhone = escapeHtml(details.contact_phone || 'Not provided')
+        const safeStatus = escapeHtml(details.vendor_status)
+        const safeRegisteredAt = escapeHtml(registeredAt)
+        const safeAdminUrl = escapeHtml(adminUrl)
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #222;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 32px 20px;">
+        <h1 style="margin: 0 0 18px; color: #007bff;">Punchcard</h1>
+        <p>A new vendor has completed self-service registration.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr><td style="padding: 8px 0; font-weight: 700;">Trading name</td><td style="padding: 8px 0;">${safeTradingName}</td></tr>
+            <tr><td style="padding: 8px 0; font-weight: 700;">Legal name</td><td style="padding: 8px 0;">${safeLegalName}</td></tr>
+            <tr><td style="padding: 8px 0; font-weight: 700;">Store slug</td><td style="padding: 8px 0;">${safeSlug}</td></tr>
+            <tr><td style="padding: 8px 0; font-weight: 700;">Owner</td><td style="padding: 8px 0;">${safeOwnerName}</td></tr>
+            <tr><td style="padding: 8px 0; font-weight: 700;">Owner email</td><td style="padding: 8px 0;">${safeOwnerEmail}</td></tr>
+            <tr><td style="padding: 8px 0; font-weight: 700;">Contact phone</td><td style="padding: 8px 0;">${safeContactPhone}</td></tr>
+            <tr><td style="padding: 8px 0; font-weight: 700;">Vendor status</td><td style="padding: 8px 0;">${safeStatus}</td></tr>
+            <tr><td style="padding: 8px 0; font-weight: 700;">Registered at</td><td style="padding: 8px 0;">${safeRegisteredAt}</td></tr>
+        </table>
+        <p><a href="${safeAdminUrl}" style="display:inline-block;background:#007bff;color:white;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:700;">Open vendor onboarding</a></p>
+    </div>
+</body>
+</html>
+        `.trim()
+
+        const textContent = `
+A new vendor has completed self-service registration.
+
+Trading name: ${details.trading_name}
+Legal name: ${details.legal_name}
+Store slug: ${details.vendor_slug}
+Owner: ${ownerName}
+Owner email: ${details.owner_email}
+Contact phone: ${details.contact_phone || 'Not provided'}
+Vendor status: ${details.vendor_status}
+Registered at: ${registeredAt}
+
+Vendor onboarding: ${adminUrl}
+        `.trim()
+
+        if (!this.transporter || !this.config) {
+            console.log('[EmailService] SMTP not configured - logging new vendor registration notification instead:')
+            console.log(`  To: ${notifyEmail}`)
+            console.log(`  Subject: ${subject}`)
+            console.log(textContent)
+            return true
+        }
+
+        try {
+            await this.transporter.sendMail({
+                from: this.config.from,
+                to: notifyEmail,
+                subject,
+                text: textContent,
+                html: htmlContent
+            })
+            console.log(`[EmailService] New vendor registration notification sent to ${notifyEmail}`)
+            return true
+        } catch (error) {
+            console.error('[EmailService] Failed to send new vendor registration notification:', error)
             return false
         }
     }

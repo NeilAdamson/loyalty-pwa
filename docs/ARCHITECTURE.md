@@ -74,6 +74,7 @@ flowchart LR
 - Every query for tenant-scoped resources MUST filter by vendor_id.
 - Vendor-admin HTTP routes (`/api/v1/v/:slug/admin/*`) **must** enforce that the path `:slug` matches the authenticated vendor's `vendor_slug` (JWT carries `vendor_id` only; slug mismatch returns `403`). This is defense-in-depth on top of `vendor_id`-scoped queries.
 - Public `GET /api/v1/v/:vendorSlug/portal/status` uses the same slug resolution rules as staff login (`VendorService.resolveBySlug`: vendor exists and status is `ACTIVE` or `TRIAL`). Used by `/vendor/login` to validate a slug before redirecting to `/v/:slug/staff` without leaking tenant branding.
+- Public `GET /api/v1/v/:vendorSlug/public` uses the same `ACTIVE | TRIAL` resolution via `VendorService.getPublicProfile` (member landing branding, signup QR gate metadata). `SUSPENDED` vendors return `404 NOT_FOUND` on this endpoint to avoid exposing tenant state.
 
 ## 5. Identity and session model
 
@@ -92,7 +93,8 @@ flowchart LR
 - **Operational Store ID UX**: tenants are addressed technically by `vendor_slug` in the URL (`/v/{slug}/…`), but user-facing screens call this value the **Store ID**. The marketing entry `/vendor/login` collects the Store ID once per device (optional); teams should bookmark `/v/{slug}/staff` on fixed hardware. The PWA may persist the last-used Store ID in `localStorage` for convenience.
 
 ### 5.3 Admin auth
-- **Business owner / vendor manager**: Authenticates with email + password through `/vendor/admin/login`. Self-service registration at `/vendor/register` is a three-step wizard: Business details, Verify email, then Create password and Store ID. It verifies the owner email with a short-lived registration code, then creates the vendor, owner account, default branch, default branding, and default program. Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
+- **Business owner / vendor manager**: Authenticates with email + password through `/vendor/admin/login`. Self-service registration at `/vendor/register` is a three-step wizard: Business details, Verify email, then Create password and Store ID. It verifies the owner email with a short-lived registration code, then creates the vendor, owner account, default branch, default branding, and default program. When registration completes (`POST /api/v1/vendor/register/complete`), the API sends an internal notification email (default: `neil@punchcard.co.za`; override with `VENDOR_REGISTRATION_NOTIFY_EMAIL`) with vendor and owner details. Uses Bearer token (JWT) in `Authorization` header for all vendor admin endpoints (`/api/v1/v/:slug/admin/*`). Token stored in localStorage.
+- **Vendor QR assets (FR-B5)**: Vendor admins manage signup posters at `/v/{slug}/admin/qr`. The API builds signed signup URLs from `vendors.signup_secret` and serves branding/program payload via `GET .../qr/assets`. A5 print and PNG export are client-side; branch-specific QRs append `b={branch_id}` for join analytics (`members.branch_joined_id`).
 - **Legacy vendor manager staff**: Staff users with `role: "ADMIN"` can still access vendor-admin endpoints after username + PIN login.
 - **Platform Admin**: email+password authentication. Uses HttpOnly cookies (set via `/api/v1/admin/auth/login`). Cookies are used for all platform admin endpoints (`/api/v1/admin/*`).
   - Email addresses are restricted to `@punchcard.co.za` domain (auto-generated from username)
@@ -106,7 +108,7 @@ flowchart LR
 ## 6. Fraud-resistant rotating token
 - Member card screen displays rotating token refreshed every 30 seconds.
 - Token properties:
-  - server-signed (HMAC)
+  - server-signed (HMAC) with `TOKEN_SIGNING_SECRET` (separate from session `JWT_SECRET`)
   - includes `vendor_id`, `card_id`, `member_id`, `jti`, `exp`
   - token is single-use for stamping OR redeeming
 - Replay protection:
@@ -136,11 +138,14 @@ flowchart LR
 
 ### 9.1 Vendor analytics pipeline (MVP)
 - Vendor analytics is served by tenant-scoped vendor-admin endpoints under `/api/v1/v/:slug/admin/*`.
-- Calculations are computed from:
+- Calculations are computed on read by `VendorAnalyticsService` using tenant-scoped SQL aggregates (`COUNT`, `GROUP BY`, `LIMIT`) over:
   - `members` (growth/activity)
   - `card_instances` (completion and near-reward state)
   - `stamp_transactions` and `redemption_transactions` (usage, behavior, and staff throughput)
   - `vendors.average_visit_value` and `vendors.reward_cost` (estimated revenue/ROI)
+- Dashboard metrics avoid unbounded row scans; bounded lists (top customers, at-risk, near-reward, staff roster) are limited in SQL.
+- Staff throughput uses grouped transaction counts joined to `staff_users`, capped at 100 rows per request (alphabetical); `/insights/staff` supports the same `limit` query param for future pagination.
+- Supporting indexes: `members(vendor_id, last_active_at)`, `members(vendor_id, created_at)`, `card_instances(vendor_id, status, stamps_count)`.
 - Reporting windows are normalized to:
   - current month
   - previous month

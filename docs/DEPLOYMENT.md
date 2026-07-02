@@ -13,12 +13,13 @@ This guide details how to deploy the Loyalty PWA to a Linux VPS using Docker Com
 The production stack consists of:
 - **Caddy**: Reverse proxy, SSL termination (Auto HTTPS), and static file server.
 - **App (Web)**: Nginx container serving the built React/Vite assets (internal only).
-- **API**: Node.js Fastify API (internal only).
+- **API**: Node.js Fastify API (internal only). Branding uploads are stored on the `api_uploads` Docker volume at `/app/uploads`.
 - **Postgres**: Database (internal, persisted to volume).
 - **Redis**: Rate limiting and throttles for OTP, staff PIN login, and transaction velocity (internal only; default URL `redis://redis:6379` on the Compose network).
 
 Traffic flow:
 `Internet -> Caddy (443) -> /api/* -> Node API:8000`
+`Internet -> Caddy (443) -> /uploads/* -> Node API:8000` (branding images)
 `Internet -> Caddy (443) -> /* -> Web Container:80`
 
 ## 3. Server Setup
@@ -60,6 +61,8 @@ REDIS_URL=redis://redis:6379
 # RATE_LIMIT_REDEEM_PER_STAFF_HOUR=20
 # The domain where the app is hosted
 CORS_ALLOWED_ORIGIN=https://punchcard.co.za
+# Public site origin for branding upload URLs (scheme + host, no trailing slash, no /api path)
+PUBLIC_ORIGIN=https://punchcard.co.za
 
 # WebAuthn / passkeys (required for member passkey registration and sign-in)
 # RP ID must be the public hostname only (no scheme, path, or port). Origins must match
@@ -112,6 +115,14 @@ The repository includes a `deploy.sh` script. Ensure it is executable on the ser
 chmod +x deploy.sh
 ```
 
+### 3.5 Branding uploads persistence
+
+Vendor branding images (logos, wordmarks, card backgrounds) are written to `/app/uploads` inside the API container and persisted via the **`api_uploads`** named Docker volume (`docker-compose.yml`). This volume survives container rebuilds and `./deploy.sh full` image rebuilds.
+
+- **Backup**: Include the `api_uploads` volume in your VPS backup strategy alongside `db_data`.
+- **URL shape**: Upload responses return `https://{PUBLIC_ORIGIN}/uploads/branding/...` (no `/api` prefix). Caddy proxies `/uploads/*` to the API.
+- **Existing bad URLs**: Migration `20260619130000_fix_branding_upload_urls` rewrites stored `/api/uploads/` URLs to `/uploads/`. Files that were lost before this volume existed must be re-uploaded by affected vendors.
+
 ## 4. Automated Deployment (GitHub Actions)
 
 The repository is configured to deploy automatically on push to `main` via `.github/workflows/deploy.yml`.
@@ -128,7 +139,7 @@ Go to **Settings > Secrets and variables > Actions** in your GitHub repository a
 2. Navigates to the deployment directory (`~/loyalty-pwa`).
 3. Pulls the latest code using `git pull`.
 4. Executes `./deploy.sh`.
-5. `deploy.sh` builds Docker images, starts containers, runs `db:deploy` (migrations), and prunes unused images.
+5. `deploy.sh` builds Docker images, starts containers, runs `db:deploy` (migrations), **verifies migration status** (fails deploy if pending/failed migrations remain), and prunes unused images.
 
 ## 5. Manual Deployment
 
@@ -162,7 +173,9 @@ See [development-Docker-startup.txt](development-Docker-startup.txt) and [DATABA
 After deployment:
 1. Visit `https://punchcard.co.za`. The PWA should load.
 2. Check `https://punchcard.co.za/api/health`. Should return `{"status":"ok"}`.
+   - **Note:** `/health` checks Redis and OTP config only — it does **not** confirm the database schema matches `schema.prisma`. `deploy.sh` runs `prisma migrate status` after migrations and **exits with an error** if migrations are pending or failed.
 3. Check logs if needed: `docker compose logs -f api`.
+4. Manual migration check: `docker compose run --rm api pnpm prisma migrate status` (expect `Database schema is up to date!`).
 
 ## 8. Troubleshooting
 
@@ -171,3 +184,6 @@ After deployment:
 - **CORS Errors**: Ensure `CORS_ALLOWED_ORIGIN` in `.env` matches your browser URL exactly (no trailing slash).
 - **Passkeys / “not configured on this server”**: Set `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`, and `WEBAUTHN_ORIGIN` on the API service (see above), then restart the API. If users open the site at both apex and `www`, list both origins comma-separated in `WEBAUTHN_ORIGIN`.
 - **Database Connection**: Ensure `DB_HOST=db` in `.env`.
+- **API healthy but features fail / missing columns**: `GET /health` can pass while migrations are behind. Run `docker compose run --rm api pnpm prisma migrate status`. If pending or failed migrations are listed, run `./deploy.sh migrate`. For stuck failed migrations (P3018/P3009), see [DATABASE-SETUP.md](DATABASE-SETUP.md) and [db_migration_fix.md](../db_migration_fix.md).
+- **`rebuild` / `restart` without migrations**: `./deploy.sh rebuild` and `./deploy.sh restart` update containers but do **not** run `db:deploy`. The script still verifies migration status at the end and fails with a clear message if the schema is not up to date.
+- **Broken branding images after deploy**: Confirm `PUBLIC_ORIGIN` matches your public hostname (no `/api` suffix). Check Caddy routes `/uploads/*` to the API. Verify the `api_uploads` volume is mounted: `docker compose exec api ls /app/uploads`. If URLs in the DB were fixed by migration but files are missing, re-upload branding in the vendor admin UI.

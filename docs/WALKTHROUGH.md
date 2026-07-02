@@ -109,7 +109,20 @@ Admin users use username-based email addresses. The email is automatically gener
 
 **Note**: Vendor admin routes use Bearer token authentication (not cookies). The frontend automatically injects the token from localStorage for vendor admin endpoints.
 
-## 5. Security & Troubleshooting
+## 5. Vendor QR posters (FR-B5)
+
+1. Log in as vendor admin and open **QR Codes** (`/v/{slug}/admin/qr`).
+2. Verify A5 preview shows trading name, program summary, and signup QR.
+3. Switch branch tabs if multiple active branches exist; URL should include `b=` for branch-specific assets.
+4. Click **Download PNG** and confirm a poster file is saved.
+5. Click **Print A5** and verify print preview uses A5 portrait layout.
+6. Copy signup URL and open in a private window; `/v/{slug}` redirect must preserve `?v=&s=&b=` query params on `/login`.
+7. Complete member OTP signup from the signed URL; verify new member has `branch_joined_id` when branch QR was used (DB or admin member detail).
+8. Optional: **Rotate secret**, confirm old URL fails at OTP with a clear error, and new poster URL works.
+
+Platform admins can access the same poster assets from **Vendors → QR** (`/admin/vendors/{id}/qr`).
+
+## 6. Security & Troubleshooting
 
 ### Security Check (Cookie)
 1. Open DevTools -> Application -> Cookies.

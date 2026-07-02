@@ -103,7 +103,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api pnpm db:
 | Deploy (build + start + migrations) | `./deploy.sh` |
 | Seed (first run only) | `docker compose exec api pnpm db:seed` |
 
-**Note:** `deploy.sh` runs `db:deploy` automatically, so migrations are applied on every deploy.
+**Note:** `deploy.sh full` and `./deploy.sh migrate` run `db:deploy`, then `prisma migrate status`. Deploy **fails** if pending or failed migrations remain (so a healthy API cannot silently run against an old schema). `./deploy.sh rebuild` and `./deploy.sh restart` do not apply migrations but still run the same check at the end.
 
 ---
 
@@ -208,7 +208,7 @@ ALTER TABLE "vendors" ALTER COLUMN "contact_name" SET NOT NULL;
 
 ### deploy.sh and Migrations
 
-**Fixed:** `deploy.sh` now runs `docker compose run --rm api pnpm db:deploy` after `docker compose up`, so migrations are applied automatically on every deploy.
+`deploy.sh full` runs `docker compose run --rm api pnpm db:deploy` after `docker compose up`, then verifies with `prisma migrate status`. If migrations are pending or failed, deploy exits non-zero with remediation steps. Use `./deploy.sh migrate` to apply migrations only.
 
 ---
 

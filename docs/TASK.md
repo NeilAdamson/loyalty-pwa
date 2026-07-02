@@ -57,7 +57,7 @@
     - [x] Web: Admin Layout & Navigation <!-- id: 85 -->
     - [x] Web: Vendor Management Screens <!-- id: 86 -->
     - [x] Web: Member Management Screens (Basic List) <!-- id: 87 -->
-    - [x] Web: QR Asset Generation <!-- id: 88 -->
+    - [x] Web: QR Asset Generation (platform admin + vendor admin A5 posters, branch QRs, secret rotation) <!-- id: 88 -->
 - [x] Milestone 5a: Admin UI Overhaul (Phase 1) <!-- id: 90 -->
     - [x] Design System: CSS Variables & Reset <!-- id: 91 -->
     - [x] Layout: Responsive Grid Shell (Sidebar + Content) <!-- id: 92 -->

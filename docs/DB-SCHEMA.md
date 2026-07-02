@@ -9,6 +9,9 @@ The database is implemented in PostgreSQL using Prisma ORM.
 *   **Vendor** (`vendors`): Root tenant.
     - `average_visit_value` (`DECIMAL(10,2)`, required): vendor-defined estimate of spend per stamp visit.
     - `reward_cost` (`DECIMAL(10,2)`, required): vendor-defined cost per redemption.
+    - `signup_secret` (`TEXT`, nullable): per-vendor HMAC secret for signed signup QR URLs; never exposed to clients.
+    - `signup_secret_version` (`INT`, default `0`): `0` = legacy unsigned signup URLs allowed; `>= 1` = signed URLs required.
+    - `signup_secret_rotated_at` (`TIMESTAMPTZ`, nullable): last signup QR secret rotation timestamp.
 *   **VendorBranding** (`vendor_branding`): Theming configuration.
 *   **Branch** (`branches`): Physical locations.
 
@@ -45,6 +48,23 @@ The database is implemented in PostgreSQL using Prisma ORM.
 
 ### Replay Protection
 *   **Token Uniqueness**: `TokenUse` has a composite Primary Key `(vendor_id, token_jti)`. Attempting to process the same token JTI twice for the same vendor will fail with a constraint violation.
+
+### Tenant-Scoped Referential Integrity (Enforced by Database)
+Cross-vendor references on tenant-owned records are blocked via composite unique keys and composite foreign keys.
+
+**Branch references** (Phase 1):
+1.  **Branch composite unique key**: `UNIQUE (vendor_id, branch_id)` on `branches`.
+2.  **StaffUser**: `FOREIGN KEY (vendor_id, branch_id) REFERENCES branches(vendor_id, branch_id)`.
+3.  **Member**: `FOREIGN KEY (vendor_id, branch_joined_id) REFERENCES branches(vendor_id, branch_id)` (`NULL` allowed).
+4.  **StampTransaction / RedemptionTransaction**: `FOREIGN KEY (vendor_id, branch_id) REFERENCES branches(vendor_id, branch_id)`.
+
+**Record references** (Phase 2):
+5.  **Composite unique keys** on parent tables: `members(vendor_id, member_id)`, `programs(vendor_id, program_id)`, `card_instances(vendor_id, card_id)`, `staff_users(vendor_id, staff_id)`.
+6.  **CardInstance**: `FOREIGN KEY (vendor_id, member_id) REFERENCES members(...)` and `FOREIGN KEY (vendor_id, program_id) REFERENCES programs(...)`.
+7.  **StampTransaction / RedemptionTransaction**: `FOREIGN KEY (vendor_id, card_id) REFERENCES card_instances(...)` and `FOREIGN KEY (vendor_id, staff_id) REFERENCES staff_users(...)`.
+8.  **WebAuthnCredential**: `FOREIGN KEY (vendor_id, member_id)` and `FOREIGN KEY (vendor_id, staff_id)` with nullable member/staff columns.
+
+Platform admin staff APIs validate branch ownership in application code before write. Card creation validates member ownership before insert.
 
 ## ER Diagram
 ```mermaid

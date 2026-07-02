@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from '@prisma/client'
+import { generateSignupSecret } from '../utils/signup-token'
 
 type VendorUpdatePayload = Record<string, unknown> & {
     branding?: Record<string, unknown>
@@ -73,6 +74,8 @@ export class AdminVendorService {
                 billing_status: 'TRIAL',
                 onboarding_status: 'COMPLETE',
                 onboarding_completed_at: new Date(),
+                signup_secret: generateSignupSecret(),
+                signup_secret_version: 1,
                 monthly_billing_amount: Number(vendorData.monthly_billing_amount),
                 billing_start_date: new Date(vendorData.billing_start_date || Date.now()),
                 // Create default branding?

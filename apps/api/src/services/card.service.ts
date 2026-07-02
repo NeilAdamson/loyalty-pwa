@@ -39,6 +39,17 @@ export class CardService {
             return card
         }
 
+        const member = await this.prisma.member.findFirst({
+            where: { member_id: memberId, vendor_id: vendorId },
+        })
+        if (!member) {
+            throw {
+                statusCode: 404,
+                code: ERROR_CODES.NOT_FOUND,
+                message: 'Member not found for this vendor',
+            }
+        }
+
         // 3. Create New Card if none exists
         // Check for 'REDEEMED' cards? Replay logic handles new card creation on redeem.
         // Here we just want the current active one.

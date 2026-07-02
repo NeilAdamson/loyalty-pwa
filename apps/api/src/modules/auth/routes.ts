@@ -4,37 +4,74 @@ import { VendorService } from '../../services/vendor.service'
 import { AuthService } from '../../services/auth.service'
 import { SMSFlowService } from '../../services/smsflow.service'
 import { WebAuthnService } from '../../services/webauthn.service'
+import { SignupQrService } from '../../services/signup-qr.service'
 import { getClientIp } from '../../utils/client-ip'
+import { isRateLimitError } from '../../services/fraud-event.service'
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
     const vendorService = new VendorService(fastify.prisma)
     const otpSender = new SMSFlowService()
-    const authService = new AuthService(fastify.prisma, otpSender, fastify.rateLimiter)
+    const authService = new AuthService(fastify.prisma, otpSender, fastify.rateLimiter, fastify.fraudEvents)
+    const signupQrService = new SignupQrService(fastify.prisma)
     const webAuthn = new WebAuthnService(fastify.prisma, fastify.redis, fastify.rateLimiter)
 
     // Member OTP Request
-    fastify.post<{ Params: { vendorSlug: string }; Body: { phone: string } }>(
+    fastify.post<{
+        Params: { vendorSlug: string }
+        Body: { phone: string; signup_v?: number | string; signup_s?: string; branch_joined_id?: string }
+    }>(
         '/v/:vendorSlug/auth/member/otp/request',
         async (request, reply) => {
             const { vendorSlug } = request.params
-            const { phone } = request.body
+            const { phone, signup_v, signup_s, branch_joined_id } = request.body
 
             const vendor = await vendorService.resolveBySlug(vendorSlug)
+            const signup = await signupQrService.validateSignupAccess(vendor.vendor_id, {
+                v: signup_v,
+                s: signup_s,
+                b: branch_joined_id,
+            })
             await authService.requestMemberOtp(vendor.vendor_id, phone, getClientIp(request))
 
-            return reply.send({ success: true, message: 'OTP sent' })
+            return reply.send({
+                success: true,
+                message: 'OTP sent',
+                branch_joined_id: signup.branchId,
+            })
         }
     )
 
     // Member OTP Verify
-    fastify.post<{ Params: { vendorSlug: string }; Body: { phone: string; code: string; consent_marketing?: boolean } }>(
+    fastify.post<{
+        Params: { vendorSlug: string }
+        Body: {
+            phone: string
+            code: string
+            consent_marketing?: boolean
+            signup_v?: number | string
+            signup_s?: string
+            branch_joined_id?: string
+        }
+    }>(
         '/v/:vendorSlug/auth/member/otp/verify',
         async (request, reply) => {
             const { vendorSlug } = request.params
-            const { phone, code, consent_marketing } = request.body
+            const { phone, code, consent_marketing, signup_v, signup_s, branch_joined_id } = request.body
 
             const vendor = await vendorService.resolveBySlug(vendorSlug)
-            const member = await authService.verifyMemberOtp(vendor.vendor_id, phone, code, consent_marketing === true)
+            const signup = await signupQrService.validateSignupAccess(vendor.vendor_id, {
+                v: signup_v,
+                s: signup_s,
+                b: branch_joined_id,
+            })
+            const member = await authService.verifyMemberOtp(
+                vendor.vendor_id,
+                phone,
+                code,
+                consent_marketing === true,
+                signup.branchId,
+                getClientIp(request)
+            )
 
             // Issue Token
             const token = fastify.jwt.sign({
@@ -183,7 +220,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             const vendor = await vendorService.resolveBySlug(vendorSlug)
-            await fastify.rateLimiter.assertStaffLoginAllowed(getClientIp(request))
+            const clientIp = getClientIp(request)
+            try {
+                await fastify.rateLimiter.assertStaffLoginAllowed(clientIp)
+            } catch (err) {
+                if (isRateLimitError(err)) {
+                    await fastify.fraudEvents.recordStaffLoginLimit(vendor.vendor_id, clientIp)
+                }
+                throw err
+            }
             const staff = await authService.verifyStaffByUsername(vendor.vendor_id, username.trim().toLowerCase(), pin)
 
             const token = fastify.jwt.sign({

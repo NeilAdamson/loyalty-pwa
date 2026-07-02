@@ -209,8 +209,8 @@ const VendorBranding: React.FC = () => {
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '40px', alignItems: 'stretch', paddingBottom: '40px' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="branding-layout" style={{ display: 'flex', gap: '40px', alignItems: 'flex-start', paddingBottom: '40px' }}>
+                <div className="branding-controls" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
                     <div className="admin-card" style={{ padding: '24px', background: 'var(--bg-surface, #1e1e1e)', borderRadius: '12px' }}>
                         <h3 style={{ marginBottom: '24px', fontSize: '18px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>Card Appearance</h3>
 
@@ -355,6 +355,15 @@ const VendorBranding: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <style>{`
+                @media (max-width: 768px) {
+                    .branding-layout {
+                        flex-direction: column !important;
+                        gap: 24px !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

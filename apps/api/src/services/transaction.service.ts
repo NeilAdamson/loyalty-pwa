@@ -1,6 +1,8 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 import { ERROR_CODES } from '../plugins/errors'
 import type { RedisRateLimiter } from './redis-rate-limiter.service'
+import type { FraudEventService } from './fraud-event.service'
+import { isRateLimitError } from './fraud-event.service'
 
 // Helper for cooldown check (e.g. 5 seconds)
 const STAMP_COOLDOWN_MS = 5000
@@ -39,7 +41,8 @@ function utcDayStart(now = new Date()): Date {
 export class TransactionService {
     constructor(
         private prisma: PrismaClient,
-        private rateLimiter: RedisRateLimiter
+        private rateLimiter: RedisRateLimiter,
+        private fraudEvents: FraudEventService
     ) { }
 
     private async lockCardForUpdate(tx: TransactionClient, vendorId: string, cardId: string) {
@@ -81,10 +84,24 @@ export class TransactionService {
         }
     }
 
-    async stamp(vendorId: string, staffId: string, branchId: string, payload: TransactionTokenPayload) {
+    async stamp(
+        vendorId: string,
+        staffId: string,
+        branchId: string,
+        payload: TransactionTokenPayload,
+        ipAddress?: string
+    ) {
         const { card_id, jti, member_id } = payload
 
-        await this.rateLimiter.consumeStaffStampHour(staffId)
+        try {
+            await this.rateLimiter.consumeStaffStampHour(staffId)
+        } catch (err) {
+            if (isRateLimitError(err)) {
+                await this.fraudEvents.recordStaffStampHourlyLimit(vendorId, staffId, ipAddress)
+            }
+            throw err
+        }
+
         try {
             return await this.prisma.$transaction(async (tx) => {
                 const card = await this.lockCardForUpdate(tx, vendorId, card_id)
@@ -97,6 +114,7 @@ export class TransactionService {
                     },
                 })
                 if (stampsToday >= card.max_stamps_per_day) {
+                    await this.fraudEvents.recordCardDailyLimit(vendorId, card_id, staffId, ipAddress)
                     throw appError(429, ERROR_CODES.RATE_LIMITED, 'Daily stamp limit reached for this card')
                 }
 
@@ -121,6 +139,7 @@ export class TransactionService {
                 if (lastTx) {
                     const diff = Date.now() - lastTx.stamped_at.getTime()
                     if (diff < STAMP_COOLDOWN_MS) {
+                        await this.fraudEvents.trackCooldownDenial(vendorId, card_id, staffId, ipAddress)
                         throw appError(429, ERROR_CODES.RATE_LIMITED, 'Stamping too fast')
                     }
                 }
@@ -138,6 +157,7 @@ export class TransactionService {
                         staff_id: staffId,
                         branch_id: branchId,
                         token_jti: jti,
+                        ip_address: ipAddress ?? null,
                     },
                 })
 
@@ -149,10 +169,24 @@ export class TransactionService {
         }
     }
 
-    async redeem(vendorId: string, staffId: string, branchId: string, payload: TransactionTokenPayload) {
+    async redeem(
+        vendorId: string,
+        staffId: string,
+        branchId: string,
+        payload: TransactionTokenPayload,
+        ipAddress?: string
+    ) {
         const { card_id, jti, member_id } = payload
 
-        await this.rateLimiter.consumeStaffRedeemHour(staffId)
+        try {
+            await this.rateLimiter.consumeStaffRedeemHour(staffId)
+        } catch (err) {
+            if (isRateLimitError(err)) {
+                await this.fraudEvents.recordStaffRedeemHourlyLimit(vendorId, staffId, ipAddress)
+            }
+            throw err
+        }
+
         try {
             return await this.prisma.$transaction(async (tx) => {
                 const card = await this.lockCardForUpdate(tx, vendorId, card_id)
@@ -186,6 +220,7 @@ export class TransactionService {
                         staff_id: staffId,
                         branch_id: branchId,
                         token_jti: jti,
+                        ip_address: ipAddress ?? null,
                     },
                 })
 

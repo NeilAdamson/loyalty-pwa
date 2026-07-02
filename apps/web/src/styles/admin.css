@@ -78,16 +78,173 @@ body {
     }
 
     .adminSidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        padding: 16px;
+        display: none;
     }
 
     .adminContent {
-        padding: 24px;
+        padding: 16px;
+        padding-top: 64px;     /* room for mobile top header */
+        padding-bottom: 88px;  /* room for bottom tab bar + system nav */
+        width: 100%;
+    }
+
+    .adminContentInner {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* ── Mobile Top Header ── */
+    .adminMobileHeader {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 56px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        z-index: 40;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        backdrop-filter: blur(10px);
+    }
+
+    .adminMobileHeaderBrand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .adminMobileHeaderBrandIcon {
+        width: 28px;
+        height: 28px;
+        background: var(--primary);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    .adminMobileHeaderTitle {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .adminMobileHeaderUser {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+
+    .adminMobileHeaderAvatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--surface-hover);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .adminMobileHeaderLogout {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text-secondary);
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    /* ── Bottom Tab Bar ── */
+    .adminBottomBar {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 68px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        z-index: 40;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 4px;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .adminBottomBar .bottomTab {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-width: 48px;
+        min-height: 48px;
+        padding: 4px 6px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 10px;
+        font-weight: 600;
+        transition: all 0.15s ease;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+    }
+
+    .adminBottomBar .bottomTab.active {
+        color: var(--primary);
+        background: rgba(59, 130, 246, 0.08);
+    }
+
+    .adminBottomBar .bottomTab.active::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 28px;
+        height: 3px;
+        border-radius: 0 0 3px 3px;
+        background: var(--primary);
+    }
+
+    .adminBottomBar .bottomTab svg {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+/* ── Desktop-only: hide mobile header & bottom bar ── */
+@media (min-width: 769px) {
+    .adminMobileHeader {
+        display: none;
+    }
+
+    .adminBottomBar {
+        display: none;
     }
 }
 
@@ -111,10 +268,31 @@ p {
 /* Table Utilities */
 .tableWrap {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--surface);
     box-shadow: var(--shadow);
+    position: relative;
+}
+
+/* Scroll indicator shadow on right edge when table overflows */
+.tableWrap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to left, var(--surface) 20%, transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tableWrap.scrollable::after {
+    opacity: 1;
 }
 
 .table {

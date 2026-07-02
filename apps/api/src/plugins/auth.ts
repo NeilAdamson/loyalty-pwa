@@ -65,11 +65,19 @@ export default fp(async (fastify) => {
             }
 
             if (vendor.status !== 'ACTIVE' && vendor.status !== 'TRIAL') {
-                reply.status(403).send({
-                    code: 'VENDOR_SUSPENDED', // Must match ERROR_CODES.VENDOR_SUSPENDED
-                    message: 'Vendor account is suspended'
-                })
-                return // Stop execution
+                const path = request.url.split('?')[0]
+                const memberReadOnly =
+                    request.method === 'GET'
+                    && request.user.role === 'MEMBER'
+                    && (path.endsWith('/me/card') || path.endsWith('/me/transactions'))
+
+                if (!memberReadOnly) {
+                    reply.status(403).send({
+                        code: 'VENDOR_SUSPENDED', // Must match ERROR_CODES.VENDOR_SUSPENDED
+                        message: 'Vendor account is suspended'
+                    })
+                    return
+                }
             }
 
             // Append status to user object if needed, or just proceed

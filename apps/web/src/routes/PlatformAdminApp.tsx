@@ -10,6 +10,7 @@ import AdminMemberList from '../pages/admin/AdminMemberList';
 import AdminUserList from '../pages/admin/AdminUserList';
 import AdminUserCreate from '../pages/admin/AdminUserCreate';
 import AdminUserEdit from '../pages/admin/AdminUserEdit';
+import AdminFraudEvents from '../pages/admin/AdminFraudEvents';
 import { startPerf } from '../utils/perf';
 
 function lazyWithTiming<T extends ComponentType<Record<string, never>>>(
@@ -52,6 +53,7 @@ export default function PlatformAdminApp() {
                 <Route path="users" element={<AdminUserList />} />
                 <Route path="users/new" element={<AdminUserCreate />} />
                 <Route path="users/:id/edit" element={<AdminUserEdit />} />
+                <Route path="fraud" element={<AdminFraudEvents />} />
                 <Route path="settings" element={<div>Settings</div>} />
                 <Route path="*" element={<Navigate to="/admin" replace />} />
             </Route>

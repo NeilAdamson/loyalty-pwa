@@ -340,10 +340,18 @@ Primary key: (vendor_id, token_jti)
 - **RP ID**: `WEBAUTHN_RP_ID` must be the public hostname without port (e.g. `punchcard.co.za`); local dev typically uses `localhost` with origins `http://localhost:5173` (see `docs/SECURITY.md`).
 
 ### 5.3 Fraud flags
-Record fraud flags in transaction `flags` JSON when:
-- stamps/hour per staff exceed threshold.
-- repeated denied cooldown attempts.
-- excessive member login attempts.
+Record fraud telemetry in `admin_audit_log` with `actor_type = SYSTEM` and action prefix `FRAUD_*` when:
+- stamps/hour per staff exceed threshold (`FRAUD_STAMP_HOURLY_LIMIT`)
+- redeems/hour per staff exceed threshold (`FRAUD_REDEEM_HOURLY_LIMIT`)
+- per-card daily stamp limit exceeded (`FRAUD_CARD_DAILY_LIMIT`)
+- repeated denied cooldown attempts (3+ denials within 15 minutes on the same card → `FRAUD_REPEATED_COOLDOWN_DENIAL`)
+- excessive member OTP request rate (`FRAUD_MEMBER_OTP_REQUEST_LIMIT`)
+- excessive member OTP verify attempts (`FRAUD_MEMBER_OTP_VERIFY_LIMIT`)
+- excessive staff login attempts (`FRAUD_STAFF_LOGIN_LIMIT`)
+
+Platform admins review these via `GET /api/v1/admin/fraud-events` and the `/admin/fraud` backoffice screen. Events are deduplicated to at most once per hour per entity/action (cooldown abuse uses a separate 15-minute counter).
+
+Successful stamp/redeem transactions persist `ip_address` on the transaction row. The optional transaction `flags` JSON column remains reserved for future per-transaction annotations.
 
 ---
 
@@ -370,6 +378,34 @@ Record fraud flags in transaction `flags` JSON when:
 
 ---
 
+## 6b. Signup QR token specification (FR-B5)
+
+Static printed signup QRs encode a **signed URL** for member join (distinct from §6 rotating stamp/redeem tokens).
+
+### 6b.1 URL shape
+```
+{PUBLIC_APP_URL}/v/{vendor_slug}/login?v={version}&s={sig}[&b={branch_id}]
+```
+
+- `sig` = first 32 chars of base64url(HMAC-SHA256(`signup_secret`, `{vendor_id}:{version}:{branch_id|''}`))
+- `b` optional: when present and valid, first-time member signup sets `members.branch_joined_id`
+
+### 6b.2 Vendor fields
+- `vendors.signup_secret` — random secret; never returned to clients
+- `vendors.signup_secret_version` — `0` = legacy unsigned URLs accepted; `>= 1` = signed URL required
+- `vendors.signup_secret_rotated_at` — last rotation timestamp
+
+### 6b.3 Validation (member OTP request/verify)
+- When `signup_secret_version >= 1`: require matching `v` and `s`; reject with `SIGNUP_QR_INVALID` if missing or wrong
+- When `signup_secret_version = 0`: unsigned `/v/{slug}/login` still accepted (migration path until vendor rotates)
+- Rotation increments version and replaces secret; prior printed QRs fail validation
+
+### 6b.4 Admin APIs
+- Vendor admin: `GET /api/v1/v/:slug/admin/qr/assets`, `POST /api/v1/v/:slug/admin/qr/rotate`
+- Platform admin: `GET /api/v1/admin/vendors/:id/qr/assets`
+
+---
+
 ## 7. SMS OTP specification
 
 ### 7.1 OTP generation
@@ -385,6 +421,8 @@ Record fraud flags in transaction `flags` JSON when:
 ### 7.3 Verify
 - Compare bcrypt against (submitted_code + pepper)
 - Max attempts: 5 per otp_id; then invalidate.
+- **Single-use:** each OTP may be consumed at most once. On successful verify the API sets `consumed_at` using a row lock (`SELECT … FOR UPDATE`) and a conditional `updateMany` (`consumed_at IS NULL`). Concurrent verify requests with the same code yield **at most one** success; other callers receive `OTP_INVALID`.
+- Member find/create runs in the same database transaction as OTP consumption so signup races do not issue duplicate JWTs.
 
 Failure modes:
 - If SMS delivery fails, return error `OTP_DELIVERY_FAILED`.
@@ -453,7 +491,10 @@ Response:
     "status": "ACTIVE",
     "stamps_count": 3,
     "program": {
-        "stamps_required": 10
+        "stamps_required": 10,
+        "reward_title": "Free coffee",
+        "reward_description": "...",
+        "terms_text": "..."
     }
   },
   "member": {
@@ -462,12 +503,22 @@ Response:
   },
   "token": "...",
   "expires_in_seconds": 30,
+  "read_only": false,
   "vendor": {
     "trading_name": "ACME Car Wash",
+    "vendor_slug": "acme",
+    "status": "ACTIVE",
     "branding": { "logo_url": "...", "primary_color": "#...", "secondary_color": "#..." }
   }
 }
 ```
+
+**GET** `/api/v1/me/transactions?limit=20` — stamp/redeem history for the active card (newest first, max 20).
+
+Member web routes:
+- `/v/{vendor_slug}` — branded landing (program summary + Join CTA, FR-C1)
+- `/v/{vendor_slug}/login` — SMS OTP signup/login
+- `/me/card` — member card UI (FR-C3)
 
 ### 8.5 Staff login (username + PIN)
 **POST** `/api/v1/v/{vendor_slug}/auth/staff/login`
@@ -587,14 +638,13 @@ All admin actions MUST write `admin_audit_log`.
 ---
 
 ## 10. PWA requirements
-- Manifest:
-  - name, short_name, icons, display=standalone, start_url
-- Service worker:
-  - cache static assets
-  - network-first for API calls
+- Manifest: `apps/web/public/manifest.webmanifest` — name, short_name, display=standalone, start_url
+- Service worker: `apps/web/public/sw.js` — caches app shell assets; registered from `apps/web/src/main.tsx` in production builds
 - Offline behavior:
-  - member UI shell loads; card data indicates “Offline”
-  - staff actions disabled offline
+  - member UI shell loads from cache when offline
+  - last `/me/card` response cached in `localStorage` (`memberCardCache.ts`); member card shows an offline banner and read-only progress without a live rotating token
+  - staff actions disabled offline (no offline stamping)
+- Suspended vendor (FR-A2): `GET /me/card` and `GET /me/transactions` remain available read-only; rotating token is omitted when vendor status is not `ACTIVE`/`TRIAL`
 
 ---
 
@@ -628,6 +678,7 @@ A scheduled job runs daily:
 - `STAMP_COOLDOWN_SECONDS=5`
 - `REDIS_URL` (recommended)
 - `CORS_ALLOWED_ORIGIN`
+- `PUBLIC_APP_URL` — public PWA origin used when building signup QR URLs (e.g. `http://localhost:5173`, `https://punchcard.co.za`)
 - `DB_HOST` (e.g. 'db', 'localhost')
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
@@ -640,6 +691,7 @@ A scheduled job runs daily:
 - `SMTP_PASSWORD`
 - `SMTP_SECURE` (true for SSL/TLS)
 - `SMTP_FROM` (sender email address)
+- `VENDOR_REGISTRATION_NOTIFY_EMAIL` (optional; internal alert when self-service vendor registration completes; defaults to `neil@punchcard.co.za`)
 
 ---
 

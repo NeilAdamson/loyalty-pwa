@@ -1,12 +1,13 @@
-import { lazy, Suspense } from 'react';
-import type { ComponentType } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import VendorLayout from '../pages/VendorLayout';
+import VendorMemberLanding from '../pages/VendorMemberLanding';
 import MemberAuth from '../pages/MemberAuth';
 import StaffAuth from '../pages/StaffAuth';
 import { loadStaffDashboard } from './routeLoaders';
 import { startPerf } from '../utils/perf';
 import { ProtectedRoute } from '../shared/ProtectedRoute';
+import { lazy, Suspense } from 'react';
+import type { ComponentType } from 'react';
 
 function lazyWithTiming<T extends ComponentType<Record<string, never>>>(
     label: string,
@@ -32,7 +33,7 @@ export default function VendorPublicApp() {
     return (
         <Routes>
             <Route element={<VendorLayout />}>
-                <Route index element={<Navigate to="login" replace />} />
+                <Route index element={<VendorMemberLanding />} />
                 <Route path="login" element={<MemberAuth />} />
                 <Route path="staff" element={<StaffAuth />} />
                 <Route

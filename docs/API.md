@@ -121,7 +121,7 @@ Body:
   "password": "minimum8chars"
 }
 ```
-Creates the vendor, owner admin account, default branch, default branding, and default loyalty program. Returns `{ token, vendor_admin, vendor }`.
+Creates the vendor, owner admin account, default branch, default branding, and default loyalty program. Returns `{ token, vendor_admin, vendor }`. Sends an internal notification email (default recipient: `neil@punchcard.co.za`; override with `VENDOR_REGISTRATION_NOTIFY_EMAIL`) with vendor and owner details.
 
 **Vendor admin login**
 `POST /api/v1/vendor/auth/login`
@@ -146,18 +146,50 @@ Headers: `Authorization: Bearer <MemberToken>`
 Returns:
 ```json
 {
-  "card": { "card_id": "...", "stamps_count": 0, "status": "ACTIVE", ... },
+  "card": {
+    "card_id": "...",
+    "stamps_count": 0,
+    "status": "ACTIVE",
+    "program": {
+      "stamps_required": 10,
+      "reward_title": "Free coffee",
+      "reward_description": "Get a free black coffee.",
+      "terms_text": "One redemption per full card."
+    }
+  },
   "token": "ROTATING_JWT_TOKEN",
   "expires_in_seconds": 30,
+  "read_only": false,
   "vendor": {
       "trading_name": "...",
       "vendor_slug": "demo-cafe",
+      "status": "ACTIVE",
       "branding": { ... }
   }
 }
 ```
 
+- `token` is `null` when the vendor is suspended (`read_only: true`); members may still view card progress and history.
+- `read_only: true` also applies when the vendor status is not `ACTIVE` or `TRIAL`.
+
 `vendor_slug` is included so the member app can call tenant-scoped routes (e.g. passkey enrollment) without embedding the slug in the member JWT.
+
+### Member transaction history
+**GET /me/transactions?limit=20**
+Headers: `Authorization: Bearer <MemberToken>`
+Query: `limit` optional, integer 1–20 (default 20).
+
+Returns stamp and redemption events for the member's **current active card**, merged and sorted newest first:
+```json
+{
+  "transactions": [
+    { "id": "...", "type": "STAMP", "at": "2026-06-21T10:15:00.000Z" },
+    { "id": "...", "type": "REDEEM", "at": "2026-06-20T18:02:00.000Z" }
+  ]
+}
+```
+
+Available when the vendor is suspended (read-only member access per FR-A2).
 
 ## Transactions (Protected: Staff)
 
@@ -200,6 +232,8 @@ Returns:
 
 **Get Public Profile** (Public)
 `GET /v/:vendorSlug/public`
+
+Returns branding, signup metadata, and active program summary for vendors with status `ACTIVE` or `TRIAL` (self-service registrations start as `TRIAL`). Returns `404 NOT_FOUND` for unknown slugs and for `SUSPENDED` vendors.
 
 ### Programs
 **Create Draft** (Protected: Vendor Admin)
@@ -275,8 +309,10 @@ Accepts multipart form data with a single `file` field. Server-side limits:
 
 Returns:
 ```json
-{ "url": "https://.../uploads/branding/{scope}/{file}" }
+{ "url": "https://{PUBLIC_ORIGIN}/uploads/branding/{scope}/{file}" }
 ```
+
+`PUBLIC_ORIGIN` is the public site origin (scheme + host, no `/api` path). Caddy proxies `/uploads/*` to the API; see `docs/DEPLOYMENT.md`.
 
 **Get Branding**
 `GET /api/v1/v/:slug/admin/branding`
@@ -369,7 +405,7 @@ Returns:
 - Estimated value: `estimated_revenue_current_month`, `total_reward_cost_current_month`, `estimated_roi_ratio`, `estimated_roi_label`
 - Behavioral insights: `behavior_insights.stamps_by_day`, `behavior_insights.stamps_by_time_bucket`
 - Customer insights: `customer_insights.top_customers_30d`, `customer_insights.at_risk_customers_30d`, `customer_insights.near_reward_customers`
-- Staff insights: `staff_activity[]` with `stamps_issued` and `redemptions_processed`
+- Staff insights: `staff_activity[]` with `stamps_issued` and `redemptions_processed`, plus `staff_activity_total` and `staff_activity_truncated` when the roster exceeds the dashboard limit (100).
 
 **Behavior Insights**
 `GET /api/v1/v/:slug/admin/insights/behavior`
@@ -389,7 +425,15 @@ Returns:
 **Staff Insights**
 `GET /api/v1/v/:slug/admin/insights/staff`
 
-Returns per-staff aggregates:
+Optional query: `limit` (1–100, default 100).
+
+Returns:
+- `staff[]` — per-staff aggregates ordered by name
+- `total_staff` — full roster size for the vendor
+- `limit` — applied row cap
+- `truncated` — true when `total_staff` exceeds `limit`
+
+Each staff row includes:
 - `stamps_issued`
 - `redemptions_processed`
 
@@ -441,7 +485,11 @@ Admin users have username-based email addresses restricted to the `@punchcard.co
   - Email is auto-generated as `{username}@punchcard.co.za`
   - Username must be alphanumeric with optional dots/hyphens (e.g., `judy`, `john.smith`)
 - **Get admin (for edit)**: `GET /api/v1/admin/users/:id` — Returns `{ admin }` (no password). 404 if not found.
-- **Update admin**: `PATCH /api/v1/admin/users/:id` — Body: `{ first_name?, last_name?, role?, status?, password? }`. 
+- **Update admin**: `PATCH /api/v1/admin/users/:id` — Body: `{ first_name?, last_name?, role?, status?, password? }`.
+
+### Fraud flags (platform admin)
+
+- **List fraud events**: `GET /api/v1/admin/fraud-events` — Cookie auth. Query: `page`, `limit` (max 100), optional `vendor_id`, optional `action` (one of the `FRAUD_*` constants). Returns `{ data: [{ audit_id, action, vendor_id, payload, created_at, vendor }], meta: { page, limit, total, pages } }`. Events are append-only rows in `admin_audit_log` written by the API when rate limits or repeated cooldown abuse thresholds are exceeded. 
   - `username` and `email` are immutable after creation
   - Leave `password` blank to keep current. Cannot disable own account (400).
 
@@ -456,6 +504,5 @@ Admin users have username-based email addresses restricted to the `@punchcard.co
 ### Vendor Staff (Platform Admin)
 - **List staff**: `GET /api/v1/admin/vendors/:id/staff`
 - **Create staff**: `POST /api/v1/admin/vendors/:id/staff` — Body: `{ name, username, pin, role?, branch_id? }`
-- **Update staff**: `PATCH /api/v1/admin/vendors/:id/staff/:staffId` — Body: `{ name?, username?, pin?, role?, branch_id?, status? }`. Leave `pin` blank to keep current PIN.
+- **Update staff**: `PATCH /api/v1/admin/vendors/:id/staff/:staffId` — Body: `{ name?, username?, pin?, role?, branch_id?, status? }`. Leave `pin` blank to keep current PIN. Set `status` to `DISABLED` or `ENABLED` to revoke or restore staff login access; staff records are retained for append-only stamp/redemption audit history.
 - **Reset PIN**: `PATCH /api/v1/admin/vendors/:id/staff/:staffId/pin` — Body: `{ pin }`
-- **Delete staff**: `DELETE /api/v1/admin/vendors/:id/staff/:staffId`

@@ -1,9 +1,29 @@
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 import { ERROR_CODES } from '../plugins/errors'
 import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 import { requireSecret } from '../utils/config'
 import type { RedisRateLimiter } from './redis-rate-limiter.service'
+import type { FraudEventService } from './fraud-event.service'
+import { isRateLimitError } from './fraud-event.service'
+
+type LockedOtpRow = {
+    otp_id: string
+    otp_hash: string
+    attempts: number
+    expires_at: Date
+    consumed_at: Date | null
+}
+
+type TransactionClient = Prisma.TransactionClient
+
+function appError(statusCode: number, code: string, message: string) {
+    return { statusCode, code, message }
+}
+
+function isUniqueConstraintError(error: unknown) {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
+}
 
 /** OTP delivery through SMSFlow. */
 export interface IOtpSender {
@@ -11,23 +31,33 @@ export interface IOtpSender {
     isConfigured(): boolean
 }
 
-const OTP_PEPPER = requireSecret('OTP_PEPPER')
+function getOtpPepper() {
+    return requireSecret('OTP_PEPPER')
+}
 
 export class AuthService {
     constructor(
         private prisma: PrismaClient,
         private otpSender: IOtpSender,
-        private rateLimiter: RedisRateLimiter
+        private rateLimiter: RedisRateLimiter,
+        private fraudEvents?: FraudEventService
     ) { }
 
     // --- Member OTP ---
 
     async requestMemberOtp(vendorId: string, phone: string, clientIp: string) {
-        await this.rateLimiter.assertOtpRequestAllowed(vendorId, phone, clientIp)
+        try {
+            await this.rateLimiter.assertOtpRequestAllowed(vendorId, phone, clientIp)
+        } catch (err) {
+            if (isRateLimitError(err)) {
+                await this.fraudEvents?.recordMemberOtpRequestLimit(vendorId, phone, clientIp)
+            }
+            throw err
+        }
 
         // Generate OTP
         const plainOtp = randomInt(100000, 999999).toString();
-        const hash = await bcrypt.hash(plainOtp + OTP_PEPPER, 10)
+        const hash = await bcrypt.hash(plainOtp + getOtpPepper(), 10)
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
 
         // 3. Store in DB
@@ -52,74 +82,151 @@ export class AuthService {
         return { success: true, dev_otp: plainOtp }
     }
 
-    async verifyMemberOtp(vendorId: string, phone: string, code: string, consentMarketing = false) {
-        // 1. Find valid, unconsumed request
-        // We get the LATEST unconsumed one
+    private async lockOtpForUpdate(tx: TransactionClient, otpId: string) {
+        const rows = await tx.$queryRaw<LockedOtpRow[]>`
+            SELECT
+                otp_id::text AS otp_id,
+                otp_hash,
+                attempts,
+                expires_at,
+                consumed_at
+            FROM "otp_requests"
+            WHERE otp_id = ${otpId}::uuid
+            FOR UPDATE
+        `
+        return rows[0] ?? null
+    }
+
+    private async findOrCreateMember(
+        tx: TransactionClient,
+        vendorId: string,
+        phone: string,
+        consentMarketing: boolean,
+        branchJoinedId?: string | null
+    ) {
+        let member = await tx.member.findUnique({
+            where: {
+                vendor_id_phone_e164: {
+                    vendor_id: vendorId,
+                    phone_e164: phone,
+                },
+            },
+        })
+
+        if (member) {
+            if (consentMarketing && member.consent_marketing !== true) {
+                member = await tx.member.update({
+                    where: { member_id: member.member_id },
+                    data: { consent_marketing: true },
+                })
+            }
+            return member
+        }
+
+        try {
+            return await tx.member.create({
+                data: {
+                    vendor_id: vendorId,
+                    phone_e164: phone,
+                    name: 'New Member',
+                    consent_marketing: consentMarketing,
+                    branch_joined_id: branchJoinedId ?? null,
+                },
+            })
+        } catch (error) {
+            if (!isUniqueConstraintError(error)) {
+                throw error
+            }
+            member = await tx.member.findUnique({
+                where: {
+                    vendor_id_phone_e164: {
+                        vendor_id: vendorId,
+                        phone_e164: phone,
+                    },
+                },
+            })
+            if (!member) {
+                throw error
+            }
+            if (consentMarketing && member.consent_marketing !== true) {
+                member = await tx.member.update({
+                    where: { member_id: member.member_id },
+                    data: { consent_marketing: true },
+                })
+            }
+            return member
+        }
+    }
+
+    async verifyMemberOtp(
+        vendorId: string,
+        phone: string,
+        code: string,
+        consentMarketing = false,
+        branchJoinedId?: string | null,
+        clientIp?: string
+    ) {
         const otpReq = await this.prisma.otpRequest.findFirst({
             where: {
                 vendor_id: vendorId,
                 phone_e164: phone,
                 purpose: 'MEMBER_LOGIN',
                 consumed_at: null,
-                expires_at: { gt: new Date() }
+                expires_at: { gt: new Date() },
             },
-            orderBy: { created_at: 'desc' }
+            orderBy: { created_at: 'desc' },
         })
 
         if (!otpReq) {
-            // Could be generic invalid
-            throw { statusCode: 400, code: ERROR_CODES.OTP_INVALID, message: 'Invalid or expired OTP' }
+            throw appError(400, ERROR_CODES.OTP_INVALID, 'Invalid or expired OTP')
         }
 
-        // 2. Check Attempts
-        if (otpReq.attempts >= 5) {
-            throw { statusCode: 429, code: ERROR_CODES.OTP_RATE_LIMITED, message: 'Too many attempts' }
-        }
+        return this.prisma.$transaction(async (tx) => {
+            const locked = await this.lockOtpForUpdate(tx, otpReq.otp_id)
 
-        // 3. Verify Hash
-        const valid = await bcrypt.compare(code + OTP_PEPPER, otpReq.otp_hash)
-        if (!valid) {
-            // Increment attempts
-            await this.prisma.otpRequest.update({
-                where: { otp_id: otpReq.otp_id },
-                data: { attempts: { increment: 1 } }
-            })
-            throw { statusCode: 400, code: ERROR_CODES.OTP_INVALID, message: 'Invalid OTP' }
-        }
-
-        // 4. Mark Consumed
-        await this.prisma.otpRequest.update({
-            where: { otp_id: otpReq.otp_id },
-            data: { consumed_at: new Date() }
-        })
-
-        // 5. Find or Create Member
-        let member = await this.prisma.member.findUnique({
-            where: {
-                vendor_id_phone_e164: {
-                    vendor_id: vendorId,
-                    phone_e164: phone
-                }
+            if (!locked || locked.consumed_at !== null || locked.expires_at <= new Date()) {
+                throw appError(400, ERROR_CODES.OTP_INVALID, 'Invalid or expired OTP')
             }
-        })
 
-        if (!member) {
-            member = await this.prisma.member.create({
-                data: {
-                    vendor_id: vendorId,
-                    phone_e164: phone,
-                    name: 'New Member', // Placeholder, user can update later
-                    consent_marketing: consentMarketing === true,
+            if (locked.attempts >= 5) {
+                await this.fraudEvents?.recordMemberOtpVerifyLimit(vendorId, phone, clientIp)
+                throw appError(429, ERROR_CODES.OTP_RATE_LIMITED, 'Too many attempts')
+            }
+
+            const valid = await bcrypt.compare(code + getOtpPepper(), locked.otp_hash)
+            if (!valid) {
+                const nextAttempts = locked.attempts + 1
+                await tx.otpRequest.update({
+                    where: { otp_id: locked.otp_id },
+                    data: { attempts: { increment: 1 } },
+                })
+                if (nextAttempts >= 5) {
+                    await this.fraudEvents?.recordMemberOtpVerifyLimit(vendorId, phone, clientIp)
                 }
-            })
-        } else if (consentMarketing === true && member.consent_marketing !== true) {
-            member = await this.prisma.member.update({
-                where: { member_id: member.member_id },
-                data: { consent_marketing: true }
-            })
-        }
+                throw appError(400, ERROR_CODES.OTP_INVALID, 'Invalid OTP')
+            }
 
-        return member
+            const consumed = await tx.otpRequest.updateMany({
+                where: {
+                    otp_id: locked.otp_id,
+                    consumed_at: null,
+                    expires_at: { gt: new Date() },
+                    attempts: { lt: 5 },
+                },
+                data: { consumed_at: new Date() },
+            })
+            if (consumed.count !== 1) {
+                throw appError(400, ERROR_CODES.OTP_INVALID, 'Invalid or expired OTP')
+            }
+
+            return this.findOrCreateMember(
+                tx,
+                vendorId,
+                phone,
+                consentMarketing === true,
+                branchJoinedId
+            )
+        })
     }
 
     // --- Staff Login (username + PIN) ---

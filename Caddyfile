@@ -19,6 +19,10 @@ www.punchcard.co.za {
 
 # Main Site
 punchcard.co.za {
+    handle /uploads/* {
+        reverse_proxy api:8000
+    }
+
     handle /api/* {
         reverse_proxy api:8000
     }
