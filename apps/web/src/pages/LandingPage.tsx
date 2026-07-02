@@ -311,17 +311,17 @@ const LandingPage: React.FC = () => {
                 <div className="landing-nav-buttons" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <button
                         type="button"
-                        title="Staff and vendor managers: enter your store slug, then username and PIN"
+                        title="Business owners and managers sign in with email and password"
                         style={{ ...styles.secondaryButton, padding: '0.5rem 1.25rem', fontSize: '0.9rem' }}
-                        onClick={() => navigate('/vendor/login')}
+                        onClick={() => navigate('/vendor/admin/login')}
                     >
-                        Vendor Login
+                        Business owner login
                     </button>
                     <button
                         style={{ ...styles.primaryButton, padding: '0.5rem 1.25rem', fontSize: '0.9rem' }}
                         onClick={() => window.location.href = 'mailto:info@punchcard.co.za'}
                     >
-                        Contact Us
+                        Email us
                     </button>
                 </div>
             </nav>
@@ -343,16 +343,16 @@ const LandingPage: React.FC = () => {
                             <button
                                 style={styles.primaryButton}
                                 className="landing-cta-primary"
-                                onClick={() => window.location.href = 'mailto:info@punchcard.co.za?subject=Get PunchCard for my business'}
+                                onClick={() => navigate('/vendor/register')}
                             >
-                                Get PunchCard For Your Business
+                                Start free trial
                             </button>
                             <button
                                 style={styles.secondaryButton}
                                 className="landing-cta-secondary"
-                                onClick={() => scrollToSection('problem')}
+                                onClick={() => window.location.href = 'mailto:info@punchcard.co.za?subject=Help with PunchCard signup'}
                             >
-                                Learn More
+                                Email us
                             </button>
                         </div>
                     </div>
@@ -626,17 +626,17 @@ const LandingPage: React.FC = () => {
                     <div className="landing-getting-started-steps" style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', marginBottom: '4rem' }}>
                         <div className="landing-step-card" style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(185, 28, 28, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
                             <div className="landing-step-img-wrap" style={{ marginBottom: '1rem' }}>
-                                <img src="/assets/Pics/Punchcard-pic-01.jpg" alt="Contact PunchCard" style={{ width: '100%', maxWidth: '140px', height: '100px', objectFit: 'cover', borderRadius: '12px', margin: '0 auto', display: 'block' }} />
+                                <img src="/assets/Pics/Punchcard-pic-01.jpg" alt="Create a PunchCard vendor account" style={{ width: '100%', maxWidth: '140px', height: '100px', objectFit: 'cover', borderRadius: '12px', margin: '0 auto', display: 'block' }} />
                             </div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#b91c1c', marginBottom: '1rem' }}>Step 1</div>
-                            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>Contact PunchCard.</p>
+                            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>Create your vendor account.</p>
                         </div>
                         <div className="landing-step-card" style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(180, 83, 9, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
                             <div className="landing-step-img-wrap" style={{ marginBottom: '1rem' }}>
                                 <img src="/assets/Pics/Punchcard-pic-02.jpg" alt="Branded card and QR posters" style={{ width: '100%', maxWidth: '140px', height: '100px', objectFit: 'cover', borderRadius: '12px', margin: '0 auto', display: 'block' }} />
                             </div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#b45309', marginBottom: '1rem' }}>Step 2</div>
-                            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>We set up your branded loyalty card and provide QR posters.</p>
+                            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>Use the setup wizard to choose your reward, branding, and staff logins.</p>
                         </div>
                         <div className="landing-step-card" style={{ background: 'rgba(255,255,255,0.6)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(29, 78, 216, 0.2)', flex: '1 1 250px', textAlign: 'center' }}>
                             <div className="landing-step-img-wrap" style={{ marginBottom: '1rem' }}>
@@ -662,16 +662,16 @@ const LandingPage: React.FC = () => {
 
                     <div style={{ background: '#fff', padding: '4rem 2rem', borderRadius: '24px', border: '3px solid #ef4444', boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }}>
                         <h2 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, marginBottom: '1rem', letterSpacing: '-0.02em', color: '#1f2937' }}>Interested In PunchCard For Your Business?</h2>
-                        <p style={{ ...styles.sectionSubtitle, marginBottom: '2.5rem', color: '#374151' }}>Contact us to learn more or request a demonstration.</p>
+                        <p style={{ ...styles.sectionSubtitle, marginBottom: '2.5rem', color: '#374151' }}>Create your vendor account and finish setup in the guided wizard. Email us if you want help.</p>
                         <button
                             style={{ ...styles.primaryButton, padding: '1.2rem 3rem', fontSize: '1.2rem' }}
                             className="landing-cta-primary"
-                            onClick={() => window.location.href = 'mailto:info@punchcard.co.za'}
+                            onClick={() => navigate('/vendor/register')}
                         >
-                            Contact Us Today
+                            Start free trial
                         </button>
                         <p style={{ marginTop: '1.5rem', color: '#6b7280' }}>
-                            Or email us directly at <a href="mailto:info@punchcard.co.za" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>info@punchcard.co.za</a>
+                            Need help? Email us at <a href="mailto:info@punchcard.co.za?subject=Help with PunchCard signup" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>info@punchcard.co.za</a>
                         </p>
                     </div>
                 </div>

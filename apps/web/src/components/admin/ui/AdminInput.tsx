@@ -1,4 +1,4 @@
-import React, { InputHTMLAttributes } from 'react';
+import React, { InputHTMLAttributes, SelectHTMLAttributes, useId } from 'react';
 
 interface AdminInputProps extends InputHTMLAttributes<HTMLInputElement | HTMLSelectElement> {
     label?: string;
@@ -17,23 +17,37 @@ const AdminInput: React.FC<AdminInputProps> = ({
     options,
     type,
     required,
+    id,
+    'aria-describedby': ariaDescribedBy,
     ...props
 }) => {
+    const generatedId = useId();
+    const inputId = id || `admin-input-${generatedId.replace(/:/g, '')}`;
+    const helperId = helperText ? `${inputId}-help` : undefined;
+    const errorId = error ? `${inputId}-error` : undefined;
+    const describedBy = [ariaDescribedBy, errorId, helperId].filter(Boolean).join(' ') || undefined;
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
             {label && (
-                <label style={{
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    color: 'var(--text-secondary)'
-                }}>
+                <label
+                    htmlFor={inputId}
+                    style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: 'var(--text-secondary)'
+                    }}
+                >
                     {label}
                     {required && <span style={{ color: 'var(--danger)', marginLeft: '2px' }}>*</span>}
                 </label>
             )}
             {type === 'select' ? (
                 <select
+                    id={inputId}
                     required={required}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={describedBy}
                     style={{
                         padding: '10px 12px',
                         borderRadius: 'var(--radius)',
@@ -48,7 +62,7 @@ const AdminInput: React.FC<AdminInputProps> = ({
                     }}
                     onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
                     onBlur={(e) => e.target.style.borderColor = error ? 'var(--danger)' : 'var(--border)'}
-                    {...props as any}
+                    {...props as SelectHTMLAttributes<HTMLSelectElement>}
                 >
                     {options?.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -56,8 +70,11 @@ const AdminInput: React.FC<AdminInputProps> = ({
                 </select>
             ) : (
                 <input
+                    id={inputId}
                     type={type}
                     required={required}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={describedBy}
                     style={{
                         padding: '10px 12px',
                         borderRadius: 'var(--radius)',
@@ -72,14 +89,14 @@ const AdminInput: React.FC<AdminInputProps> = ({
                     }}
                     onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
                     onBlur={(e) => e.target.style.borderColor = error ? 'var(--danger)' : 'var(--border)'}
-                    {...props as any}
+                    {...props as InputHTMLAttributes<HTMLInputElement>}
                 />
             )}
             {error && (
-                <span style={{ fontSize: '12px', color: 'var(--danger)' }}>{error}</span>
+                <span id={errorId} style={{ fontSize: '12px', color: 'var(--danger)' }}>{error}</span>
             )}
             {helperText && !error && (
-                <span style={{ fontSize: '12px', color: '#666' }}>{helperText}</span>
+                <span id={helperId} style={{ fontSize: '12px', color: '#666' }}>{helperText}</span>
             )}
         </div>
     );

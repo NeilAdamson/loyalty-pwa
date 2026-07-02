@@ -61,6 +61,13 @@ REDIS_URL=redis://redis:6379
 # The domain where the app is hosted
 CORS_ALLOWED_ORIGIN=https://punchcard.co.za
 
+# WebAuthn / passkeys (required for member passkey registration and sign-in)
+# RP ID must be the public hostname only (no scheme, path, or port). Origins must match
+# every URL users use to open the PWA (include www separately if you serve both).
+WEBAUTHN_RP_ID=punchcard.co.za
+WEBAUTHN_RP_NAME=Punchcard
+WEBAUTHN_ORIGIN=https://punchcard.co.za
+
 # Security Secrets (Generate new random strings)
 JWT_SECRET=long_random_string_here
 COOKIE_SECRET=cookie_signing_random_string_here
@@ -162,4 +169,5 @@ After deployment:
 - **502 Bad Gateway**: Usually means the API container is crashing or starting up. Check logs: `docker compose logs api`.
   - After the security hardening update, confirm `.env` contains non-empty values for `JWT_SECRET`, `COOKIE_SECRET`, `TOKEN_SIGNING_SECRET`, `OTP_PEPPER`, `SMSFLOW_CLIENT_ID`, and `SMSFLOW_CLIENT_SECRET`. Missing required secrets cause the API to fail startup.
 - **CORS Errors**: Ensure `CORS_ALLOWED_ORIGIN` in `.env` matches your browser URL exactly (no trailing slash).
+- **Passkeys / “not configured on this server”**: Set `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`, and `WEBAUTHN_ORIGIN` on the API service (see above), then restart the API. If users open the site at both apex and `www`, list both origins comma-separated in `WEBAUTHN_ORIGIN`.
 - **Database Connection**: Ensure `DB_HOST=db` in `.env`.

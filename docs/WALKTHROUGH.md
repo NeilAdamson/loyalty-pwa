@@ -33,6 +33,8 @@ Admin users use username-based email addresses. The email is automatically gener
 
 ## 2. Vendor Management
 
+### Platform-admin vendor creation
+
 1. Click **Vendors** in sidebar.
 2. Verify list of existing vendors (seeded in M1/M2).
 3. Click **+ New Vendor**.
@@ -45,6 +47,19 @@ Admin users use username-based email addresses. The email is automatically gener
 6. Verify redirect to Vendor List and `New Cafe` appears in the table.
 7. Verify status is `ACTIVE`.
 8. (Note: Valid Slug characters are alphanumeric and hyphens).
+
+### Vendor self-service signup
+
+1. Navigate to `http://localhost:5173/vendor/register`.
+2. Verify the registration wizard shows three steps:
+   - **Business details**
+   - **Verify email**
+   - **Create password and Store ID**
+3. Fill business-owner and business details, then send the verification code.
+4. Verify the screen explains that the code was sent to the business owner email.
+5. After entering the email code, create the owner password and choose the **Store ID**.
+6. Verify the new business opens the setup wizard at `/v/{slug}/admin/onboarding`.
+7. On the launch step, verify the customer QR/link, Staff login URL, checklist, and `info@punchcard.co.za` support link are visible.
 
 ## 3. Member Management
 

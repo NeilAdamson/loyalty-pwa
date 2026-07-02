@@ -145,7 +145,7 @@ const VendorStaff: React.FC = () => {
                 <div>
                     <h1 className="page-title">Staff Management</h1>
                     <p className="page-subtitle">
-                        Create Stamper logins for the counter scanner, or Admin logins for managers (full vendor portal).
+                        Create Staff login users for counter scanning, or manager users who can access business settings.
                     </p>
                 </div>
                 <button
@@ -267,7 +267,7 @@ const VendorStaff: React.FC = () => {
                                             className="glass-input appearance-none cursor-pointer"
                                         >
                                             <option value="STAMPER">Stamper — counter scanning only</option>
-                                            <option value="ADMIN">Admin — manager / full vendor portal</option>
+                                            <option value="ADMIN">Admin - manager access</option>
                                         </select>
                                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-muted">
                                             {/* Explicit width/height to prevent giant arrow */}

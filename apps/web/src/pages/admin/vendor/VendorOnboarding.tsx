@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../../../utils/api';
 
 type Branch = {
@@ -52,6 +53,7 @@ type Staff = {
 };
 
 const steps = ['Business', 'Program', 'Branding', 'Staff', 'Billing', 'Launch'] as const;
+const SUPPORT_EMAIL = 'info@punchcard.co.za';
 
 const asMoneyString = (value: string | number | undefined, fallback: string) => {
     if (value === undefined || value === null || value === '') return fallback;
@@ -80,6 +82,7 @@ const VendorOnboarding: React.FC = () => {
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [staff, setStaff] = useState<Staff[]>([]);
+    const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
 
     const [business, setBusiness] = useState({
         trading_name: '',
@@ -125,6 +128,21 @@ const VendorOnboarding: React.FC = () => {
     const isLastStep = stepIndex === steps.length - 1;
 
     const staffSummary = useMemo(() => staff.filter((item) => item.status === 'ENABLED'), [staff]);
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const customerLink = `${origin}/v/${slug || ''}`;
+    const staffLoginLink = `${origin}/v/${slug || ''}/staff`;
+    const hasStaff = staffSummary.length > 0;
+
+    const copyToClipboard = async (label: string, value: string) => {
+        try {
+            await navigator.clipboard.writeText(value);
+            setCopiedLabel(label);
+            window.setTimeout(() => setCopiedLabel(null), 2000);
+        } catch {
+            setError('Could not copy. Select the link and copy it manually.');
+            window.setTimeout(() => setError(''), 4000);
+        }
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -248,9 +266,12 @@ const VendorOnboarding: React.FC = () => {
         <div className="vendor-onboarding fade-in">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Vendor Setup</h1>
+                    <h1 className="page-title">Business setup</h1>
                     <p className="page-subtitle">Finish the details needed to launch your digital stamp card.</p>
                 </div>
+            </div>
+            <div className="onboarding-help">
+                Need help? <a href={`mailto:${SUPPORT_EMAIL}?subject=Help with PunchCard setup`}>Email {SUPPORT_EMAIL}</a>
             </div>
 
             <div className="onboarding-steps" aria-label="Onboarding progress">
@@ -328,8 +349,8 @@ const VendorOnboarding: React.FC = () => {
 
                 {activeStep === 'Staff' && (
                     <>
-                        <h2>Staff And Stampers</h2>
-                        <p className="onboarding-muted">Staff do not need email addresses. Create a username and PIN for each counter user.</p>
+                        <h2>Staff login users</h2>
+                        <p className="onboarding-muted">Staff do not need email addresses. Create a username and PIN for each counter user who will use Staff login.</p>
                         <div className="onboarding-grid">
                             {input('Staff name', newStaff.name, (value) => setNewStaff({ ...newStaff, name: value }))}
                             {input('Username', newStaff.username, (value) => setNewStaff({ ...newStaff, username: value.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))}
@@ -376,9 +397,47 @@ const VendorOnboarding: React.FC = () => {
                     <>
                         <h2>Launch</h2>
                         <div className="onboarding-review">
-                            <p><strong>{business.trading_name}</strong> will launch at <code>/v/{slug}</code>.</p>
+                            <p><strong>{business.trading_name}</strong> will launch with Store ID <code>{slug}</code>.</p>
                             <p>{program.stamps_required} stamps unlock: <strong>{program.reward_title}</strong></p>
-                            <p>{staffSummary.length} enabled staff account{staffSummary.length === 1 ? '' : 's'} created.</p>
+                        </div>
+
+                        <div className="launch-grid">
+                            <div className="launch-card">
+                                <h3>Customer signup QR</h3>
+                                <div className="launch-qr" aria-label={`QR code for ${customerLink}`}>
+                                    <QRCodeSVG value={customerLink} size={144} bgColor="#ffffff" fgColor="#111827" />
+                                </div>
+                                <code>{customerLink}</code>
+                                <button type="button" className="btn-ghost launch-copy" onClick={() => copyToClipboard('customer', customerLink)}>
+                                    {copiedLabel === 'customer' ? 'Copied' : 'Copy customer link'}
+                                </button>
+                            </div>
+
+                            <div className="launch-card">
+                                <h3>Staff login URL</h3>
+                                <p>Bookmark this on shop tablets so staff can sign in with username and PIN.</p>
+                                <code>{staffLoginLink}</code>
+                                <button type="button" className="btn-ghost launch-copy" onClick={() => copyToClipboard('staff', staffLoginLink)}>
+                                    {copiedLabel === 'staff' ? 'Copied' : 'Copy Staff login URL'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="launch-checklist" aria-label="First day checklist">
+                            <h3>First day checklist</h3>
+                            <ul>
+                                <li className="ready">Customer signup link is ready.</li>
+                                <li className={hasStaff ? 'ready' : 'needs-action'}>
+                                    {hasStaff
+                                        ? `${staffSummary.length} Staff login user${staffSummary.length === 1 ? '' : 's'} created.`
+                                        : 'Create at least one Staff login user before opening.'}
+                                </li>
+                                <li className="ready">Print or display the customer QR code near the till.</li>
+                                <li className="ready">Bookmark the Staff login URL on staff devices.</li>
+                            </ul>
+                            <p>
+                                Questions before launch? <a href={`mailto:${SUPPORT_EMAIL}?subject=Help launching PunchCard`}>Email {SUPPORT_EMAIL}</a>.
+                            </p>
                         </div>
                     </>
                 )}
@@ -402,6 +461,20 @@ const VendorOnboarding: React.FC = () => {
                     grid-template-columns: repeat(6, minmax(0, 1fr));
                     gap: 8px;
                     margin-bottom: 20px;
+                }
+                .onboarding-help {
+                    margin: -0.5rem 0 1.25rem;
+                    padding: 0.75rem 1rem;
+                    border-radius: 10px;
+                    background: rgba(59,130,246,0.1);
+                    border: 1px solid rgba(59,130,246,0.22);
+                    color: var(--text-muted);
+                    font-size: 0.875rem;
+                }
+                .onboarding-help a,
+                .launch-checklist a {
+                    color: #93c5fd;
+                    font-weight: 700;
                 }
                 .onboarding-step {
                     border: 1px solid rgba(255,255,255,0.1);
@@ -490,6 +563,82 @@ const VendorOnboarding: React.FC = () => {
                     display: grid;
                     gap: 10px;
                 }
+                .launch-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 16px;
+                    margin-top: 18px;
+                }
+                .launch-card {
+                    display: grid;
+                    gap: 12px;
+                    align-content: start;
+                    padding: 18px;
+                    border-radius: 12px;
+                    background: rgba(255,255,255,0.04);
+                    border: 1px solid rgba(255,255,255,0.08);
+                }
+                .launch-card h3,
+                .launch-checklist h3 {
+                    margin: 0;
+                    color: #fff;
+                    font-size: 16px;
+                }
+                .launch-card p {
+                    margin: 0;
+                    color: var(--text-muted);
+                    font-size: 14px;
+                    line-height: 1.5;
+                }
+                .launch-card code {
+                    word-break: break-all;
+                    color: #bfdbfe;
+                    font-size: 12px;
+                }
+                .launch-qr {
+                    width: 164px;
+                    height: 164px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 12px;
+                    background: #fff;
+                    padding: 10px;
+                }
+                .launch-copy {
+                    justify-self: start;
+                }
+                .launch-checklist {
+                    margin-top: 18px;
+                    padding: 18px;
+                    border-radius: 12px;
+                    background: rgba(34,197,94,0.08);
+                    border: 1px solid rgba(34,197,94,0.18);
+                    color: var(--text-muted);
+                }
+                .launch-checklist ul {
+                    list-style: none;
+                    padding: 0;
+                    margin: 14px 0;
+                    display: grid;
+                    gap: 8px;
+                }
+                .launch-checklist li::before {
+                    content: "";
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 999px;
+                    display: inline-block;
+                    margin-right: 10px;
+                    background: #22c55e;
+                }
+                .launch-checklist li.needs-action::before {
+                    background: #f59e0b;
+                }
+                .launch-checklist p {
+                    margin: 0;
+                    font-size: 14px;
+                }
                 .onboarding-actions {
                     display: flex;
                     justify-content: flex-end;
@@ -513,7 +662,8 @@ const VendorOnboarding: React.FC = () => {
                 }
                 @media (max-width: 860px) {
                     .onboarding-steps,
-                    .onboarding-grid {
+                    .onboarding-grid,
+                    .launch-grid {
                         grid-template-columns: 1fr;
                     }
                     .onboarding-step {

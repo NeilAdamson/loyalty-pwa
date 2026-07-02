@@ -53,8 +53,8 @@ const VendorAdminLogin: React.FC = () => {
 
     return (
         <AuthShell
-            title="Vendor Admin Login"
-            subtitle="Owners and managers sign in with email and password. Counter staff use the staff PIN login."
+            title="Business owner login"
+            subtitle="Business owners and managers sign in with email and password. Counter staff use Staff login."
         >
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {error && (
@@ -98,7 +98,7 @@ const VendorAdminLogin: React.FC = () => {
                 </div>
 
                 <div style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    Staff member? <Link to="/vendor/login" style={{ color: 'var(--primary)' }}>Use staff portal</Link>
+                    Staff member? <Link to="/vendor/login" style={{ color: 'var(--primary)' }}>Use Staff login</Link>
                 </div>
             </form>
         </AuthShell>

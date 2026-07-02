@@ -36,7 +36,7 @@ const VendorLookup: React.FC = () => {
         setError('');
         const normalized = normalizeVendorSlugInput(slug);
         if (!normalized) {
-            setError('Enter your store slug.');
+            setError('Enter your Store ID.');
             return;
         }
         if (!VENDOR_SLUG_PATTERN.test(normalized)) {
@@ -58,14 +58,14 @@ const VendorLookup: React.FC = () => {
 
             if (status === 404 || code === 'NOT_FOUND') {
                 setError(
-                    'No active store found for that slug. Check spelling or contact support — your slug was emailed when you joined.'
+                    'No active store found for that Store ID. Check spelling or contact support.'
                 );
             } else if (status === 403 || code === 'VENDOR_SUSPENDED') {
                 setError('This vendor account is suspended. Staff login is blocked until reactivated.');
             } else {
                 setError(
                     message ||
-                        'Could not verify that slug right now. Try again or use the link from your onboarding email.'
+                        'Could not verify that Store ID right now. Try again or use the staff link from setup.'
                 );
             }
         } finally {
@@ -84,7 +84,7 @@ const VendorLookup: React.FC = () => {
                 goToStaffLogin(recentSlug);
             } catch {
                 setError(
-                    'Your saved store is no longer available or was suspended. Enter your slug below or clear saved store.'
+                    'Your saved store is no longer available or was suspended. Enter your Store ID below or clear saved store.'
                 );
             } finally {
                 setIsLoading(false);
@@ -94,8 +94,8 @@ const VendorLookup: React.FC = () => {
 
     return (
         <AuthShell
-            title="Vendor Portal"
-            subtitle="Counter staff use Store Slug plus username/PIN. Owners and managers use email/password."
+            title="Staff login"
+            subtitle="Counter staff enter the Store ID, then sign in with username and PIN. Business owners use email/password."
         >
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {recentSlug && (
@@ -157,7 +157,7 @@ const VendorLookup: React.FC = () => {
 
                 <div>
                     <AdminInput
-                        label="Store Slug"
+                        label="Store ID"
                         type="text"
                         value={slug}
                         onChange={(e) => setSlug(e.target.value)}
@@ -168,20 +168,20 @@ const VendorLookup: React.FC = () => {
                     />
                     <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                         Lowercase only — e.g. <strong>demo-cafe</strong>. Tip: bookmark{' '}
-                        <strong>/v/your-slug/staff</strong> on shop tablets to skip this step.
+                        <strong>/v/your-store-id/staff</strong> on shop tablets to skip this step.
                     </p>
                 </div>
 
                 <AdminButton type="submit" variant="primary" isLoading={isLoading} fullWidth>
-                    Go to Staff Login
+                    Continue to Staff login
                 </AdminButton>
 
                 <div style={{ display: 'grid', gap: '8px', textAlign: 'center', fontSize: '13px' }}>
                     <Link to="/vendor/admin/login" style={{ color: 'var(--primary)' }}>
-                        Owner / manager email login
+                        Business owner login
                     </Link>
                     <Link to="/vendor/register" style={{ color: 'var(--text-secondary)' }}>
-                        Register a new vendor
+                        Create vendor account
                     </Link>
                 </div>
 

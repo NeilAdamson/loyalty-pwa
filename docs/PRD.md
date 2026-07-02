@@ -31,9 +31,9 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ## 5. Key decisions locked for MVP
 - OTP channel: **phone-based OTP via SMSFlow SMS**
-- Vendor admin login: **email + password** with email-delivered registration code for self-service onboarding
+- Business owner login: **email + password** with email-delivered registration code for self-service onboarding
 - Staff login: **username + PIN** (PIN stored as hash, unique username per staff account within a vendor)
-- Vendor onboarding: **self-service supported**; platform admin can still create vendors manually
+- Vendor onboarding: **self-service supported** through a guided signup and setup wizard; platform admin can still create vendors manually
 - Multi-branch: **required**
 - Cooldown policy: **global default; vendor can increase but not decrease**
 - Card expiry: **no expiry in MVP** (future option: global fixed expiry via configuration)
@@ -44,6 +44,7 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ## 6. Glossary
 - Vendor / Tenant: A business using the system.
+- Store ID: The user-facing name for the vendor URL identifier (`vendor_slug`) used in customer links and staff login bookmarks.
 - Branch: A physical location belonging to a vendor.
 - Member: A customer enrolled in a vendor’s program.
 - Program: The vendor’s loyalty rule set (e.g., 10 stamps → reward).
@@ -53,8 +54,8 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
 
 ## 7. Personas and roles
 - Platform Admin: Creates vendors, configures billing status, supports vendors, reviews fraud, suspends vendors.
-- Vendor Admin / vendor manager: Configures branding, program rules, branches, staff PINs, billing details, and setup. Primary login is **email + password** through `/vendor/admin/login`; after login, uses `/v/{slug}/admin/*`.
-- Staff (Stamper): Stamps and redeems at the point of service. **Implemented as the staff role `STAMPER`** (`/v/{slug}/staff/scan`).
+- Business owner / vendor manager: Configures branding, program rules, branches, staff PINs, billing details, and setup. Primary login is **email + password** through `/vendor/admin/login`; after login, uses `/v/{slug}/admin/*`.
+- Staff (Stamper): Stamps and redeems at the point of service. **Implemented as the staff role `STAMPER`** (`/v/{slug}/staff/scan`), reached through Staff login using the business Store ID.
 - Member: Joins, views card, presents rotating token for stamping/redeeming.
 
 ## 8. Success metrics (pilot)
@@ -78,16 +79,22 @@ A Progressive Web App (PWA) provides each vendor (tenant) with a branded digital
   - Default active program (v1) with 10 stamps.
 
 **FR-A1b Vendor self-service registration**
-- A vendor owner can register without platform-admin intervention by providing:
+- A vendor owner can register without platform-admin intervention through a three-step wizard:
+  1. Business details
+  2. Verify email
+  3. Create password and Store ID
+- The wizard collects:
   - owner name and email
   - trading/legal business names
   - contact phone
+  - password and Store ID (`vendor_slug`)
 - System sends a short-lived registration code to the owner email.
 - After code verification and password creation, the system creates:
   - vendor in `TRIAL` status
   - vendor owner admin account
   - default branch, branding, and active program
   - onboarding wizard state set to incomplete
+- Signup and setup screens must provide easy email support access at `info@punchcard.co.za`.
 
 **FR-A2 Vendor suspend / reactivate**
 - Suspending vendor MUST:

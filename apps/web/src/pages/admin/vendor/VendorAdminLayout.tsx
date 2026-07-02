@@ -119,7 +119,7 @@ const VendorAdminLayout: React.FC = () => {
                     <span className="brand-punch">Punch</span>
                     <span className="brand-card">Card</span>
                     <div className="text-xs text-muted mt-1">
-                        {vendorName ? `${vendorName} Vendor Portal` : 'Vendor Portal'}
+                        {vendorName ? `${vendorName} Business Portal` : 'Business Portal'}
                     </div>
                 </div>
 

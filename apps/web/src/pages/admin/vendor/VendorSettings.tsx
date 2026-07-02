@@ -137,7 +137,7 @@ const VendorSettings: React.FC = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
                             <div>
-                                <label className="input-label">Vendor Slug (Store ID)</label>
+                                <label className="input-label">Store ID</label>
                                 <input
                                     type="text"
                                     value={vendorSlug}
@@ -145,7 +145,7 @@ const VendorSettings: React.FC = () => {
                                     className="glass-input max-w-md opacity-70 cursor-not-allowed font-mono text-accent bg-accent/5 border-accent/20"
                                 />
                                 <p className="text-xs text-dim mt-2">
-                                    Your unique identifier for the web portal. Cannot be changed.
+                                    Your unique identifier for customer links and Staff login. Cannot be changed.
                                 </p>
                             </div>
                             <div>
@@ -226,10 +226,10 @@ const VendorSettings: React.FC = () => {
                 {/* Portal shortcuts — share with staff / bookmark on devices */}
                 <div className="glass-panel p-8 mb-8">
                     <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                        <span>🔗</span> Staff portal shortcuts
+                        <span>🔗</span> Staff login shortcuts
                     </h2>
                     <p className="text-sm text-dim mb-4">
-                        Bookmark these on shop tablets or share with your team. Slug in the URL must match your Store ID
+                        Bookmark these on shop tablets or share with your team. The Store ID in the URL must match your Store ID
                         above.
                     </p>
                     <ul className="space-y-3 text-sm">
@@ -257,7 +257,7 @@ const VendorSettings: React.FC = () => {
                         </li>
                         <li className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between gap-x-4">
                             <div>
-                                <div className="font-medium text-white">Vendor portal entry (slug picker)</div>
+                                <div className="font-medium text-white">Staff login entry (Store ID picker)</div>
                                 <code className="text-accent text-xs break-all">
                                     {typeof window !== 'undefined'
                                         ? `${window.location.origin}/vendor/login`

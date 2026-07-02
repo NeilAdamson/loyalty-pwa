@@ -26,6 +26,8 @@ type CompleteResponse = {
     };
 };
 
+const SUPPORT_EMAIL = 'info@punchcard.co.za';
+
 const apiErrorMessage = (err: unknown, fallback: string): string => {
     if (typeof err === 'object' && err !== null && 'response' in err) {
         const response = (err as { response?: { data?: { message?: unknown } } }).response;
@@ -64,8 +66,28 @@ const VendorRegister: React.FC = () => {
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [expiresInMinutes, setExpiresInMinutes] = useState<number | null>(null);
 
     const suggestedSlug = useMemo(() => slugify(form.trading_name), [form.trading_name]);
+    const steps = [
+        {
+            key: 'details',
+            label: 'Business details',
+            description: 'Tell us who owns the account and which business is joining.'
+        },
+        {
+            key: 'code',
+            label: 'Verify email',
+            description: 'Enter the code sent to the business owner email.'
+        },
+        {
+            key: 'password',
+            label: 'Create password and Store ID',
+            description: 'Choose the login password and the Store ID used in customer and staff links.'
+        }
+    ] as const;
+    const activeStepIndex = steps.findIndex((item) => item.key === step);
+    const activeStep = steps[activeStepIndex];
 
     const update = (field: keyof typeof form, value: string) => {
         setForm((current) => ({ ...current, [field]: value }));
@@ -86,8 +108,9 @@ const VendorRegister: React.FC = () => {
                 contact_phone: form.contact_phone
             });
             setRegistration(res.data.registration);
+            setExpiresInMinutes(res.data.expires_in_minutes);
             update('vendor_slug', res.data.registration.vendor_slug || suggestedSlug);
-            setMessage(`We sent a registration code to ${res.data.registration.email}.`);
+            setMessage(`We sent a verification code to ${res.data.registration.email}.`);
             setStep('code');
         } catch (err: unknown) {
             setError(apiErrorMessage(err, 'Could not start registration.'));
@@ -108,7 +131,7 @@ const VendorRegister: React.FC = () => {
                 code: form.code
             });
             setRegistration(res.data.registration);
-            setMessage('Email verified. Create your vendor admin password.');
+            setMessage('Email verified. Create your business owner password.');
             setStep('password');
         } catch (err: unknown) {
             setError(apiErrorMessage(err, 'Invalid registration code.'));
@@ -148,18 +171,75 @@ const VendorRegister: React.FC = () => {
 
     return (
         <AuthShell
-            title="Create Vendor Account"
-            subtitle="Register the owner/admin account first, then finish store setup in the onboarding wizard."
+            title="Create vendor account"
+            subtitle="Start a free trial, verify the business owner email, then finish setup in the guided wizard."
         >
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '22px' }} aria-hidden>
-                {['details', 'code', 'password'].map((item) => (
+            <div style={{ marginBottom: '22px' }}>
+                <div
+                    aria-label="Registration progress"
+                    style={{ display: 'grid', gap: '8px' }}
+                >
+                    {steps.map((item, index) => (
+                        <div
+                            key={item.key}
+                            aria-current={step === item.key ? 'step' : undefined}
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: '28px 1fr',
+                                gap: '10px',
+                                alignItems: 'center',
+                                color: step === item.key ? 'var(--text)' : 'var(--text-secondary)',
+                                fontSize: '13px'
+                            }}
+                        >
+                            <span
+                                aria-hidden="true"
+                                style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '999px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: step === item.key ? 'var(--primary)' : 'var(--border)',
+                                    color: step === item.key ? 'var(--primary-contrast, #fff)' : 'var(--text-secondary)',
+                                    fontWeight: 700
+                                }}
+                            >
+                                {index + 1}
+                            </span>
+                            <span>{item.label}</span>
+                        </div>
+                    ))}
+                </div>
+                <p style={{ margin: '14px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Step {activeStepIndex + 1} of {steps.length}: <strong>{activeStep.label}</strong>. {activeStep.description}
+                </p>
+            </div>
+
+            <div
+                style={{
+                    padding: '10px 12px',
+                    marginBottom: '18px',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid var(--border)',
+                    fontSize: '13px',
+                    color: 'var(--text-secondary)',
+                    textAlign: 'center'
+                }}
+            >
+                Need help? <a href={`mailto:${SUPPORT_EMAIL}?subject=Help with PunchCard signup`} style={{ color: 'var(--primary)' }}>Email {SUPPORT_EMAIL}</a>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '22px' }} aria-hidden="true">
+                {steps.map((item) => (
                     <div
-                        key={item}
+                        key={item.key}
                         style={{
                             height: '4px',
                             flex: 1,
                             borderRadius: '999px',
-                            background: step === item ? 'var(--primary)' : 'var(--border)'
+                            background: step === item.key ? 'var(--primary)' : 'var(--border)'
                         }}
                     />
                 ))}
@@ -170,22 +250,28 @@ const VendorRegister: React.FC = () => {
 
             {step === 'details' && (
                 <form onSubmit={startRegistration} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <AdminInput label="Owner email" type="email" value={form.email} onChange={(event) => update('email', event.target.value)} required autoFocus />
+                    <AdminInput label="Business owner email" type="email" value={form.email} onChange={(event) => update('email', event.target.value)} required autoFocus />
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <AdminInput label="First name" value={form.first_name} onChange={(event) => update('first_name', event.target.value)} required />
-                        <AdminInput label="Last name" value={form.last_name} onChange={(event) => update('last_name', event.target.value)} required />
+                        <AdminInput label="Owner first name" value={form.first_name} onChange={(event) => update('first_name', event.target.value)} required />
+                        <AdminInput label="Owner last name" value={form.last_name} onChange={(event) => update('last_name', event.target.value)} required />
                     </div>
                     <AdminInput label="Trading name" value={form.trading_name} onChange={(event) => update('trading_name', event.target.value)} required />
                     <AdminInput label="Legal name" value={form.legal_name} onChange={(event) => update('legal_name', event.target.value)} placeholder="Defaults to trading name" />
                     <AdminInput label="Contact phone" value={form.contact_phone} onChange={(event) => update('contact_phone', event.target.value)} />
-                    <AdminButton type="submit" isLoading={isLoading} fullWidth>Send Registration Code</AdminButton>
+                    <AdminButton type="submit" isLoading={isLoading} fullWidth>Send verification code</AdminButton>
                 </form>
             )}
 
             {step === 'code' && (
                 <form onSubmit={verifyCode} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <AdminInput label="Registration code" value={form.code} onChange={(event) => update('code', event.target.value)} required inputMode="numeric" autoFocus />
-                    <AdminButton type="submit" isLoading={isLoading} fullWidth>Verify Code</AdminButton>
+                    {registration && (
+                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.5 }}>
+                            We sent a code to <strong>{registration.email}</strong>
+                            {expiresInMinutes ? ` that expires in ${expiresInMinutes} minutes.` : '.'}
+                        </p>
+                    )}
+                    <AdminInput label="Verification code" value={form.code} onChange={(event) => update('code', event.target.value)} required inputMode="numeric" autoFocus />
+                    <AdminButton type="submit" isLoading={isLoading} fullWidth>Verify email</AdminButton>
                     <AdminButton type="button" variant="secondary" onClick={() => setStep('details')} fullWidth>Back</AdminButton>
                 </form>
             )}
@@ -193,20 +279,20 @@ const VendorRegister: React.FC = () => {
             {step === 'password' && (
                 <form onSubmit={completeRegistration} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <AdminInput
-                        label="Store slug"
+                        label="Store ID"
                         value={form.vendor_slug}
                         onChange={(event) => update('vendor_slug', slugify(event.target.value))}
-                        helperText="Used in URLs and staff bookmarks."
+                        helperText="Used in customer links and Staff login bookmarks, for example /v/demo-cafe."
                         required
                     />
                     <AdminInput label="Password" type="password" value={form.password} onChange={(event) => update('password', event.target.value)} required minLength={8} autoComplete="new-password" />
                     <AdminInput label="Confirm password" type="password" value={form.confirm_password} onChange={(event) => update('confirm_password', event.target.value)} required minLength={8} autoComplete="new-password" />
-                    <AdminButton type="submit" isLoading={isLoading} fullWidth>Create Vendor</AdminButton>
+                    <AdminButton type="submit" isLoading={isLoading} fullWidth>Create vendor account</AdminButton>
                 </form>
             )}
 
             <div style={{ textAlign: 'center', marginTop: '22px', fontSize: '13px' }}>
-                <Link to="/vendor/admin/login" style={{ color: 'var(--text-secondary)' }}>Already registered? Sign in</Link>
+                <Link to="/vendor/admin/login" style={{ color: 'var(--text-secondary)' }}>Already registered? Business owner login</Link>
             </div>
         </AuthShell>
     );
